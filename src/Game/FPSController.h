@@ -1,0 +1,29 @@
+#pragma once
+
+#include <glm/glm.hpp>
+
+struct GLFWwindow;
+
+namespace GeoFPS
+{
+class Camera;
+
+class FPSController
+{
+  public:
+    void AttachWindow(GLFWwindow* window);
+    void AttachCamera(Camera* camera);
+    void SetEnabled(bool enabled);
+    void Update(float deltaTime);
+
+  private:
+    GLFWwindow* m_Window {nullptr};
+    Camera* m_Camera {nullptr};
+    bool m_Enabled {true};
+    bool m_FirstMouse {true};
+    double m_LastMouseX {0.0};
+    double m_LastMouseY {0.0};
+    float m_MoveSpeed {12.0f};
+    float m_MouseSensitivity {0.08f};
+};
+} // namespace GeoFPS

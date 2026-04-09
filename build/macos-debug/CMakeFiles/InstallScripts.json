@@ -1,0 +1,11 @@
+{
+	"InstallScripts" : 
+	[
+		"/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/cmake_install.cmake",
+		"/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-build/cmake_install.cmake",
+		"/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-build/src/cmake_install.cmake",
+		"/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glm-build/cmake_install.cmake",
+		"/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glm-build/glm/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

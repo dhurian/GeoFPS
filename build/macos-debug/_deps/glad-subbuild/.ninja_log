@@ -1,0 +1,21 @@
+# ninja log v7
+0	16	1775751408288964510	glad-populate-prefix/src/glad-populate-stamp/glad-populate-mkdir	88c776535ba7f98a
+0	16	1775751408288964510	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glad-subbuild/glad-populate-prefix/src/glad-populate-stamp/glad-populate-mkdir	88c776535ba7f98a
+16	778	1775751409050906478	glad-populate-prefix/src/glad-populate-stamp/glad-populate-download	82eae67652705a9c
+16	778	1775751409050906478	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glad-subbuild/glad-populate-prefix/src/glad-populate-stamp/glad-populate-download	82eae67652705a9c
+778	1383	1775751409052126681	glad-populate-prefix/src/glad-populate-stamp/glad-populate-update	f6c1643dd6ae4c19
+778	1383	1775751409052126681	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glad-subbuild/glad-populate-prefix/src/glad-populate-stamp/glad-populate-update	f6c1643dd6ae4c19
+1383	1398	1775751409670633991	glad-populate-prefix/src/glad-populate-stamp/glad-populate-patch	c13888a6f6618efb
+1383	1398	1775751409670633991	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glad-subbuild/glad-populate-prefix/src/glad-populate-stamp/glad-populate-patch	c13888a6f6618efb
+1398	1413	1775751409685339967	glad-populate-prefix/src/glad-populate-stamp/glad-populate-configure	feb54909cb037c6d
+1398	1413	1775751409685339967	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glad-subbuild/glad-populate-prefix/src/glad-populate-stamp/glad-populate-configure	feb54909cb037c6d
+1413	1427	1775751409699918319	glad-populate-prefix/src/glad-populate-stamp/glad-populate-build	e445f5796c153b5a
+1413	1427	1775751409699918319	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glad-subbuild/glad-populate-prefix/src/glad-populate-stamp/glad-populate-build	e445f5796c153b5a
+1427	1441	1775751409714062549	glad-populate-prefix/src/glad-populate-stamp/glad-populate-install	464f5b2c574455fe
+1427	1441	1775751409714062549	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glad-subbuild/glad-populate-prefix/src/glad-populate-stamp/glad-populate-install	464f5b2c574455fe
+1441	1456	1775751409728493360	glad-populate-prefix/src/glad-populate-stamp/glad-populate-test	6a62927cf5c6b490
+1441	1456	1775751409728493360	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glad-subbuild/glad-populate-prefix/src/glad-populate-stamp/glad-populate-test	6a62927cf5c6b490
+1456	1476	1775751409748943144	CMakeFiles/glad-populate-complete	61c42cda83698f42
+1456	1476	1775751409748943144	glad-populate-prefix/src/glad-populate-stamp/glad-populate-done	61c42cda83698f42
+1456	1476	1775751409748943144	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glad-subbuild/CMakeFiles/glad-populate-complete	61c42cda83698f42
+1456	1476	1775751409748943144	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glad-subbuild/glad-populate-prefix/src/glad-populate-stamp/glad-populate-done	61c42cda83698f42

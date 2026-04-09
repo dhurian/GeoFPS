@@ -1,0 +1,70 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "CMake: Configure (auto)",
+      "type": "shell",
+      "command": "cmake --preset ${input:configurePreset}",
+      "problemMatcher": []
+    },
+    {
+      "label": "CMake: Build (auto)",
+      "type": "shell",
+      "command": "cmake --build --preset ${input:buildPreset}",
+      "dependsOn": "CMake: Configure (auto)",
+      "group": "build",
+      "problemMatcher": ["$gcc"]
+    },
+    {
+      "label": "Run GeoFPS",
+      "type": "shell",
+      "command": "${input:runCommand}",
+      "dependsOn": "CMake: Build (auto)",
+      "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "configurePreset",
+      "type": "pickString",
+      "description": "Select configure preset",
+      "options": [
+        "macos-debug",
+        "linux-debug",
+        "windows-debug",
+        "macos-release",
+        "linux-release",
+        "windows-release"
+      ],
+      "default": "macos-debug"
+    },
+    {
+      "id": "buildPreset",
+      "type": "pickString",
+      "description": "Select build preset",
+      "options": [
+        "macos-debug",
+        "linux-debug",
+        "windows-debug",
+        "macos-release",
+        "linux-release",
+        "windows-release"
+      ],
+      "default": "macos-debug"
+    },
+    {
+      "id": "runCommand",
+      "type": "pickString",
+      "description": "Select run command",
+      "options": [
+        "./build/macos-debug/bin/GeoFPS",
+        "./build/linux-debug/bin/GeoFPS",
+        ".\\build\\windows-debug\\bin\\GeoFPS.exe",
+        "./build/macos-release/bin/GeoFPS",
+        "./build/linux-release/bin/GeoFPS",
+        ".\\build\\windows-release\\bin\\GeoFPS.exe"
+      ],
+      "default": "./build/macos-debug/bin/GeoFPS"
+    }
+  ]
+}

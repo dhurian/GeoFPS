@@ -1,0 +1,21 @@
+# ninja log v7
+0	15	1775751398001730453	glm-populate-prefix/src/glm-populate-stamp/glm-populate-mkdir	61a2a536b21906e2
+0	15	1775751398001730453	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glm-subbuild/glm-populate-prefix/src/glm-populate-stamp/glm-populate-mkdir	61a2a536b21906e2
+15	10067	1775751408053666591	glm-populate-prefix/src/glm-populate-stamp/glm-populate-download	7d911aaa2893da17
+15	10067	1775751408053666591	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glm-subbuild/glm-populate-prefix/src/glm-populate-stamp/glm-populate-download	7d911aaa2893da17
+10067	10090	1775751408054403172	glm-populate-prefix/src/glm-populate-stamp/glm-populate-update	328bbdfe6f68f240
+10067	10090	1775751408054403172	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glm-subbuild/glm-populate-prefix/src/glm-populate-stamp/glm-populate-update	328bbdfe6f68f240
+10090	10108	1775751408094545453	glm-populate-prefix/src/glm-populate-stamp/glm-populate-patch	97a0c1a3d94a6a26
+10090	10108	1775751408094545453	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glm-subbuild/glm-populate-prefix/src/glm-populate-stamp/glm-populate-patch	97a0c1a3d94a6a26
+10108	10122	1775751408108951347	glm-populate-prefix/src/glm-populate-stamp/glm-populate-configure	216840c80d373b4f
+10108	10122	1775751408108951347	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glm-subbuild/glm-populate-prefix/src/glm-populate-stamp/glm-populate-configure	216840c80d373b4f
+10122	10137	1775751408123457450	glm-populate-prefix/src/glm-populate-stamp/glm-populate-build	bbe92496462d05ea
+10122	10137	1775751408123457450	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glm-subbuild/glm-populate-prefix/src/glm-populate-stamp/glm-populate-build	bbe92496462d05ea
+10137	10151	1775751408138091802	glm-populate-prefix/src/glm-populate-stamp/glm-populate-install	cc97ec0d84d2b349
+10137	10151	1775751408138091802	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glm-subbuild/glm-populate-prefix/src/glm-populate-stamp/glm-populate-install	cc97ec0d84d2b349
+10151	10166	1775751408152990403	glm-populate-prefix/src/glm-populate-stamp/glm-populate-test	433b0cf415ab543f
+10151	10166	1775751408152990403	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glm-subbuild/glm-populate-prefix/src/glm-populate-stamp/glm-populate-test	433b0cf415ab543f
+10166	10187	1775751408174491599	CMakeFiles/glm-populate-complete	bf8e56f278c8bb49
+10166	10187	1775751408174491599	glm-populate-prefix/src/glm-populate-stamp/glm-populate-done	bf8e56f278c8bb49
+10166	10187	1775751408174491599	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glm-subbuild/CMakeFiles/glm-populate-complete	bf8e56f278c8bb49
+10166	10187	1775751408174491599	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glm-subbuild/glm-populate-prefix/src/glm-populate-stamp/glm-populate-done	bf8e56f278c8bb49

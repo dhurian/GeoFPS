@@ -1,0 +1,9 @@
+{
+  "files.associations": {
+    "*.tpp": "cpp"
+  },
+  "cmake.configureOnOpen": true,
+  "cmake.useCMakePresets": "always",
+  "editor.formatOnSave": true,
+  "C_Cpp.default.cppStandard": "c++20"
+}
