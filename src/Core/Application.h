@@ -56,6 +56,8 @@ class Application
     bool ActivateTerrainDataset(int index);
     bool LoadOverlayImage(OverlayEntry& overlay);
     bool LoadActiveOverlayImage();
+    bool DeleteTerrainDataset(int index);
+    bool DeleteActiveOverlay();
     bool RebuildTerrain();
     void ResetOverlayToTerrainBounds(GeoImageDefinition& imageDefinition, const std::vector<TerrainPoint>& points) const;
     void ResetOverlayToTerrainBounds(GeoImageDefinition& imageDefinition) const;

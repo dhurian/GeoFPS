@@ -311,6 +311,48 @@ bool Application::LoadActiveOverlayImage()
     return LoadOverlayImage(*overlay);
 }
 
+bool Application::DeleteTerrainDataset(int index)
+{
+    if (index < 0 || index >= static_cast<int>(m_TerrainDatasets.size()) || m_TerrainDatasets.size() <= 1)
+    {
+        return false;
+    }
+
+    m_TerrainDatasets.erase(m_TerrainDatasets.begin() + index);
+    if (m_ActiveTerrainIndex >= static_cast<int>(m_TerrainDatasets.size()))
+    {
+        m_ActiveTerrainIndex = static_cast<int>(m_TerrainDatasets.size()) - 1;
+    }
+
+    m_StatusMessage = "Deleted terrain dataset.";
+    return ActivateTerrainDataset(m_ActiveTerrainIndex);
+}
+
+bool Application::DeleteActiveOverlay()
+{
+    TerrainDataset* dataset = GetActiveTerrainDataset();
+    if (dataset == nullptr || dataset->overlays.size() <= 1)
+    {
+        return false;
+    }
+
+    if (dataset->activeOverlayIndex < 0 || dataset->activeOverlayIndex >= static_cast<int>(dataset->overlays.size()))
+    {
+        return false;
+    }
+
+    dataset->overlays.erase(dataset->overlays.begin() + dataset->activeOverlayIndex);
+    if (dataset->activeOverlayIndex >= static_cast<int>(dataset->overlays.size()))
+    {
+        dataset->activeOverlayIndex = static_cast<int>(dataset->overlays.size()) - 1;
+    }
+
+    m_OverlayTexture.Reset();
+    m_StatusMessage = "Deleted overlay.";
+    LoadActiveOverlayImage();
+    return true;
+}
+
 bool Application::RebuildTerrain()
 {
     GeoConverter converter(m_GeoReference);
@@ -412,6 +454,11 @@ void Application::RenderMainMenuBar()
             ActivateTerrainDataset(static_cast<int>(m_TerrainDatasets.size()) - 1);
         }
 
+        if (ImGui::MenuItem("Delete Active Terrain", nullptr, false, m_TerrainDatasets.size() > 1))
+        {
+            DeleteTerrainDataset(m_ActiveTerrainIndex);
+        }
+
         if (ImGui::MenuItem("Next Terrain", nullptr, false, m_TerrainDatasets.size() > 1))
         {
             const int nextIndex = (m_ActiveTerrainIndex + 1) % static_cast<int>(m_TerrainDatasets.size());
@@ -435,6 +482,12 @@ void Application::RenderMainMenuBar()
                 m_OverlayTexture.Reset();
                 m_StatusMessage = "Added overlay slot to active terrain.";
             }
+        }
+
+        if (ImGui::MenuItem("Delete Active Overlay", nullptr, false, GetActiveTerrainDataset() != nullptr &&
+                                                                 GetActiveTerrainDataset()->overlays.size() > 1))
+        {
+            DeleteActiveOverlay();
         }
 
         if (ImGui::MenuItem("Next Overlay", nullptr, false, GetActiveTerrainDataset() != nullptr &&
@@ -551,6 +604,13 @@ void Application::RenderEditor()
             activeTerrain = GetActiveTerrainDataset();
             activeOverlay = GetActiveOverlayEntry();
         }
+        ImGui::SameLine();
+        if (ImGui::Button("Delete Active Terrain"))
+        {
+            DeleteTerrainDataset(m_ActiveTerrainIndex);
+            activeTerrain = GetActiveTerrainDataset();
+            activeOverlay = GetActiveOverlayEntry();
+        }
     }
 
     ImGui::InputDouble("Origin Latitude", &m_GeoReference.originLatitude, 0.0, 0.0, "%.8f");
@@ -604,6 +664,12 @@ void Application::RenderEditor()
                 activeTerrain->activeOverlayIndex = static_cast<int>(activeTerrain->overlays.size()) - 1;
                 activeOverlay = GetActiveOverlayEntry();
                 m_OverlayTexture.Reset();
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Delete Active Overlay"))
+            {
+                DeleteActiveOverlay();
+                activeOverlay = GetActiveOverlayEntry();
             }
         }
     }
