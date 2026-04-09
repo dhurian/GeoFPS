@@ -69,3 +69,7 @@
 68	1382	1775753229489723437	CMakeFiles/GeoFPS.dir/src/Core/Application.cpp.o	54d031782d928bc3
 70	1384	1775753229491901184	CMakeFiles/GeoFPS.dir/src/Renderer/Shader.cpp.o	4f1580ed0271541c
 1384	1612	1775753230805786296	bin/GeoFPS	a1c34d36ced16d64
+4	17	1775754093025443634	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/CMakeFiles/cmake.verify_globs	1528edb493f5e36b
+78	997	1775754093099561679	CMakeFiles/GeoFPS.dir/src/main.cpp.o	b97e9ebafb26ad83
+77	1049	1775754093099122508	CMakeFiles/GeoFPS.dir/src/Core/Application.cpp.o	54d031782d928bc3
+1049	1275	1775754094070517325	bin/GeoFPS	a1c34d36ced16d64

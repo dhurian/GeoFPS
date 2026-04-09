@@ -18,6 +18,24 @@ struct GLFWwindow;
 
 namespace GeoFPS
 {
+struct OverlayEntry
+{
+    std::string name {"Overlay 1"};
+    GeoImageDefinition image {};
+};
+
+struct TerrainDataset
+{
+    std::string name {"Terrain 1"};
+    std::string path {"assets/data/sample_terrain.csv"};
+    std::vector<TerrainPoint> points;
+    GeoReference geoReference {};
+    TerrainBuildSettings settings {};
+    std::vector<OverlayEntry> overlays;
+    bool loaded {false};
+    int activeOverlayIndex {0};
+};
+
 class Application
 {
   public:
@@ -29,10 +47,20 @@ class Application
     void ProcessInput(float deltaTime);
     void Update(float deltaTime);
     void Render();
-    bool LoadStartupTerrain();
-    bool LoadOverlayImage();
+    void InitializeProject();
+    TerrainDataset* GetActiveTerrainDataset();
+    const TerrainDataset* GetActiveTerrainDataset() const;
+    OverlayEntry* GetActiveOverlayEntry();
+    const OverlayEntry* GetActiveOverlayEntry() const;
+    bool LoadTerrainDataset(TerrainDataset& dataset);
+    bool ActivateTerrainDataset(int index);
+    bool LoadOverlayImage(OverlayEntry& overlay);
+    bool LoadActiveOverlayImage();
     bool RebuildTerrain();
-    void ResetOverlayToTerrainBounds();
+    void ResetOverlayToTerrainBounds(GeoImageDefinition& imageDefinition, const std::vector<TerrainPoint>& points) const;
+    void ResetOverlayToTerrainBounds(GeoImageDefinition& imageDefinition) const;
+    void LoadActiveTerrainIntoScene();
+    void RenderMainMenuBar();
     void SetupImGui();
     void ShutdownImGui();
     void BeginImGuiFrame();
@@ -44,11 +72,12 @@ class Application
     std::unique_ptr<Shader> m_TerrainShader;
     std::unique_ptr<Mesh> m_TerrainMesh;
     Texture m_OverlayTexture;
+    std::vector<TerrainDataset> m_TerrainDatasets;
     std::vector<TerrainPoint> m_TerrainPoints;
     GeoReference m_GeoReference {};
-    GeoImageDefinition m_GeoImage {};
     TerrainBuildSettings m_TerrainSettings {};
     bool m_MouseCaptured {true};
-    std::string m_TerrainPath {"assets/data/sample_terrain.csv"};
+    int m_ActiveTerrainIndex {0};
+    std::string m_StatusMessage;
 };
 } // namespace GeoFPS

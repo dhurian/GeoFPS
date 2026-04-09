@@ -55,11 +55,8 @@ bool Application::Initialize()
     SetupImGui();
     m_Window.SetCursorCaptured(true);
 
-    m_TerrainSettings.gridResolutionX = 64;
-    m_TerrainSettings.gridResolutionZ = 64;
-    m_TerrainSettings.heightScale = 1.0;
-
-    if (!LoadStartupTerrain())
+    InitializeProject();
+    if (!ActivateTerrainDataset(m_ActiveTerrainIndex))
     {
         return false;
     }
@@ -115,6 +112,7 @@ void Application::Render()
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     BeginImGuiFrame();
+    RenderMainMenuBar();
 
     if (m_TerrainShader && m_TerrainMesh)
     {
@@ -124,19 +122,27 @@ void Application::Render()
         m_TerrainShader->SetMat4("uProjection", m_Camera.GetProjectionMatrix());
         m_TerrainShader->SetVec3("uCameraPos", m_Camera.GetPosition());
 
+        const OverlayEntry* activeOverlay = GetActiveOverlayEntry();
+        GeoImageDefinition overlayDefinition {};
+        if (activeOverlay != nullptr)
+        {
+            overlayDefinition = activeOverlay->image;
+        }
+
         GeoConverter converter(m_GeoReference);
-        const glm::vec2 overlayOrigin = ToGroundPlane(
-            converter.ToLocal(m_GeoImage.topLeft.latitude, m_GeoImage.topLeft.longitude, m_GeoReference.originHeight));
-        const glm::vec2 overlayAxisU = ToGroundPlane(
-            converter.ToLocal(m_GeoImage.topRight.latitude, m_GeoImage.topRight.longitude, m_GeoReference.originHeight)) -
+        const glm::vec2 overlayOrigin = ToGroundPlane(converter.ToLocal(
+            overlayDefinition.topLeft.latitude, overlayDefinition.topLeft.longitude, m_GeoReference.originHeight));
+        const glm::vec2 overlayAxisU = ToGroundPlane(converter.ToLocal(
+            overlayDefinition.topRight.latitude, overlayDefinition.topRight.longitude, m_GeoReference.originHeight)) -
             overlayOrigin;
-        const glm::vec2 overlayAxisV = ToGroundPlane(
-            converter.ToLocal(m_GeoImage.bottomLeft.latitude, m_GeoImage.bottomLeft.longitude, m_GeoReference.originHeight)) -
+        const glm::vec2 overlayAxisV = ToGroundPlane(converter.ToLocal(
+            overlayDefinition.bottomLeft.latitude, overlayDefinition.bottomLeft.longitude, m_GeoReference.originHeight)) -
             overlayOrigin;
 
-        const bool overlayReady = m_GeoImage.enabled && m_GeoImage.loaded && m_OverlayTexture.IsLoaded();
+        const bool overlayReady =
+            activeOverlay != nullptr && overlayDefinition.enabled && overlayDefinition.loaded && m_OverlayTexture.IsLoaded();
         m_TerrainShader->SetInt("uUseOverlay", overlayReady ? 1 : 0);
-        m_TerrainShader->SetFloat("uOverlayOpacity", m_GeoImage.opacity);
+        m_TerrainShader->SetFloat("uOverlayOpacity", overlayDefinition.opacity);
         m_TerrainShader->SetVec2("uOverlayOrigin", overlayOrigin);
         m_TerrainShader->SetVec2("uOverlayAxisU", overlayAxisU);
         m_TerrainShader->SetVec2("uOverlayAxisV", overlayAxisV);
@@ -155,39 +161,154 @@ void Application::Render()
     m_Window.SwapBuffers();
 }
 
-bool Application::LoadStartupTerrain()
+void Application::InitializeProject()
 {
-    m_TerrainPoints.clear();
-    if (!TerrainImporter::LoadCSV(m_TerrainPath, m_TerrainPoints))
+    TerrainDataset dataset;
+    dataset.name = "Terrain 1";
+    dataset.path = "assets/data/sample_terrain.csv";
+    dataset.settings.gridResolutionX = 64;
+    dataset.settings.gridResolutionZ = 64;
+    dataset.settings.heightScale = 1.0f;
+
+    OverlayEntry overlay;
+    overlay.name = "Overlay 1";
+    overlay.image.opacity = 0.85f;
+    dataset.overlays.push_back(overlay);
+
+    m_TerrainDatasets.push_back(dataset);
+    m_ActiveTerrainIndex = 0;
+    m_StatusMessage = "Project initialized.";
+}
+
+TerrainDataset* Application::GetActiveTerrainDataset()
+{
+    if (m_ActiveTerrainIndex < 0 || m_ActiveTerrainIndex >= static_cast<int>(m_TerrainDatasets.size()))
     {
-        std::cerr << "Could not load terrain CSV: " << m_TerrainPath << '\n';
+        return nullptr;
+    }
+
+    return &m_TerrainDatasets[static_cast<size_t>(m_ActiveTerrainIndex)];
+}
+
+const TerrainDataset* Application::GetActiveTerrainDataset() const
+{
+    if (m_ActiveTerrainIndex < 0 || m_ActiveTerrainIndex >= static_cast<int>(m_TerrainDatasets.size()))
+    {
+        return nullptr;
+    }
+
+    return &m_TerrainDatasets[static_cast<size_t>(m_ActiveTerrainIndex)];
+}
+
+OverlayEntry* Application::GetActiveOverlayEntry()
+{
+    TerrainDataset* dataset = GetActiveTerrainDataset();
+    if (dataset == nullptr || dataset->activeOverlayIndex < 0 ||
+        dataset->activeOverlayIndex >= static_cast<int>(dataset->overlays.size()))
+    {
+        return nullptr;
+    }
+
+    return &dataset->overlays[static_cast<size_t>(dataset->activeOverlayIndex)];
+}
+
+const OverlayEntry* Application::GetActiveOverlayEntry() const
+{
+    const TerrainDataset* dataset = GetActiveTerrainDataset();
+    if (dataset == nullptr || dataset->activeOverlayIndex < 0 ||
+        dataset->activeOverlayIndex >= static_cast<int>(dataset->overlays.size()))
+    {
+        return nullptr;
+    }
+
+    return &dataset->overlays[static_cast<size_t>(dataset->activeOverlayIndex)];
+}
+
+bool Application::LoadTerrainDataset(TerrainDataset& dataset)
+{
+    dataset.points.clear();
+    if (!TerrainImporter::LoadCSV(dataset.path, dataset.points))
+    {
+        std::cerr << "Could not load terrain CSV: " << dataset.path << '\n';
+        m_StatusMessage = "Failed to load terrain: " + dataset.path;
         return false;
     }
 
-    if (m_TerrainPoints.empty())
+    if (dataset.points.empty())
+    {
+        m_StatusMessage = "Terrain file contained no valid points.";
+        return false;
+    }
+
+    dataset.geoReference.originLatitude = dataset.points.front().latitude;
+    dataset.geoReference.originLongitude = dataset.points.front().longitude;
+    dataset.geoReference.originHeight = dataset.points.front().height;
+    dataset.loaded = true;
+
+    for (auto& overlay : dataset.overlays)
+    {
+        ResetOverlayToTerrainBounds(overlay.image, dataset.points);
+    }
+
+    m_StatusMessage = "Loaded terrain: " + dataset.name;
+    return true;
+}
+
+bool Application::ActivateTerrainDataset(int index)
+{
+    if (index < 0 || index >= static_cast<int>(m_TerrainDatasets.size()))
     {
         return false;
     }
 
-    m_GeoReference.originLatitude = m_TerrainPoints.front().latitude;
-    m_GeoReference.originLongitude = m_TerrainPoints.front().longitude;
-    m_GeoReference.originHeight = m_TerrainPoints.front().height;
+    m_ActiveTerrainIndex = index;
+    TerrainDataset& dataset = m_TerrainDatasets[static_cast<size_t>(index)];
+    if (!dataset.loaded && !LoadTerrainDataset(dataset))
+    {
+        return false;
+    }
 
-    ResetOverlayToTerrainBounds();
+    LoadActiveTerrainIntoScene();
+
+    if (!LoadActiveOverlayImage())
+    {
+        m_OverlayTexture.Reset();
+    }
+
     return RebuildTerrain();
 }
 
-bool Application::LoadOverlayImage()
+bool Application::LoadOverlayImage(OverlayEntry& overlay)
 {
-    if (m_GeoImage.imagePath.empty())
+    if (overlay.image.imagePath.empty())
     {
+        overlay.image.loaded = false;
         m_OverlayTexture.Reset();
-        m_GeoImage.loaded = false;
+        m_StatusMessage = "Overlay path is empty.";
         return false;
     }
 
-    m_GeoImage.loaded = m_OverlayTexture.LoadFromFile(m_GeoImage.imagePath);
-    return m_GeoImage.loaded;
+    overlay.image.loaded = m_OverlayTexture.LoadFromFile(overlay.image.imagePath);
+    if (!overlay.image.loaded)
+    {
+        m_StatusMessage = "Failed to load overlay: " + overlay.image.imagePath;
+        return false;
+    }
+
+    m_StatusMessage = "Loaded overlay: " + overlay.name;
+    return true;
+}
+
+bool Application::LoadActiveOverlayImage()
+{
+    OverlayEntry* overlay = GetActiveOverlayEntry();
+    if (overlay == nullptr)
+    {
+        m_OverlayTexture.Reset();
+        return false;
+    }
+
+    return LoadOverlayImage(*overlay);
 }
 
 bool Application::RebuildTerrain()
@@ -202,12 +323,14 @@ bool Application::RebuildTerrain()
     }
 
     m_TerrainMesh = std::make_unique<Mesh>(meshData);
+    m_StatusMessage = "Terrain mesh rebuilt.";
     return true;
 }
 
-void Application::ResetOverlayToTerrainBounds()
+void Application::ResetOverlayToTerrainBounds(GeoImageDefinition& imageDefinition,
+                                              const std::vector<TerrainPoint>& points) const
 {
-    if (m_TerrainPoints.empty())
+    if (points.empty())
     {
         return;
     }
@@ -217,7 +340,7 @@ void Application::ResetOverlayToTerrainBounds()
     double minLongitude = std::numeric_limits<double>::max();
     double maxLongitude = std::numeric_limits<double>::lowest();
 
-    for (const auto& point : m_TerrainPoints)
+    for (const auto& point : points)
     {
         minLatitude = std::min(minLatitude, point.latitude);
         maxLatitude = std::max(maxLatitude, point.latitude);
@@ -225,10 +348,109 @@ void Application::ResetOverlayToTerrainBounds()
         maxLongitude = std::max(maxLongitude, point.longitude);
     }
 
-    m_GeoImage.topLeft = {maxLatitude, minLongitude};
-    m_GeoImage.topRight = {maxLatitude, maxLongitude};
-    m_GeoImage.bottomLeft = {minLatitude, minLongitude};
-    m_GeoImage.bottomRight = {minLatitude, maxLongitude};
+    imageDefinition.topLeft = {maxLatitude, minLongitude};
+    imageDefinition.topRight = {maxLatitude, maxLongitude};
+    imageDefinition.bottomLeft = {minLatitude, minLongitude};
+    imageDefinition.bottomRight = {minLatitude, maxLongitude};
+}
+
+void Application::ResetOverlayToTerrainBounds(GeoImageDefinition& imageDefinition) const
+{
+    ResetOverlayToTerrainBounds(imageDefinition, m_TerrainPoints);
+}
+
+void Application::LoadActiveTerrainIntoScene()
+{
+    const TerrainDataset* dataset = GetActiveTerrainDataset();
+    if (dataset == nullptr)
+    {
+        return;
+    }
+
+    m_TerrainPoints = dataset->points;
+    m_GeoReference = dataset->geoReference;
+    m_TerrainSettings = dataset->settings;
+}
+
+void Application::RenderMainMenuBar()
+{
+    if (!ImGui::BeginMainMenuBar())
+    {
+        return;
+    }
+
+    if (ImGui::BeginMenu("File"))
+    {
+        if (ImGui::MenuItem("Reload Active Terrain"))
+        {
+            TerrainDataset* dataset = GetActiveTerrainDataset();
+            if (dataset != nullptr && LoadTerrainDataset(*dataset))
+            {
+                LoadActiveTerrainIntoScene();
+                RebuildTerrain();
+            }
+        }
+
+        if (ImGui::MenuItem("Reload Active Overlay"))
+        {
+            LoadActiveOverlayImage();
+        }
+        ImGui::EndMenu();
+    }
+
+    if (ImGui::BeginMenu("Terrain"))
+    {
+        if (ImGui::MenuItem("Add Terrain Dataset"))
+        {
+            TerrainDataset dataset;
+            dataset.name = "Terrain " + std::to_string(m_TerrainDatasets.size() + 1);
+            dataset.path = "assets/data/sample_terrain.csv";
+            OverlayEntry overlay;
+            overlay.name = "Overlay 1";
+            dataset.overlays.push_back(overlay);
+            m_TerrainDatasets.push_back(dataset);
+            ActivateTerrainDataset(static_cast<int>(m_TerrainDatasets.size()) - 1);
+        }
+
+        if (ImGui::MenuItem("Next Terrain", nullptr, false, m_TerrainDatasets.size() > 1))
+        {
+            const int nextIndex = (m_ActiveTerrainIndex + 1) % static_cast<int>(m_TerrainDatasets.size());
+            ActivateTerrainDataset(nextIndex);
+        }
+        ImGui::EndMenu();
+    }
+
+    if (ImGui::BeginMenu("Overlay"))
+    {
+        if (ImGui::MenuItem("Add Overlay To Active Terrain"))
+        {
+            TerrainDataset* dataset = GetActiveTerrainDataset();
+            if (dataset != nullptr)
+            {
+                OverlayEntry overlay;
+                overlay.name = "Overlay " + std::to_string(dataset->overlays.size() + 1);
+                ResetOverlayToTerrainBounds(overlay.image);
+                dataset->overlays.push_back(overlay);
+                dataset->activeOverlayIndex = static_cast<int>(dataset->overlays.size()) - 1;
+                m_OverlayTexture.Reset();
+                m_StatusMessage = "Added overlay slot to active terrain.";
+            }
+        }
+
+        if (ImGui::MenuItem("Next Overlay", nullptr, false, GetActiveTerrainDataset() != nullptr &&
+                                                           GetActiveTerrainDataset()->overlays.size() > 1))
+        {
+            TerrainDataset* dataset = GetActiveTerrainDataset();
+            if (dataset != nullptr)
+            {
+                dataset->activeOverlayIndex = (dataset->activeOverlayIndex + 1) % static_cast<int>(dataset->overlays.size());
+                LoadActiveOverlayImage();
+            }
+        }
+        ImGui::EndMenu();
+    }
+
+    ImGui::EndMainMenuBar();
 }
 
 void Application::SetupImGui()
@@ -264,11 +486,71 @@ void Application::RenderEditor()
     ImGui::Text("Custom terrain-mapping FPS engine starter");
     ImGui::Separator();
 
-    char pathBuffer[512];
-    std::snprintf(pathBuffer, sizeof(pathBuffer), "%s", m_TerrainPath.c_str());
-    if (ImGui::InputText("Terrain CSV", pathBuffer, sizeof(pathBuffer)))
+    TerrainDataset* activeTerrain = GetActiveTerrainDataset();
+    OverlayEntry* activeOverlay = GetActiveOverlayEntry();
+
+    if (activeTerrain == nullptr)
     {
-        m_TerrainPath = pathBuffer;
+        ImGui::Text("No terrain datasets available.");
+        ImGui::End();
+        return;
+    }
+
+    if (!m_StatusMessage.empty())
+    {
+        ImGui::TextWrapped("Status: %s", m_StatusMessage.c_str());
+        ImGui::Separator();
+    }
+
+    if (ImGui::CollapsingHeader("Terrain Datasets", ImGuiTreeNodeFlags_DefaultOpen))
+    {
+        for (int i = 0; i < static_cast<int>(m_TerrainDatasets.size()); ++i)
+        {
+            TerrainDataset& dataset = m_TerrainDatasets[static_cast<size_t>(i)];
+            const bool selected = i == m_ActiveTerrainIndex;
+            if (ImGui::Selectable(dataset.name.c_str(), selected) && !selected)
+            {
+                ActivateTerrainDataset(i);
+                activeTerrain = GetActiveTerrainDataset();
+                activeOverlay = GetActiveOverlayEntry();
+            }
+        }
+
+        char terrainNameBuffer[256];
+        std::snprintf(terrainNameBuffer, sizeof(terrainNameBuffer), "%s", activeTerrain->name.c_str());
+        if (ImGui::InputText("Terrain Name", terrainNameBuffer, sizeof(terrainNameBuffer)))
+        {
+            activeTerrain->name = terrainNameBuffer;
+        }
+
+        char pathBuffer[512];
+        std::snprintf(pathBuffer, sizeof(pathBuffer), "%s", activeTerrain->path.c_str());
+        if (ImGui::InputText("Terrain CSV", pathBuffer, sizeof(pathBuffer)))
+        {
+            activeTerrain->path = pathBuffer;
+        }
+
+        if (ImGui::Button("Load Active Terrain"))
+        {
+            if (LoadTerrainDataset(*activeTerrain))
+            {
+                LoadActiveTerrainIntoScene();
+                RebuildTerrain();
+            }
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Add Terrain Dataset"))
+        {
+            TerrainDataset dataset;
+            dataset.name = "Terrain " + std::to_string(m_TerrainDatasets.size() + 1);
+            dataset.path = activeTerrain->path;
+            dataset.settings = activeTerrain->settings;
+            dataset.overlays.push_back(OverlayEntry {});
+            m_TerrainDatasets.push_back(dataset);
+            ActivateTerrainDataset(static_cast<int>(m_TerrainDatasets.size()) - 1);
+            activeTerrain = GetActiveTerrainDataset();
+            activeOverlay = GetActiveOverlayEntry();
+        }
     }
 
     ImGui::InputDouble("Origin Latitude", &m_GeoReference.originLatitude, 0.0, 0.0, "%.8f");
@@ -280,51 +562,99 @@ void Application::RenderEditor()
 
     if (ImGui::Button("Reload Terrain"))
     {
-        LoadStartupTerrain();
+        if (LoadTerrainDataset(*activeTerrain))
+        {
+            LoadActiveTerrainIntoScene();
+            RebuildTerrain();
+        }
     }
     ImGui::SameLine();
     if (ImGui::Button("Rebuild Mesh"))
     {
+        activeTerrain->geoReference = m_GeoReference;
+        activeTerrain->settings = m_TerrainSettings;
         RebuildTerrain();
     }
 
     ImGui::Separator();
     ImGui::Text("Aerial Image Overlay");
 
-    char imagePathBuffer[512];
-    std::snprintf(imagePathBuffer, sizeof(imagePathBuffer), "%s", m_GeoImage.imagePath.c_str());
-    if (ImGui::InputText("Image Path", imagePathBuffer, sizeof(imagePathBuffer)))
+    if (ImGui::CollapsingHeader("Overlay Library", ImGuiTreeNodeFlags_DefaultOpen))
     {
-        m_GeoImage.imagePath = imagePathBuffer;
+        if (activeTerrain != nullptr)
+        {
+            for (int i = 0; i < static_cast<int>(activeTerrain->overlays.size()); ++i)
+            {
+                OverlayEntry& overlay = activeTerrain->overlays[static_cast<size_t>(i)];
+                const bool selected = i == activeTerrain->activeOverlayIndex;
+                if (ImGui::Selectable(overlay.name.c_str(), selected) && !selected)
+                {
+                    activeTerrain->activeOverlayIndex = i;
+                    LoadActiveOverlayImage();
+                    activeOverlay = GetActiveOverlayEntry();
+                }
+            }
+
+            if (ImGui::Button("Add Overlay Slot"))
+            {
+                OverlayEntry overlay;
+                overlay.name = "Overlay " + std::to_string(activeTerrain->overlays.size() + 1);
+                ResetOverlayToTerrainBounds(overlay.image);
+                activeTerrain->overlays.push_back(overlay);
+                activeTerrain->activeOverlayIndex = static_cast<int>(activeTerrain->overlays.size()) - 1;
+                activeOverlay = GetActiveOverlayEntry();
+                m_OverlayTexture.Reset();
+            }
+        }
     }
 
-    ImGui::Checkbox("Enable Overlay", &m_GeoImage.enabled);
-    ImGui::SliderFloat("Overlay Opacity", &m_GeoImage.opacity, 0.0f, 1.0f);
-
-    ImGui::InputDouble("Top Left Lat", &m_GeoImage.topLeft.latitude, 0.0, 0.0, "%.8f");
-    ImGui::InputDouble("Top Left Lon", &m_GeoImage.topLeft.longitude, 0.0, 0.0, "%.8f");
-    ImGui::InputDouble("Top Right Lat", &m_GeoImage.topRight.latitude, 0.0, 0.0, "%.8f");
-    ImGui::InputDouble("Top Right Lon", &m_GeoImage.topRight.longitude, 0.0, 0.0, "%.8f");
-    ImGui::InputDouble("Bottom Left Lat", &m_GeoImage.bottomLeft.latitude, 0.0, 0.0, "%.8f");
-    ImGui::InputDouble("Bottom Left Lon", &m_GeoImage.bottomLeft.longitude, 0.0, 0.0, "%.8f");
-    ImGui::InputDouble("Bottom Right Lat", &m_GeoImage.bottomRight.latitude, 0.0, 0.0, "%.8f");
-    ImGui::InputDouble("Bottom Right Lon", &m_GeoImage.bottomRight.longitude, 0.0, 0.0, "%.8f");
-
-    if (ImGui::Button("Load Overlay Image"))
+    if (activeOverlay != nullptr)
     {
-        LoadOverlayImage();
-    }
-    ImGui::SameLine();
-    if (ImGui::Button("Fit Overlay To Terrain"))
-    {
-        ResetOverlayToTerrainBounds();
+        char overlayNameBuffer[256];
+        std::snprintf(overlayNameBuffer, sizeof(overlayNameBuffer), "%s", activeOverlay->name.c_str());
+        if (ImGui::InputText("Overlay Name", overlayNameBuffer, sizeof(overlayNameBuffer)))
+        {
+            activeOverlay->name = overlayNameBuffer;
+        }
+
+        char imagePathBuffer[512];
+        std::snprintf(imagePathBuffer, sizeof(imagePathBuffer), "%s", activeOverlay->image.imagePath.c_str());
+        if (ImGui::InputText("Image Path", imagePathBuffer, sizeof(imagePathBuffer)))
+        {
+            activeOverlay->image.imagePath = imagePathBuffer;
+        }
+
+        ImGui::Checkbox("Enable Overlay", &activeOverlay->image.enabled);
+        ImGui::SliderFloat("Overlay Opacity", &activeOverlay->image.opacity, 0.0f, 1.0f);
+
+        ImGui::InputDouble("Top Left Lat", &activeOverlay->image.topLeft.latitude, 0.0, 0.0, "%.8f");
+        ImGui::InputDouble("Top Left Lon", &activeOverlay->image.topLeft.longitude, 0.0, 0.0, "%.8f");
+        ImGui::InputDouble("Top Right Lat", &activeOverlay->image.topRight.latitude, 0.0, 0.0, "%.8f");
+        ImGui::InputDouble("Top Right Lon", &activeOverlay->image.topRight.longitude, 0.0, 0.0, "%.8f");
+        ImGui::InputDouble("Bottom Left Lat", &activeOverlay->image.bottomLeft.latitude, 0.0, 0.0, "%.8f");
+        ImGui::InputDouble("Bottom Left Lon", &activeOverlay->image.bottomLeft.longitude, 0.0, 0.0, "%.8f");
+        ImGui::InputDouble("Bottom Right Lat", &activeOverlay->image.bottomRight.latitude, 0.0, 0.0, "%.8f");
+        ImGui::InputDouble("Bottom Right Lon", &activeOverlay->image.bottomRight.longitude, 0.0, 0.0, "%.8f");
+
+        if (ImGui::Button("Load Overlay Image"))
+        {
+            LoadOverlayImage(*activeOverlay);
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Fit Overlay To Terrain"))
+        {
+            ResetOverlayToTerrainBounds(activeOverlay->image);
+        }
+
+        ImGui::Text("Overlay: %s", activeOverlay->image.loaded ? "loaded" : "not loaded");
+        if (activeOverlay->image.loaded)
+        {
+            ImGui::Text("Image Size: %d x %d", m_OverlayTexture.GetWidth(), m_OverlayTexture.GetHeight());
+        }
     }
 
-    ImGui::Text("Overlay: %s", m_GeoImage.loaded ? "loaded" : "not loaded");
-    if (m_GeoImage.loaded)
-    {
-        ImGui::Text("Image Size: %d x %d", m_OverlayTexture.GetWidth(), m_OverlayTexture.GetHeight());
-    }
+    activeTerrain->geoReference = m_GeoReference;
+    activeTerrain->settings = m_TerrainSettings;
 
     ImGui::Separator();
     const glm::vec3 cameraPos = m_Camera.GetPosition();
