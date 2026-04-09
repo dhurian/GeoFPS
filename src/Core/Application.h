@@ -29,7 +29,6 @@ class Application
     void Render();
     bool LoadStartupTerrain();
     bool RebuildTerrain();
-    void FrameCameraToTerrain();
     void SetupImGui();
     void ShutdownImGui();
     void BeginImGuiFrame();

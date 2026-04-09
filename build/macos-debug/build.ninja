@@ -278,7 +278,7 @@ build bin/GeoFPS: CXX_EXECUTABLE_LINKER__GeoFPS_Debug CMakeFiles/GeoFPS.dir/src/
   LINK_FLAGS = -Wl,-search_paths_first -Wl,-headerpad_max_install_names
   LINK_LIBRARIES = _deps/glfw-build/src/libglfw3.a  _deps/glm-build/glm/libglm.a  libglad.a  libimgui.a  -framework OpenGL  -framework Cocoa  -framework IOKit  -framework CoreVideo  _deps/glfw-build/src/libglfw3.a  -framework Cocoa  -framework IOKit  -framework CoreFoundation
   OBJECT_DIR = CMakeFiles/GeoFPS.dir
-  POST_BUILD = cd /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug && /opt/homebrew/bin/cmake -E copy_directory /Users/dhurianvitoldas/Documents/Development/GeoFPS/assets /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/bin/assets && /opt/homebrew/bin/cmake -E copy_directory /Users/dhurianvitoldas/Documents/Development/GeoFPS/assets /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/assets
+  POST_BUILD = cd /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug && /opt/homebrew/bin/cmake -E copy_directory /Users/dhurianvitoldas/Documents/Development/GeoFPS/assets /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/bin/assets
   PRE_LINK = :
   TARGET_FILE = bin/GeoFPS
   TARGET_PDB = GeoFPS.dbg

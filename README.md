@@ -1,72 +1,51 @@
 # GeoFPS
 
-GeoFPS is a custom C++ starter engine for your geospatial first-person terrain-mapping project.
+GeoFPS is a custom C++ FPS-oriented terrain engine starter with geospatial terrain import.
 
-It is set up for **VS Code** and targets:
-- macOS
-- Linux
-- Windows
+## Included in this package
 
-The current template includes:
-- GLFW window creation
-- OpenGL 3.3 rendering
-- GLAD loader
-- Dear ImGui editor panel
-- FPS-style camera controls
-- CSV terrain import for `latitude,longitude,height`
-- local geospatial conversion scaffold
-- starter terrain mesh generation
+This **v0.2 terrain step 2** snapshot already includes:
 
-## Project layout
+- cross-platform VS Code + CMake project
+- macOS / Windows / Linux CMake presets
+- GLFW + GLAD + GLM + Dear ImGui
+- FPS camera controls
+- terrain CSV loading (`latitude,longitude,height`)
+- geospatial local-coordinate conversion
+- terrain mesh generation from geographic points
+- terrain rendering in OpenGL
+- no Python/Jinja2 build dependency for GLAD
 
-```text
-GeoFPS/
-  .vscode/
-  assets/
-  src/
-  CMakeLists.txt
-  CMakePresets.json
-```
+## Terrain step 2 overview
 
-## Requirements
+The terrain pipeline is:
 
-### All platforms
-- CMake 3.24+
-- Ninja
-- Git
-- VS Code
-- C/C++ compiler with C++20 support
+1. `TerrainImporter::LoadCSV(...)`
+2. `GeoConverter::ToLocal(...)`
+3. `TerrainMeshBuilder::BuildFromGeographicPoints(...)`
+4. `Application::RebuildTerrain()`
 
-### macOS
-- Xcode Command Line Tools
+### Coordinate convention
 
-Install quickly:
-```bash
-xcode-select --install
-brew install cmake ninja git
-```
+- `X = East`
+- `Y = Up`
+- `Z = North`
 
-### Linux
-Ubuntu/Debian example:
-```bash
-sudo apt update
-sudo apt install -y build-essential cmake ninja-build git libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libgl1-mesa-dev
-```
+`GeoConverter` uses a local geospatial origin stored in `GeoReference` and converts
+latitude/longitude/height into local engine-space meters.
 
-### Windows
-Recommended:
-- Visual Studio 2022 Build Tools or Visual Studio Community with C++ workload
-- CMake
-- Ninja
-- Git
+## Important files
 
-## Open in VS Code
+- `src/Core/Application.cpp`
+- `src/Math/GeoConverter.h`
+- `src/Math/GeoConverter.cpp`
+- `src/Terrain/TerrainImporter.h`
+- `src/Terrain/TerrainImporter.cpp`
+- `src/Terrain/TerrainMeshBuilder.h`
+- `src/Terrain/TerrainMeshBuilder.cpp`
+- `assets/data/sample_terrain.csv`
 
-1. Open the `GeoFPS` folder in VS Code.
-2. Install the recommended extensions when prompted.
-3. Use the CMake Tools extension, or run the VS Code tasks.
-
-## Build from terminal
+## Build
 
 ### macOS
 ```bash
@@ -92,40 +71,11 @@ cmake --build --preset windows-debug
 ## Controls
 
 - `W A S D` move
-- `Mouse` look around
-- `Shift` move faster
-- `Esc` release mouse cursor
-- `Tab` capture mouse cursor again
+- mouse look
+- `Esc` releases mouse
+- `Tab` recaptures mouse
 
-## Terrain CSV format
+## Status
 
-Place CSV files in `assets/data/`.
-
-Example:
-```csv
-latitude,longitude,height
-48.123400,11.567800,520.4
-48.123500,11.567900,521.1
-48.123600,11.568000,519.8
-```
-
-The engine currently loads `assets/data/sample_terrain.csv` at startup.
-
-## Notes
-
-- Dependencies are pulled with `FetchContent` the first time CMake configures.
-- On macOS, Apple deprecates OpenGL, but it still works for starter projects like this.
-- The terrain builder is intentionally simple in v0.1 and is meant to be replaced with a stronger interpolation and chunking pipeline next.
-
-## Next recommended steps
-
-1. Add shader-based terrain image draping.
-2. Add project JSON save/load.
-3. Add image georeference input panel.
-4. Replace the simple grid builder with chunked terrain generation.
-
-
-## Note on GLAD
-
-This project now uses a pre-generated GLAD repository through CMake `FetchContent`, so building does **not** require Python or Jinja2.
-# GeoFPS
+This package is the clean baseline for the next milestone:
+**image draping / terrain mapping overlay**.

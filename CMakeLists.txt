@@ -6,8 +6,6 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-set(CMAKE_WARN_DEPRECATED OFF CACHE BOOL "Suppress deprecation warnings from vendored dependencies" FORCE)
-set(CMAKE_SUPPRESS_DEVELOPER_WARNINGS 1 CACHE INTERNAL "Suppress developer warnings from vendored dependencies" FORCE)
 
 option(GEOFPS_BUILD_TESTS "Build tests" OFF)
 
@@ -70,7 +68,7 @@ target_include_directories(imgui PUBLIC
   ${imgui_SOURCE_DIR}
   ${imgui_SOURCE_DIR}/backends
 )
-target_link_libraries(imgui PRIVATE glfw)
+target_link_libraries(imgui PUBLIC glfw)
 target_compile_definitions(imgui PRIVATE IMGUI_IMPL_OPENGL_LOADER_GLAD)
 
 find_package(OpenGL REQUIRED)
@@ -108,7 +106,4 @@ add_custom_command(TARGET GeoFPS POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy_directory
           ${CMAKE_SOURCE_DIR}/assets
           $<TARGET_FILE_DIR:GeoFPS>/assets
-  COMMAND ${CMAKE_COMMAND} -E copy_directory
-          ${CMAKE_SOURCE_DIR}/assets
-          ${CMAKE_BINARY_DIR}/assets
 )

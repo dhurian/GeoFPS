@@ -1,0 +1,11 @@
+GeoFPS v0.2 Terrain Step 2
+
+This snapshot already contains the full terrain-step-2 pipeline:
+
+- TerrainImporter loads CSV terrain points
+- GeoConverter converts lat/lon/height to local X/Y/Z meters
+- TerrainMeshBuilder builds a terrain mesh from geographic points
+- Application loads startup terrain and rebuilds the mesh
+
+You should not need to manually copy/paste code from chat.
+Just replace your project with this folder or compare it against your local project.

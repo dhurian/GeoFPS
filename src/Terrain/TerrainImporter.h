@@ -3,10 +3,18 @@
 #include <string>
 #include <vector>
 
-#include "TerrainPoint.h"
+namespace GeoFPS
+{
+struct TerrainPoint
+{
+    double latitude {0.0};
+    double longitude {0.0};
+    double height {0.0};
+};
 
 class TerrainImporter
 {
-public:
+  public:
     static bool LoadCSV(const std::string& path, std::vector<TerrainPoint>& outPoints);
 };
+} // namespace GeoFPS
