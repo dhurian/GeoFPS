@@ -103,6 +103,24 @@ void Shader::Bind() const
     glUseProgram(m_ProgramId);
 }
 
+void Shader::SetFloat(const std::string& name, float value) const
+{
+    const int location = glGetUniformLocation(m_ProgramId, name.c_str());
+    glUniform1f(location, value);
+}
+
+void Shader::SetInt(const std::string& name, int value) const
+{
+    const int location = glGetUniformLocation(m_ProgramId, name.c_str());
+    glUniform1i(location, value);
+}
+
+void Shader::SetVec2(const std::string& name, const glm::vec2& value) const
+{
+    const int location = glGetUniformLocation(m_ProgramId, name.c_str());
+    glUniform2fv(location, 1, &value[0]);
+}
+
 void Shader::SetMat4(const std::string& name, const glm::mat4& value) const
 {
     const int location = glGetUniformLocation(m_ProgramId, name.c_str());

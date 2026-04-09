@@ -6,10 +6,16 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+set(CMAKE_WARN_DEPRECATED OFF CACHE BOOL "Suppress dependency deprecation warnings" FORCE)
+set(CMAKE_SUPPRESS_DEVELOPER_WARNINGS 1 CACHE INTERNAL "Suppress dependency developer warnings" FORCE)
 
 option(GEOFPS_BUILD_TESTS "Build tests" OFF)
 
 include(FetchContent)
+
+if(POLICY CMP0169)
+  cmake_policy(SET CMP0169 OLD)
+endif()
 
 # Dependencies
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
@@ -48,6 +54,16 @@ if(NOT glad_POPULATED)
   )
 endif()
 
+FetchContent_Declare(
+  stb
+  GIT_REPOSITORY https://github.com/nothings/stb.git
+  GIT_TAG master
+)
+FetchContent_GetProperties(stb)
+if(NOT stb_POPULATED)
+  FetchContent_Populate(stb)
+endif()
+
 # Dear ImGui
 FetchContent_Declare(
   imgui
@@ -68,7 +84,7 @@ target_include_directories(imgui PUBLIC
   ${imgui_SOURCE_DIR}
   ${imgui_SOURCE_DIR}/backends
 )
-target_link_libraries(imgui PUBLIC glfw)
+target_link_libraries(imgui PRIVATE glfw)
 target_compile_definitions(imgui PRIVATE IMGUI_IMPL_OPENGL_LOADER_GLAD)
 
 find_package(OpenGL REQUIRED)
@@ -79,7 +95,10 @@ file(GLOB_RECURSE GEOFPS_SOURCES CONFIGURE_DEPENDS
 
 add_executable(GeoFPS ${GEOFPS_SOURCES})
 
-target_include_directories(GeoFPS PRIVATE src)
+target_include_directories(GeoFPS PRIVATE
+  src
+  ${stb_SOURCE_DIR}
+)
 target_link_libraries(GeoFPS PRIVATE
   glfw
   glm
@@ -106,4 +125,7 @@ add_custom_command(TARGET GeoFPS POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy_directory
           ${CMAKE_SOURCE_DIR}/assets
           $<TARGET_FILE_DIR:GeoFPS>/assets
+  COMMAND ${CMAKE_COMMAND} -E copy_directory
+          ${CMAKE_SOURCE_DIR}/assets
+          ${CMAKE_BINARY_DIR}/assets
 )

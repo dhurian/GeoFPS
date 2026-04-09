@@ -1,0 +1,21 @@
+# ninja log v7
+0	16	1775753226844887732	stb-populate-prefix/src/stb-populate-stamp/stb-populate-mkdir	d37bf12438383b56
+0	16	1775753226844887732	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/stb-subbuild/stb-populate-prefix/src/stb-populate-stamp/stb-populate-mkdir	d37bf12438383b56
+16	1515	1775753228343279476	stb-populate-prefix/src/stb-populate-stamp/stb-populate-download	2fe9aaebe4e02308
+16	1515	1775753228343279476	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/stb-subbuild/stb-populate-prefix/src/stb-populate-stamp/stb-populate-download	2fe9aaebe4e02308
+1515	2219	1775753228344115308	stb-populate-prefix/src/stb-populate-stamp/stb-populate-update	276fcd1019eebf2d
+1515	2219	1775753228344115308	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/stb-subbuild/stb-populate-prefix/src/stb-populate-stamp/stb-populate-update	276fcd1019eebf2d
+2219	2235	1775753229063450067	stb-populate-prefix/src/stb-populate-stamp/stb-populate-patch	94f5653147b0b590
+2219	2235	1775753229063450067	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/stb-subbuild/stb-populate-prefix/src/stb-populate-stamp/stb-populate-patch	94f5653147b0b590
+2235	2250	1775753229079167508	stb-populate-prefix/src/stb-populate-stamp/stb-populate-configure	cec5c8e4f906abba
+2235	2250	1775753229079167508	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/stb-subbuild/stb-populate-prefix/src/stb-populate-stamp/stb-populate-configure	cec5c8e4f906abba
+2251	2266	1775753229094995825	stb-populate-prefix/src/stb-populate-stamp/stb-populate-build	3d01bb6686c29a7e
+2251	2266	1775753229094995825	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/stb-subbuild/stb-populate-prefix/src/stb-populate-stamp/stb-populate-build	3d01bb6686c29a7e
+2266	2283	1775753229111264390	stb-populate-prefix/src/stb-populate-stamp/stb-populate-install	c08b4ed152df1b83
+2266	2283	1775753229111264390	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/stb-subbuild/stb-populate-prefix/src/stb-populate-stamp/stb-populate-install	c08b4ed152df1b83
+2283	2300	1775753229128450913	stb-populate-prefix/src/stb-populate-stamp/stb-populate-test	858b1256de4286af
+2283	2300	1775753229128450913	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/stb-subbuild/stb-populate-prefix/src/stb-populate-stamp/stb-populate-test	858b1256de4286af
+2300	2321	1775753229149810723	CMakeFiles/stb-populate-complete	56cbf4bc0470531d
+2300	2321	1775753229149810723	stb-populate-prefix/src/stb-populate-stamp/stb-populate-done	56cbf4bc0470531d
+2300	2321	1775753229149810723	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/stb-subbuild/CMakeFiles/stb-populate-complete	56cbf4bc0470531d
+2300	2321	1775753229149810723	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/stb-subbuild/stb-populate-prefix/src/stb-populate-stamp/stb-populate-done	56cbf4bc0470531d

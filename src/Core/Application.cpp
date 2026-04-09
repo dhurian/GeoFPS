@@ -5,13 +5,25 @@
 #include "backends/imgui_impl_opengl3.h"
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include <glm/common.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <iostream>
+#include <limits>
 #include <stdexcept>
 
 namespace GeoFPS
 {
+namespace
+{
+glm::vec2 ToGroundPlane(const glm::dvec3& localPosition)
+{
+    return {static_cast<float>(localPosition.x), static_cast<float>(localPosition.z)};
+}
+} // namespace
+
 bool Application::Initialize()
 {
     if (!m_Window.Create(1600, 900, "GeoFPS"))
@@ -47,7 +59,12 @@ bool Application::Initialize()
     m_TerrainSettings.gridResolutionZ = 64;
     m_TerrainSettings.heightScale = 1.0;
 
-    return LoadStartupTerrain();
+    if (!LoadStartupTerrain())
+    {
+        return false;
+    }
+
+    return true;
 }
 
 void Application::Run()
@@ -93,12 +110,11 @@ void Application::Update(float)
 
 void Application::Render()
 {
-    BeginImGuiFrame();
-    RenderEditor();
-
     glViewport(0, 0, m_Window.GetWidth(), m_Window.GetHeight());
     glClearColor(0.08f, 0.10f, 0.14f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    BeginImGuiFrame();
 
     if (m_TerrainShader && m_TerrainMesh)
     {
@@ -107,9 +123,33 @@ void Application::Render()
         m_TerrainShader->SetMat4("uView", m_Camera.GetViewMatrix());
         m_TerrainShader->SetMat4("uProjection", m_Camera.GetProjectionMatrix());
         m_TerrainShader->SetVec3("uCameraPos", m_Camera.GetPosition());
+
+        GeoConverter converter(m_GeoReference);
+        const glm::vec2 overlayOrigin = ToGroundPlane(
+            converter.ToLocal(m_GeoImage.topLeft.latitude, m_GeoImage.topLeft.longitude, m_GeoReference.originHeight));
+        const glm::vec2 overlayAxisU = ToGroundPlane(
+            converter.ToLocal(m_GeoImage.topRight.latitude, m_GeoImage.topRight.longitude, m_GeoReference.originHeight)) -
+            overlayOrigin;
+        const glm::vec2 overlayAxisV = ToGroundPlane(
+            converter.ToLocal(m_GeoImage.bottomLeft.latitude, m_GeoImage.bottomLeft.longitude, m_GeoReference.originHeight)) -
+            overlayOrigin;
+
+        const bool overlayReady = m_GeoImage.enabled && m_GeoImage.loaded && m_OverlayTexture.IsLoaded();
+        m_TerrainShader->SetInt("uUseOverlay", overlayReady ? 1 : 0);
+        m_TerrainShader->SetFloat("uOverlayOpacity", m_GeoImage.opacity);
+        m_TerrainShader->SetVec2("uOverlayOrigin", overlayOrigin);
+        m_TerrainShader->SetVec2("uOverlayAxisU", overlayAxisU);
+        m_TerrainShader->SetVec2("uOverlayAxisV", overlayAxisV);
+        m_TerrainShader->SetInt("uOverlayTexture", 0);
+        if (overlayReady)
+        {
+            m_OverlayTexture.Bind(0);
+        }
+
         m_TerrainMesh->Draw();
     }
 
+    RenderEditor();
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     m_Window.SwapBuffers();
@@ -133,7 +173,21 @@ bool Application::LoadStartupTerrain()
     m_GeoReference.originLongitude = m_TerrainPoints.front().longitude;
     m_GeoReference.originHeight = m_TerrainPoints.front().height;
 
+    ResetOverlayToTerrainBounds();
     return RebuildTerrain();
+}
+
+bool Application::LoadOverlayImage()
+{
+    if (m_GeoImage.imagePath.empty())
+    {
+        m_OverlayTexture.Reset();
+        m_GeoImage.loaded = false;
+        return false;
+    }
+
+    m_GeoImage.loaded = m_OverlayTexture.LoadFromFile(m_GeoImage.imagePath);
+    return m_GeoImage.loaded;
 }
 
 bool Application::RebuildTerrain()
@@ -151,13 +205,43 @@ bool Application::RebuildTerrain()
     return true;
 }
 
+void Application::ResetOverlayToTerrainBounds()
+{
+    if (m_TerrainPoints.empty())
+    {
+        return;
+    }
+
+    double minLatitude = std::numeric_limits<double>::max();
+    double maxLatitude = std::numeric_limits<double>::lowest();
+    double minLongitude = std::numeric_limits<double>::max();
+    double maxLongitude = std::numeric_limits<double>::lowest();
+
+    for (const auto& point : m_TerrainPoints)
+    {
+        minLatitude = std::min(minLatitude, point.latitude);
+        maxLatitude = std::max(maxLatitude, point.latitude);
+        minLongitude = std::min(minLongitude, point.longitude);
+        maxLongitude = std::max(maxLongitude, point.longitude);
+    }
+
+    m_GeoImage.topLeft = {maxLatitude, minLongitude};
+    m_GeoImage.topRight = {maxLatitude, maxLongitude};
+    m_GeoImage.bottomLeft = {minLatitude, minLongitude};
+    m_GeoImage.bottomRight = {minLatitude, maxLongitude};
+}
+
 void Application::SetupImGui()
 {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGui::StyleColorsDark();
     ImGui_ImplGlfw_InitForOpenGL(m_Window.GetNativeHandle(), true);
+#ifdef __APPLE__
+    ImGui_ImplOpenGL3_Init("#version 150");
+#else
     ImGui_ImplOpenGL3_Init("#version 330");
+#endif
 }
 
 void Application::ShutdownImGui()
@@ -202,6 +286,44 @@ void Application::RenderEditor()
     if (ImGui::Button("Rebuild Mesh"))
     {
         RebuildTerrain();
+    }
+
+    ImGui::Separator();
+    ImGui::Text("Aerial Image Overlay");
+
+    char imagePathBuffer[512];
+    std::snprintf(imagePathBuffer, sizeof(imagePathBuffer), "%s", m_GeoImage.imagePath.c_str());
+    if (ImGui::InputText("Image Path", imagePathBuffer, sizeof(imagePathBuffer)))
+    {
+        m_GeoImage.imagePath = imagePathBuffer;
+    }
+
+    ImGui::Checkbox("Enable Overlay", &m_GeoImage.enabled);
+    ImGui::SliderFloat("Overlay Opacity", &m_GeoImage.opacity, 0.0f, 1.0f);
+
+    ImGui::InputDouble("Top Left Lat", &m_GeoImage.topLeft.latitude, 0.0, 0.0, "%.8f");
+    ImGui::InputDouble("Top Left Lon", &m_GeoImage.topLeft.longitude, 0.0, 0.0, "%.8f");
+    ImGui::InputDouble("Top Right Lat", &m_GeoImage.topRight.latitude, 0.0, 0.0, "%.8f");
+    ImGui::InputDouble("Top Right Lon", &m_GeoImage.topRight.longitude, 0.0, 0.0, "%.8f");
+    ImGui::InputDouble("Bottom Left Lat", &m_GeoImage.bottomLeft.latitude, 0.0, 0.0, "%.8f");
+    ImGui::InputDouble("Bottom Left Lon", &m_GeoImage.bottomLeft.longitude, 0.0, 0.0, "%.8f");
+    ImGui::InputDouble("Bottom Right Lat", &m_GeoImage.bottomRight.latitude, 0.0, 0.0, "%.8f");
+    ImGui::InputDouble("Bottom Right Lon", &m_GeoImage.bottomRight.longitude, 0.0, 0.0, "%.8f");
+
+    if (ImGui::Button("Load Overlay Image"))
+    {
+        LoadOverlayImage();
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Fit Overlay To Terrain"))
+    {
+        ResetOverlayToTerrainBounds();
+    }
+
+    ImGui::Text("Overlay: %s", m_GeoImage.loaded ? "loaded" : "not loaded");
+    if (m_GeoImage.loaded)
+    {
+        ImGui::Text("Image Size: %d x %d", m_OverlayTexture.GetWidth(), m_OverlayTexture.GetHeight());
     }
 
     ImGui::Separator();

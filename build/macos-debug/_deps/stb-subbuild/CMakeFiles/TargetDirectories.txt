@@ -1,0 +1,3 @@
+/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/stb-subbuild/CMakeFiles/stb-populate.dir
+/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/stb-subbuild/CMakeFiles/edit_cache.dir
+/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/stb-subbuild/CMakeFiles/rebuild_cache.dir
