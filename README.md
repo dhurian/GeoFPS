@@ -128,3 +128,4 @@ The engine currently loads `assets/data/sample_terrain.csv` at startup.
 ## Note on GLAD
 
 This project now uses a pre-generated GLAD repository through CMake `FetchContent`, so building does **not** require Python or Jinja2.
+# GeoFPS

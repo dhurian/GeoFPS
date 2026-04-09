@@ -56,8 +56,6 @@ build CMakeFiles/glad.dir/_deps/glad-src/src/glad.c.o: C_COMPILER__glad_unscanne
   INCLUDES = -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glad-src/include
   OBJECT_DIR = CMakeFiles/glad.dir
   OBJECT_FILE_DIR = CMakeFiles/glad.dir/_deps/glad-src/src
-  TARGET_COMPILE_PDB = CMakeFiles/glad.dir/glad.pdb
-  TARGET_PDB = libglad.pdb
   TARGET_SUPPORT_DIR = CMakeFiles/glad.dir
 
 
@@ -75,9 +73,8 @@ build libglad.a: C_STATIC_LIBRARY_LINKER__glad_Debug CMakeFiles/glad.dir/_deps/g
   OBJECT_DIR = CMakeFiles/glad.dir
   POST_BUILD = :
   PRE_LINK = :
-  TARGET_COMPILE_PDB = CMakeFiles/glad.dir/glad.pdb
   TARGET_FILE = libglad.a
-  TARGET_PDB = libglad.pdb
+  TARGET_PDB = glad.a.dbg
   TARGET_SUPPORT_DIR = CMakeFiles/glad.dir
 
 # =============================================================================
@@ -97,8 +94,6 @@ build CMakeFiles/imgui.dir/_deps/imgui-src/imgui.cpp.o: CXX_COMPILER__imgui_unsc
   INCLUDES = -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src/backends -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/include
   OBJECT_DIR = CMakeFiles/imgui.dir
   OBJECT_FILE_DIR = CMakeFiles/imgui.dir/_deps/imgui-src
-  TARGET_COMPILE_PDB = CMakeFiles/imgui.dir/imgui.pdb
-  TARGET_PDB = libimgui.pdb
   TARGET_SUPPORT_DIR = CMakeFiles/imgui.dir
 
 build CMakeFiles/imgui.dir/_deps/imgui-src/imgui_draw.cpp.o: CXX_COMPILER__imgui_unscanned_Debug /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src/imgui_draw.cpp || cmake_object_order_depends_target_imgui
@@ -109,8 +104,6 @@ build CMakeFiles/imgui.dir/_deps/imgui-src/imgui_draw.cpp.o: CXX_COMPILER__imgui
   INCLUDES = -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src/backends -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/include
   OBJECT_DIR = CMakeFiles/imgui.dir
   OBJECT_FILE_DIR = CMakeFiles/imgui.dir/_deps/imgui-src
-  TARGET_COMPILE_PDB = CMakeFiles/imgui.dir/imgui.pdb
-  TARGET_PDB = libimgui.pdb
   TARGET_SUPPORT_DIR = CMakeFiles/imgui.dir
 
 build CMakeFiles/imgui.dir/_deps/imgui-src/imgui_tables.cpp.o: CXX_COMPILER__imgui_unscanned_Debug /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src/imgui_tables.cpp || cmake_object_order_depends_target_imgui
@@ -121,8 +114,6 @@ build CMakeFiles/imgui.dir/_deps/imgui-src/imgui_tables.cpp.o: CXX_COMPILER__img
   INCLUDES = -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src/backends -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/include
   OBJECT_DIR = CMakeFiles/imgui.dir
   OBJECT_FILE_DIR = CMakeFiles/imgui.dir/_deps/imgui-src
-  TARGET_COMPILE_PDB = CMakeFiles/imgui.dir/imgui.pdb
-  TARGET_PDB = libimgui.pdb
   TARGET_SUPPORT_DIR = CMakeFiles/imgui.dir
 
 build CMakeFiles/imgui.dir/_deps/imgui-src/imgui_widgets.cpp.o: CXX_COMPILER__imgui_unscanned_Debug /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src/imgui_widgets.cpp || cmake_object_order_depends_target_imgui
@@ -133,8 +124,6 @@ build CMakeFiles/imgui.dir/_deps/imgui-src/imgui_widgets.cpp.o: CXX_COMPILER__im
   INCLUDES = -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src/backends -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/include
   OBJECT_DIR = CMakeFiles/imgui.dir
   OBJECT_FILE_DIR = CMakeFiles/imgui.dir/_deps/imgui-src
-  TARGET_COMPILE_PDB = CMakeFiles/imgui.dir/imgui.pdb
-  TARGET_PDB = libimgui.pdb
   TARGET_SUPPORT_DIR = CMakeFiles/imgui.dir
 
 build CMakeFiles/imgui.dir/_deps/imgui-src/backends/imgui_impl_glfw.cpp.o: CXX_COMPILER__imgui_unscanned_Debug /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src/backends/imgui_impl_glfw.cpp || cmake_object_order_depends_target_imgui
@@ -145,8 +134,6 @@ build CMakeFiles/imgui.dir/_deps/imgui-src/backends/imgui_impl_glfw.cpp.o: CXX_C
   INCLUDES = -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src/backends -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/include
   OBJECT_DIR = CMakeFiles/imgui.dir
   OBJECT_FILE_DIR = CMakeFiles/imgui.dir/_deps/imgui-src/backends
-  TARGET_COMPILE_PDB = CMakeFiles/imgui.dir/imgui.pdb
-  TARGET_PDB = libimgui.pdb
   TARGET_SUPPORT_DIR = CMakeFiles/imgui.dir
 
 build CMakeFiles/imgui.dir/_deps/imgui-src/backends/imgui_impl_opengl3.cpp.o: CXX_COMPILER__imgui_unscanned_Debug /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src/backends/imgui_impl_opengl3.cpp || cmake_object_order_depends_target_imgui
@@ -157,8 +144,6 @@ build CMakeFiles/imgui.dir/_deps/imgui-src/backends/imgui_impl_opengl3.cpp.o: CX
   INCLUDES = -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src/backends -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/include
   OBJECT_DIR = CMakeFiles/imgui.dir
   OBJECT_FILE_DIR = CMakeFiles/imgui.dir/_deps/imgui-src/backends
-  TARGET_COMPILE_PDB = CMakeFiles/imgui.dir/imgui.pdb
-  TARGET_PDB = libimgui.pdb
   TARGET_SUPPORT_DIR = CMakeFiles/imgui.dir
 
 
@@ -176,9 +161,8 @@ build libimgui.a: CXX_STATIC_LIBRARY_LINKER__imgui_Debug CMakeFiles/imgui.dir/_d
   OBJECT_DIR = CMakeFiles/imgui.dir
   POST_BUILD = :
   PRE_LINK = :
-  TARGET_COMPILE_PDB = CMakeFiles/imgui.dir/imgui.pdb
   TARGET_FILE = libimgui.a
-  TARGET_PDB = libimgui.pdb
+  TARGET_PDB = imgui.a.dbg
   TARGET_SUPPORT_DIR = CMakeFiles/imgui.dir
 
 # =============================================================================
@@ -197,8 +181,6 @@ build CMakeFiles/GeoFPS.dir/src/Core/Application.cpp.o: CXX_COMPILER__GeoFPS_uns
   INCLUDES = -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glm-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glad-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src/backends -iframework /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks
   OBJECT_DIR = CMakeFiles/GeoFPS.dir
   OBJECT_FILE_DIR = CMakeFiles/GeoFPS.dir/src/Core
-  TARGET_COMPILE_PDB = CMakeFiles/GeoFPS.dir/
-  TARGET_PDB = bin/GeoFPS.pdb
   TARGET_SUPPORT_DIR = CMakeFiles/GeoFPS.dir
 
 build CMakeFiles/GeoFPS.dir/src/Core/Window.cpp.o: CXX_COMPILER__GeoFPS_unscanned_Debug /Users/dhurianvitoldas/Documents/Development/GeoFPS/src/Core/Window.cpp || cmake_object_order_depends_target_GeoFPS
@@ -208,8 +190,6 @@ build CMakeFiles/GeoFPS.dir/src/Core/Window.cpp.o: CXX_COMPILER__GeoFPS_unscanne
   INCLUDES = -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glm-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glad-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src/backends -iframework /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks
   OBJECT_DIR = CMakeFiles/GeoFPS.dir
   OBJECT_FILE_DIR = CMakeFiles/GeoFPS.dir/src/Core
-  TARGET_COMPILE_PDB = CMakeFiles/GeoFPS.dir/
-  TARGET_PDB = bin/GeoFPS.pdb
   TARGET_SUPPORT_DIR = CMakeFiles/GeoFPS.dir
 
 build CMakeFiles/GeoFPS.dir/src/Game/FPSController.cpp.o: CXX_COMPILER__GeoFPS_unscanned_Debug /Users/dhurianvitoldas/Documents/Development/GeoFPS/src/Game/FPSController.cpp || cmake_object_order_depends_target_GeoFPS
@@ -219,8 +199,6 @@ build CMakeFiles/GeoFPS.dir/src/Game/FPSController.cpp.o: CXX_COMPILER__GeoFPS_u
   INCLUDES = -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glm-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glad-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src/backends -iframework /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks
   OBJECT_DIR = CMakeFiles/GeoFPS.dir
   OBJECT_FILE_DIR = CMakeFiles/GeoFPS.dir/src/Game
-  TARGET_COMPILE_PDB = CMakeFiles/GeoFPS.dir/
-  TARGET_PDB = bin/GeoFPS.pdb
   TARGET_SUPPORT_DIR = CMakeFiles/GeoFPS.dir
 
 build CMakeFiles/GeoFPS.dir/src/Math/GeoConverter.cpp.o: CXX_COMPILER__GeoFPS_unscanned_Debug /Users/dhurianvitoldas/Documents/Development/GeoFPS/src/Math/GeoConverter.cpp || cmake_object_order_depends_target_GeoFPS
@@ -230,8 +208,6 @@ build CMakeFiles/GeoFPS.dir/src/Math/GeoConverter.cpp.o: CXX_COMPILER__GeoFPS_un
   INCLUDES = -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glm-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glad-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src/backends -iframework /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks
   OBJECT_DIR = CMakeFiles/GeoFPS.dir
   OBJECT_FILE_DIR = CMakeFiles/GeoFPS.dir/src/Math
-  TARGET_COMPILE_PDB = CMakeFiles/GeoFPS.dir/
-  TARGET_PDB = bin/GeoFPS.pdb
   TARGET_SUPPORT_DIR = CMakeFiles/GeoFPS.dir
 
 build CMakeFiles/GeoFPS.dir/src/Renderer/Camera.cpp.o: CXX_COMPILER__GeoFPS_unscanned_Debug /Users/dhurianvitoldas/Documents/Development/GeoFPS/src/Renderer/Camera.cpp || cmake_object_order_depends_target_GeoFPS
@@ -241,8 +217,6 @@ build CMakeFiles/GeoFPS.dir/src/Renderer/Camera.cpp.o: CXX_COMPILER__GeoFPS_unsc
   INCLUDES = -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glm-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glad-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src/backends -iframework /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks
   OBJECT_DIR = CMakeFiles/GeoFPS.dir
   OBJECT_FILE_DIR = CMakeFiles/GeoFPS.dir/src/Renderer
-  TARGET_COMPILE_PDB = CMakeFiles/GeoFPS.dir/
-  TARGET_PDB = bin/GeoFPS.pdb
   TARGET_SUPPORT_DIR = CMakeFiles/GeoFPS.dir
 
 build CMakeFiles/GeoFPS.dir/src/Renderer/Mesh.cpp.o: CXX_COMPILER__GeoFPS_unscanned_Debug /Users/dhurianvitoldas/Documents/Development/GeoFPS/src/Renderer/Mesh.cpp || cmake_object_order_depends_target_GeoFPS
@@ -252,8 +226,6 @@ build CMakeFiles/GeoFPS.dir/src/Renderer/Mesh.cpp.o: CXX_COMPILER__GeoFPS_unscan
   INCLUDES = -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glm-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glad-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src/backends -iframework /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks
   OBJECT_DIR = CMakeFiles/GeoFPS.dir
   OBJECT_FILE_DIR = CMakeFiles/GeoFPS.dir/src/Renderer
-  TARGET_COMPILE_PDB = CMakeFiles/GeoFPS.dir/
-  TARGET_PDB = bin/GeoFPS.pdb
   TARGET_SUPPORT_DIR = CMakeFiles/GeoFPS.dir
 
 build CMakeFiles/GeoFPS.dir/src/Renderer/Shader.cpp.o: CXX_COMPILER__GeoFPS_unscanned_Debug /Users/dhurianvitoldas/Documents/Development/GeoFPS/src/Renderer/Shader.cpp || cmake_object_order_depends_target_GeoFPS
@@ -263,8 +235,6 @@ build CMakeFiles/GeoFPS.dir/src/Renderer/Shader.cpp.o: CXX_COMPILER__GeoFPS_unsc
   INCLUDES = -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glm-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glad-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src/backends -iframework /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks
   OBJECT_DIR = CMakeFiles/GeoFPS.dir
   OBJECT_FILE_DIR = CMakeFiles/GeoFPS.dir/src/Renderer
-  TARGET_COMPILE_PDB = CMakeFiles/GeoFPS.dir/
-  TARGET_PDB = bin/GeoFPS.pdb
   TARGET_SUPPORT_DIR = CMakeFiles/GeoFPS.dir
 
 build CMakeFiles/GeoFPS.dir/src/Terrain/TerrainImporter.cpp.o: CXX_COMPILER__GeoFPS_unscanned_Debug /Users/dhurianvitoldas/Documents/Development/GeoFPS/src/Terrain/TerrainImporter.cpp || cmake_object_order_depends_target_GeoFPS
@@ -274,8 +244,6 @@ build CMakeFiles/GeoFPS.dir/src/Terrain/TerrainImporter.cpp.o: CXX_COMPILER__Geo
   INCLUDES = -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glm-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glad-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src/backends -iframework /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks
   OBJECT_DIR = CMakeFiles/GeoFPS.dir
   OBJECT_FILE_DIR = CMakeFiles/GeoFPS.dir/src/Terrain
-  TARGET_COMPILE_PDB = CMakeFiles/GeoFPS.dir/
-  TARGET_PDB = bin/GeoFPS.pdb
   TARGET_SUPPORT_DIR = CMakeFiles/GeoFPS.dir
 
 build CMakeFiles/GeoFPS.dir/src/Terrain/TerrainMeshBuilder.cpp.o: CXX_COMPILER__GeoFPS_unscanned_Debug /Users/dhurianvitoldas/Documents/Development/GeoFPS/src/Terrain/TerrainMeshBuilder.cpp || cmake_object_order_depends_target_GeoFPS
@@ -285,8 +253,6 @@ build CMakeFiles/GeoFPS.dir/src/Terrain/TerrainMeshBuilder.cpp.o: CXX_COMPILER__
   INCLUDES = -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glm-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glad-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src/backends -iframework /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks
   OBJECT_DIR = CMakeFiles/GeoFPS.dir
   OBJECT_FILE_DIR = CMakeFiles/GeoFPS.dir/src/Terrain
-  TARGET_COMPILE_PDB = CMakeFiles/GeoFPS.dir/
-  TARGET_PDB = bin/GeoFPS.pdb
   TARGET_SUPPORT_DIR = CMakeFiles/GeoFPS.dir
 
 build CMakeFiles/GeoFPS.dir/src/main.cpp.o: CXX_COMPILER__GeoFPS_unscanned_Debug /Users/dhurianvitoldas/Documents/Development/GeoFPS/src/main.cpp || cmake_object_order_depends_target_GeoFPS
@@ -296,8 +262,6 @@ build CMakeFiles/GeoFPS.dir/src/main.cpp.o: CXX_COMPILER__GeoFPS_unscanned_Debug
   INCLUDES = -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glm-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glad-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src/backends -iframework /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks
   OBJECT_DIR = CMakeFiles/GeoFPS.dir
   OBJECT_FILE_DIR = CMakeFiles/GeoFPS.dir/src
-  TARGET_COMPILE_PDB = CMakeFiles/GeoFPS.dir/
-  TARGET_PDB = bin/GeoFPS.pdb
   TARGET_SUPPORT_DIR = CMakeFiles/GeoFPS.dir
 
 
@@ -314,11 +278,10 @@ build bin/GeoFPS: CXX_EXECUTABLE_LINKER__GeoFPS_Debug CMakeFiles/GeoFPS.dir/src/
   LINK_FLAGS = -Wl,-search_paths_first -Wl,-headerpad_max_install_names
   LINK_LIBRARIES = _deps/glfw-build/src/libglfw3.a  _deps/glm-build/glm/libglm.a  libglad.a  libimgui.a  -framework OpenGL  -framework Cocoa  -framework IOKit  -framework CoreVideo  _deps/glfw-build/src/libglfw3.a  -framework Cocoa  -framework IOKit  -framework CoreFoundation
   OBJECT_DIR = CMakeFiles/GeoFPS.dir
-  POST_BUILD = cd /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug && /opt/homebrew/bin/cmake -E copy_directory /Users/dhurianvitoldas/Documents/Development/GeoFPS/assets /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/bin/assets
+  POST_BUILD = cd /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug && /opt/homebrew/bin/cmake -E copy_directory /Users/dhurianvitoldas/Documents/Development/GeoFPS/assets /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/bin/assets && /opt/homebrew/bin/cmake -E copy_directory /Users/dhurianvitoldas/Documents/Development/GeoFPS/assets /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/assets
   PRE_LINK = :
-  TARGET_COMPILE_PDB = CMakeFiles/GeoFPS.dir/
   TARGET_FILE = bin/GeoFPS
-  TARGET_PDB = bin/GeoFPS.pdb
+  TARGET_PDB = GeoFPS.dbg
   TARGET_SUPPORT_DIR = CMakeFiles/GeoFPS.dir
 
 
@@ -493,8 +456,6 @@ build _deps/glfw-build/src/CMakeFiles/glfw.dir/context.c.o: C_COMPILER__glfw_uns
   INCLUDES = -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-build/src
   OBJECT_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
   OBJECT_FILE_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
-  TARGET_COMPILE_PDB = _deps/glfw-build/src/CMakeFiles/glfw.dir/glfw.pdb
-  TARGET_PDB = _deps/glfw-build/src/libglfw3.pdb
   TARGET_SUPPORT_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
 
 build _deps/glfw-build/src/CMakeFiles/glfw.dir/init.c.o: C_COMPILER__glfw_unscanned_Debug /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/src/init.c || cmake_object_order_depends_target_glfw
@@ -505,8 +466,6 @@ build _deps/glfw-build/src/CMakeFiles/glfw.dir/init.c.o: C_COMPILER__glfw_unscan
   INCLUDES = -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-build/src
   OBJECT_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
   OBJECT_FILE_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
-  TARGET_COMPILE_PDB = _deps/glfw-build/src/CMakeFiles/glfw.dir/glfw.pdb
-  TARGET_PDB = _deps/glfw-build/src/libglfw3.pdb
   TARGET_SUPPORT_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
 
 build _deps/glfw-build/src/CMakeFiles/glfw.dir/input.c.o: C_COMPILER__glfw_unscanned_Debug /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/src/input.c || cmake_object_order_depends_target_glfw
@@ -517,8 +476,6 @@ build _deps/glfw-build/src/CMakeFiles/glfw.dir/input.c.o: C_COMPILER__glfw_unsca
   INCLUDES = -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-build/src
   OBJECT_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
   OBJECT_FILE_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
-  TARGET_COMPILE_PDB = _deps/glfw-build/src/CMakeFiles/glfw.dir/glfw.pdb
-  TARGET_PDB = _deps/glfw-build/src/libglfw3.pdb
   TARGET_SUPPORT_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
 
 build _deps/glfw-build/src/CMakeFiles/glfw.dir/monitor.c.o: C_COMPILER__glfw_unscanned_Debug /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/src/monitor.c || cmake_object_order_depends_target_glfw
@@ -529,8 +486,6 @@ build _deps/glfw-build/src/CMakeFiles/glfw.dir/monitor.c.o: C_COMPILER__glfw_uns
   INCLUDES = -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-build/src
   OBJECT_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
   OBJECT_FILE_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
-  TARGET_COMPILE_PDB = _deps/glfw-build/src/CMakeFiles/glfw.dir/glfw.pdb
-  TARGET_PDB = _deps/glfw-build/src/libglfw3.pdb
   TARGET_SUPPORT_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
 
 build _deps/glfw-build/src/CMakeFiles/glfw.dir/platform.c.o: C_COMPILER__glfw_unscanned_Debug /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/src/platform.c || cmake_object_order_depends_target_glfw
@@ -541,8 +496,6 @@ build _deps/glfw-build/src/CMakeFiles/glfw.dir/platform.c.o: C_COMPILER__glfw_un
   INCLUDES = -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-build/src
   OBJECT_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
   OBJECT_FILE_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
-  TARGET_COMPILE_PDB = _deps/glfw-build/src/CMakeFiles/glfw.dir/glfw.pdb
-  TARGET_PDB = _deps/glfw-build/src/libglfw3.pdb
   TARGET_SUPPORT_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
 
 build _deps/glfw-build/src/CMakeFiles/glfw.dir/vulkan.c.o: C_COMPILER__glfw_unscanned_Debug /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/src/vulkan.c || cmake_object_order_depends_target_glfw
@@ -553,8 +506,6 @@ build _deps/glfw-build/src/CMakeFiles/glfw.dir/vulkan.c.o: C_COMPILER__glfw_unsc
   INCLUDES = -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-build/src
   OBJECT_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
   OBJECT_FILE_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
-  TARGET_COMPILE_PDB = _deps/glfw-build/src/CMakeFiles/glfw.dir/glfw.pdb
-  TARGET_PDB = _deps/glfw-build/src/libglfw3.pdb
   TARGET_SUPPORT_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
 
 build _deps/glfw-build/src/CMakeFiles/glfw.dir/window.c.o: C_COMPILER__glfw_unscanned_Debug /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/src/window.c || cmake_object_order_depends_target_glfw
@@ -565,8 +516,6 @@ build _deps/glfw-build/src/CMakeFiles/glfw.dir/window.c.o: C_COMPILER__glfw_unsc
   INCLUDES = -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-build/src
   OBJECT_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
   OBJECT_FILE_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
-  TARGET_COMPILE_PDB = _deps/glfw-build/src/CMakeFiles/glfw.dir/glfw.pdb
-  TARGET_PDB = _deps/glfw-build/src/libglfw3.pdb
   TARGET_SUPPORT_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
 
 build _deps/glfw-build/src/CMakeFiles/glfw.dir/egl_context.c.o: C_COMPILER__glfw_unscanned_Debug /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/src/egl_context.c || cmake_object_order_depends_target_glfw
@@ -577,8 +526,6 @@ build _deps/glfw-build/src/CMakeFiles/glfw.dir/egl_context.c.o: C_COMPILER__glfw
   INCLUDES = -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-build/src
   OBJECT_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
   OBJECT_FILE_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
-  TARGET_COMPILE_PDB = _deps/glfw-build/src/CMakeFiles/glfw.dir/glfw.pdb
-  TARGET_PDB = _deps/glfw-build/src/libglfw3.pdb
   TARGET_SUPPORT_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
 
 build _deps/glfw-build/src/CMakeFiles/glfw.dir/osmesa_context.c.o: C_COMPILER__glfw_unscanned_Debug /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/src/osmesa_context.c || cmake_object_order_depends_target_glfw
@@ -589,8 +536,6 @@ build _deps/glfw-build/src/CMakeFiles/glfw.dir/osmesa_context.c.o: C_COMPILER__g
   INCLUDES = -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-build/src
   OBJECT_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
   OBJECT_FILE_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
-  TARGET_COMPILE_PDB = _deps/glfw-build/src/CMakeFiles/glfw.dir/glfw.pdb
-  TARGET_PDB = _deps/glfw-build/src/libglfw3.pdb
   TARGET_SUPPORT_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
 
 build _deps/glfw-build/src/CMakeFiles/glfw.dir/null_init.c.o: C_COMPILER__glfw_unscanned_Debug /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/src/null_init.c || cmake_object_order_depends_target_glfw
@@ -601,8 +546,6 @@ build _deps/glfw-build/src/CMakeFiles/glfw.dir/null_init.c.o: C_COMPILER__glfw_u
   INCLUDES = -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-build/src
   OBJECT_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
   OBJECT_FILE_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
-  TARGET_COMPILE_PDB = _deps/glfw-build/src/CMakeFiles/glfw.dir/glfw.pdb
-  TARGET_PDB = _deps/glfw-build/src/libglfw3.pdb
   TARGET_SUPPORT_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
 
 build _deps/glfw-build/src/CMakeFiles/glfw.dir/null_monitor.c.o: C_COMPILER__glfw_unscanned_Debug /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/src/null_monitor.c || cmake_object_order_depends_target_glfw
@@ -613,8 +556,6 @@ build _deps/glfw-build/src/CMakeFiles/glfw.dir/null_monitor.c.o: C_COMPILER__glf
   INCLUDES = -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-build/src
   OBJECT_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
   OBJECT_FILE_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
-  TARGET_COMPILE_PDB = _deps/glfw-build/src/CMakeFiles/glfw.dir/glfw.pdb
-  TARGET_PDB = _deps/glfw-build/src/libglfw3.pdb
   TARGET_SUPPORT_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
 
 build _deps/glfw-build/src/CMakeFiles/glfw.dir/null_window.c.o: C_COMPILER__glfw_unscanned_Debug /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/src/null_window.c || cmake_object_order_depends_target_glfw
@@ -625,8 +566,6 @@ build _deps/glfw-build/src/CMakeFiles/glfw.dir/null_window.c.o: C_COMPILER__glfw
   INCLUDES = -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-build/src
   OBJECT_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
   OBJECT_FILE_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
-  TARGET_COMPILE_PDB = _deps/glfw-build/src/CMakeFiles/glfw.dir/glfw.pdb
-  TARGET_PDB = _deps/glfw-build/src/libglfw3.pdb
   TARGET_SUPPORT_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
 
 build _deps/glfw-build/src/CMakeFiles/glfw.dir/null_joystick.c.o: C_COMPILER__glfw_unscanned_Debug /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/src/null_joystick.c || cmake_object_order_depends_target_glfw
@@ -637,8 +576,6 @@ build _deps/glfw-build/src/CMakeFiles/glfw.dir/null_joystick.c.o: C_COMPILER__gl
   INCLUDES = -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-build/src
   OBJECT_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
   OBJECT_FILE_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
-  TARGET_COMPILE_PDB = _deps/glfw-build/src/CMakeFiles/glfw.dir/glfw.pdb
-  TARGET_PDB = _deps/glfw-build/src/libglfw3.pdb
   TARGET_SUPPORT_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
 
 build _deps/glfw-build/src/CMakeFiles/glfw.dir/cocoa_time.c.o: C_COMPILER__glfw_unscanned_Debug /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/src/cocoa_time.c || cmake_object_order_depends_target_glfw
@@ -649,8 +586,6 @@ build _deps/glfw-build/src/CMakeFiles/glfw.dir/cocoa_time.c.o: C_COMPILER__glfw_
   INCLUDES = -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-build/src
   OBJECT_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
   OBJECT_FILE_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
-  TARGET_COMPILE_PDB = _deps/glfw-build/src/CMakeFiles/glfw.dir/glfw.pdb
-  TARGET_PDB = _deps/glfw-build/src/libglfw3.pdb
   TARGET_SUPPORT_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
 
 build _deps/glfw-build/src/CMakeFiles/glfw.dir/posix_module.c.o: C_COMPILER__glfw_unscanned_Debug /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/src/posix_module.c || cmake_object_order_depends_target_glfw
@@ -661,8 +596,6 @@ build _deps/glfw-build/src/CMakeFiles/glfw.dir/posix_module.c.o: C_COMPILER__glf
   INCLUDES = -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-build/src
   OBJECT_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
   OBJECT_FILE_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
-  TARGET_COMPILE_PDB = _deps/glfw-build/src/CMakeFiles/glfw.dir/glfw.pdb
-  TARGET_PDB = _deps/glfw-build/src/libglfw3.pdb
   TARGET_SUPPORT_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
 
 build _deps/glfw-build/src/CMakeFiles/glfw.dir/posix_thread.c.o: C_COMPILER__glfw_unscanned_Debug /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/src/posix_thread.c || cmake_object_order_depends_target_glfw
@@ -673,8 +606,6 @@ build _deps/glfw-build/src/CMakeFiles/glfw.dir/posix_thread.c.o: C_COMPILER__glf
   INCLUDES = -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-build/src
   OBJECT_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
   OBJECT_FILE_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
-  TARGET_COMPILE_PDB = _deps/glfw-build/src/CMakeFiles/glfw.dir/glfw.pdb
-  TARGET_PDB = _deps/glfw-build/src/libglfw3.pdb
   TARGET_SUPPORT_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
 
 build _deps/glfw-build/src/CMakeFiles/glfw.dir/cocoa_init.m.o: C_COMPILER__glfw_unscanned_Debug /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/src/cocoa_init.m || cmake_object_order_depends_target_glfw
@@ -685,8 +616,6 @@ build _deps/glfw-build/src/CMakeFiles/glfw.dir/cocoa_init.m.o: C_COMPILER__glfw_
   INCLUDES = -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-build/src
   OBJECT_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
   OBJECT_FILE_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
-  TARGET_COMPILE_PDB = _deps/glfw-build/src/CMakeFiles/glfw.dir/glfw.pdb
-  TARGET_PDB = _deps/glfw-build/src/libglfw3.pdb
   TARGET_SUPPORT_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
 
 build _deps/glfw-build/src/CMakeFiles/glfw.dir/cocoa_joystick.m.o: C_COMPILER__glfw_unscanned_Debug /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/src/cocoa_joystick.m || cmake_object_order_depends_target_glfw
@@ -697,8 +626,6 @@ build _deps/glfw-build/src/CMakeFiles/glfw.dir/cocoa_joystick.m.o: C_COMPILER__g
   INCLUDES = -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-build/src
   OBJECT_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
   OBJECT_FILE_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
-  TARGET_COMPILE_PDB = _deps/glfw-build/src/CMakeFiles/glfw.dir/glfw.pdb
-  TARGET_PDB = _deps/glfw-build/src/libglfw3.pdb
   TARGET_SUPPORT_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
 
 build _deps/glfw-build/src/CMakeFiles/glfw.dir/cocoa_monitor.m.o: C_COMPILER__glfw_unscanned_Debug /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/src/cocoa_monitor.m || cmake_object_order_depends_target_glfw
@@ -709,8 +636,6 @@ build _deps/glfw-build/src/CMakeFiles/glfw.dir/cocoa_monitor.m.o: C_COMPILER__gl
   INCLUDES = -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-build/src
   OBJECT_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
   OBJECT_FILE_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
-  TARGET_COMPILE_PDB = _deps/glfw-build/src/CMakeFiles/glfw.dir/glfw.pdb
-  TARGET_PDB = _deps/glfw-build/src/libglfw3.pdb
   TARGET_SUPPORT_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
 
 build _deps/glfw-build/src/CMakeFiles/glfw.dir/cocoa_window.m.o: C_COMPILER__glfw_unscanned_Debug /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/src/cocoa_window.m || cmake_object_order_depends_target_glfw
@@ -721,8 +646,6 @@ build _deps/glfw-build/src/CMakeFiles/glfw.dir/cocoa_window.m.o: C_COMPILER__glf
   INCLUDES = -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-build/src
   OBJECT_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
   OBJECT_FILE_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
-  TARGET_COMPILE_PDB = _deps/glfw-build/src/CMakeFiles/glfw.dir/glfw.pdb
-  TARGET_PDB = _deps/glfw-build/src/libglfw3.pdb
   TARGET_SUPPORT_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
 
 build _deps/glfw-build/src/CMakeFiles/glfw.dir/nsgl_context.m.o: C_COMPILER__glfw_unscanned_Debug /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/src/nsgl_context.m || cmake_object_order_depends_target_glfw
@@ -733,8 +656,6 @@ build _deps/glfw-build/src/CMakeFiles/glfw.dir/nsgl_context.m.o: C_COMPILER__glf
   INCLUDES = -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-build/src
   OBJECT_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
   OBJECT_FILE_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
-  TARGET_COMPILE_PDB = _deps/glfw-build/src/CMakeFiles/glfw.dir/glfw.pdb
-  TARGET_PDB = _deps/glfw-build/src/libglfw3.pdb
   TARGET_SUPPORT_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
 
 
@@ -752,9 +673,8 @@ build _deps/glfw-build/src/libglfw3.a: C_STATIC_LIBRARY_LINKER__glfw_Debug _deps
   OBJECT_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
   POST_BUILD = :
   PRE_LINK = :
-  TARGET_COMPILE_PDB = _deps/glfw-build/src/CMakeFiles/glfw.dir/glfw.pdb
   TARGET_FILE = _deps/glfw-build/src/libglfw3.a
-  TARGET_PDB = _deps/glfw-build/src/libglfw3.pdb
+  TARGET_PDB = glfw3.a.dbg
   TARGET_SUPPORT_DIR = _deps/glfw-build/src/CMakeFiles/glfw.dir
 
 
@@ -929,8 +849,6 @@ build _deps/glm-build/glm/CMakeFiles/glm.dir/detail/glm.cpp.o: CXX_COMPILER__glm
   INCLUDES = -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glm-src
   OBJECT_DIR = _deps/glm-build/glm/CMakeFiles/glm.dir
   OBJECT_FILE_DIR = _deps/glm-build/glm/CMakeFiles/glm.dir/detail
-  TARGET_COMPILE_PDB = _deps/glm-build/glm/CMakeFiles/glm.dir/glm.pdb
-  TARGET_PDB = _deps/glm-build/glm/libglm.pdb
   TARGET_SUPPORT_DIR = _deps/glm-build/glm/CMakeFiles/glm.dir
 
 
@@ -948,9 +866,8 @@ build _deps/glm-build/glm/libglm.a: CXX_STATIC_LIBRARY_LINKER__glm_Debug _deps/g
   OBJECT_DIR = _deps/glm-build/glm/CMakeFiles/glm.dir
   POST_BUILD = :
   PRE_LINK = :
-  TARGET_COMPILE_PDB = _deps/glm-build/glm/CMakeFiles/glm.dir/glm.pdb
   TARGET_FILE = _deps/glm-build/glm/libglm.a
-  TARGET_PDB = _deps/glm-build/glm/libglm.pdb
+  TARGET_PDB = glm.a.dbg
   TARGET_SUPPORT_DIR = _deps/glm-build/glm/CMakeFiles/glm.dir
 
 
@@ -1099,14 +1016,14 @@ build /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/CMak
 #############################################
 # Re-run CMake if any of its inputs changed.
 
-build build.ninja /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/cmake_install.cmake /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-build/cmake_install.cmake /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-build/src/cmake_install.cmake /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glm-build/cmake_install.cmake /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glm-build/glm/cmake_install.cmake: RERUN_CMAKE /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/CMakeFiles/cmake.verify_globs | /Users/dhurianvitoldas/Documents/Development/GeoFPS/CMakeLists.txt /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/CMakeFiles/VerifyGlobs.cmake /opt/homebrew/share/cmake/Modules/BasicConfigVersion-SameMajorVersion.cmake.in /opt/homebrew/share/cmake/Modules/CMakeCCompiler.cmake.in /opt/homebrew/share/cmake/Modules/CMakeCCompilerABI.c /opt/homebrew/share/cmake/Modules/CMakeCInformation.cmake /opt/homebrew/share/cmake/Modules/CMakeCXXCompiler.cmake.in /opt/homebrew/share/cmake/Modules/CMakeCXXCompilerABI.cpp /opt/homebrew/share/cmake/Modules/CMakeCXXInformation.cmake /opt/homebrew/share/cmake/Modules/CMakeCommonLanguageInclude.cmake /opt/homebrew/share/cmake/Modules/CMakeCompilerIdDetection.cmake /opt/homebrew/share/cmake/Modules/CMakeDependentOption.cmake /opt/homebrew/share/cmake/Modules/CMakeDetermineCCompiler.cmake /opt/homebrew/share/cmake/Modules/CMakeDetermineCXXCompiler.cmake /opt/homebrew/share/cmake/Modules/CMakeDetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/CMakeDetermineCompilerABI.cmake /opt/homebrew/share/cmake/Modules/CMakeDetermineCompilerId.cmake /opt/homebrew/share/cmake/Modules/CMakeDetermineCompilerSupport.cmake /opt/homebrew/share/cmake/Modules/CMakeDetermineSystem.cmake /opt/homebrew/share/cmake/Modules/CMakeFindBinUtils.cmake /opt/homebrew/share/cmake/Modules/CMakeGenericSystem.cmake /opt/homebrew/share/cmake/Modules/CMakeInitializeConfigs.cmake /opt/homebrew/share/cmake/Modules/CMakeLanguageInformation.cmake /opt/homebrew/share/cmake/Modules/CMakeNinjaFindMake.cmake /opt/homebrew/share/cmake/Modules/CMakePackageConfigHelpers.cmake /opt/homebrew/share/cmake/Modules/CMakeParseImplicitIncludeInfo.cmake /opt/homebrew/share/cmake/Modules/CMakeParseImplicitLinkInfo.cmake /opt/homebrew/share/cmake/Modules/CMakeParseLibraryArchitecture.cmake /opt/homebrew/share/cmake/Modules/CMakeSystem.cmake.in /opt/homebrew/share/cmake/Modules/CMakeSystemSpecificInformation.cmake /opt/homebrew/share/cmake/Modules/CMakeSystemSpecificInitialize.cmake /opt/homebrew/share/cmake/Modules/CMakeTestCCompiler.cmake /opt/homebrew/share/cmake/Modules/CMakeTestCXXCompiler.cmake /opt/homebrew/share/cmake/Modules/CMakeTestCompilerCommon.cmake /opt/homebrew/share/cmake/Modules/CheckCSourceCompiles.cmake /opt/homebrew/share/cmake/Modules/CheckIncludeFile.cmake /opt/homebrew/share/cmake/Modules/CheckLibraryExists.cmake /opt/homebrew/share/cmake/Modules/Compiler/ADSP-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/ARMCC-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/ARMClang-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/AppleClang-C.cmake /opt/homebrew/share/cmake/Modules/Compiler/AppleClang-CXX.cmake /opt/homebrew/share/cmake/Modules/Compiler/AppleClang-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/Borland-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/Bruce-C-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/CMakeCommonCompilerMacros.cmake /opt/homebrew/share/cmake/Modules/Compiler/Clang-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/Clang-DetermineCompilerInternal.cmake /opt/homebrew/share/cmake/Modules/Compiler/Clang.cmake /opt/homebrew/share/cmake/Modules/Compiler/Compaq-C-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/Compaq-CXX-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/Cray-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/CrayClang-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/Diab-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/Embarcadero-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/Fujitsu-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/FujitsuClang-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/GHS-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/GNU-C-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/GNU-CXX-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/GNU.cmake /opt/homebrew/share/cmake/Modules/Compiler/HP-C-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/HP-CXX-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/IAR-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/IBMCPP-C-DetermineVersionInternal.cmake /opt/homebrew/share/cmake/Modules/Compiler/IBMCPP-CXX-DetermineVersionInternal.cmake /opt/homebrew/share/cmake/Modules/Compiler/IBMClang-C-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/IBMClang-CXX-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/Intel-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/IntelLLVM-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/LCC-C-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/LCC-CXX-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/MSVC-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/NVHPC-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/NVIDIA-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/OpenWatcom-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/OrangeC-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/PGI-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/PathScale-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/Renesas-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/SCO-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/SDCC-C-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/SunPro-C-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/SunPro-CXX-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/TI-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/TIClang-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/Tasking-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/TinyCC-C-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/VisualAge-C-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/VisualAge-CXX-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/Watcom-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/XL-C-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/XL-CXX-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/XLClang-C-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/XLClang-CXX-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/zOS-C-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/zOS-CXX-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/ExternalProject/shared_internal_commands.cmake /opt/homebrew/share/cmake/Modules/FetchContent.cmake /opt/homebrew/share/cmake/Modules/FetchContent/CMakeLists.cmake.in /opt/homebrew/share/cmake/Modules/FindGit.cmake /opt/homebrew/share/cmake/Modules/FindOpenGL.cmake /opt/homebrew/share/cmake/Modules/FindPackageHandleStandardArgs.cmake /opt/homebrew/share/cmake/Modules/FindPackageMessage.cmake /opt/homebrew/share/cmake/Modules/FindThreads.cmake /opt/homebrew/share/cmake/Modules/GNUInstallDirs.cmake /opt/homebrew/share/cmake/Modules/Internal/CMakeCLinkerInformation.cmake /opt/homebrew/share/cmake/Modules/Internal/CMakeCXXLinkerInformation.cmake /opt/homebrew/share/cmake/Modules/Internal/CMakeCommonLinkerInformation.cmake /opt/homebrew/share/cmake/Modules/Internal/CMakeDetermineLinkerId.cmake /opt/homebrew/share/cmake/Modules/Internal/CMakeInspectCLinker.cmake /opt/homebrew/share/cmake/Modules/Internal/CMakeInspectCXXLinker.cmake /opt/homebrew/share/cmake/Modules/Internal/CheckSourceCompiles.cmake /opt/homebrew/share/cmake/Modules/Internal/FeatureTesting.cmake /opt/homebrew/share/cmake/Modules/Linker/AppleClang-C.cmake /opt/homebrew/share/cmake/Modules/Linker/AppleClang-CXX.cmake /opt/homebrew/share/cmake/Modules/Linker/AppleClang.cmake /opt/homebrew/share/cmake/Modules/Platform/Apple-AppleClang-C.cmake /opt/homebrew/share/cmake/Modules/Platform/Apple-AppleClang-CXX.cmake /opt/homebrew/share/cmake/Modules/Platform/Apple-Clang-C.cmake /opt/homebrew/share/cmake/Modules/Platform/Apple-Clang-CXX.cmake /opt/homebrew/share/cmake/Modules/Platform/Apple-Clang.cmake /opt/homebrew/share/cmake/Modules/Platform/Darwin-Determine-CXX.cmake /opt/homebrew/share/cmake/Modules/Platform/Darwin-Initialize.cmake /opt/homebrew/share/cmake/Modules/Platform/Darwin.cmake /opt/homebrew/share/cmake/Modules/Platform/Linker/Apple-AppleClang-C.cmake /opt/homebrew/share/cmake/Modules/Platform/Linker/Apple-AppleClang-CXX.cmake /opt/homebrew/share/cmake/Modules/Platform/Linker/Apple-AppleClang.cmake /opt/homebrew/share/cmake/Modules/Platform/UnixPaths.cmake /opt/homebrew/share/cmake/Modules/WriteBasicConfigVersionFile.cmake CMakeCache.txt CMakeFiles/4.3.1/CMakeCCompiler.cmake CMakeFiles/4.3.1/CMakeCXXCompiler.cmake CMakeFiles/4.3.1/CMakeSystem.cmake _deps/glfw-src/CMake/cmake_uninstall.cmake.in _deps/glfw-src/CMake/glfw3.pc.in _deps/glfw-src/CMake/glfw3Config.cmake.in _deps/glfw-src/CMakeLists.txt _deps/glfw-src/src/CMakeLists.txt _deps/glm-src/CMakeLists.txt _deps/glm-src/glm/CMakeLists.txt
+build build.ninja /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/cmake_install.cmake /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-build/cmake_install.cmake /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-build/src/cmake_install.cmake /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glm-build/cmake_install.cmake /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glm-build/glm/cmake_install.cmake: RERUN_CMAKE /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/CMakeFiles/cmake.verify_globs | /Users/dhurianvitoldas/Documents/Development/GeoFPS/CMakeLists.txt /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/CMakeFiles/VerifyGlobs.cmake /opt/homebrew/share/cmake/Modules/BasicConfigVersion-SameMajorVersion.cmake.in /opt/homebrew/share/cmake/Modules/CMakeCInformation.cmake /opt/homebrew/share/cmake/Modules/CMakeCXXInformation.cmake /opt/homebrew/share/cmake/Modules/CMakeCommonLanguageInclude.cmake /opt/homebrew/share/cmake/Modules/CMakeDependentOption.cmake /opt/homebrew/share/cmake/Modules/CMakeGenericSystem.cmake /opt/homebrew/share/cmake/Modules/CMakeInitializeConfigs.cmake /opt/homebrew/share/cmake/Modules/CMakeLanguageInformation.cmake /opt/homebrew/share/cmake/Modules/CMakePackageConfigHelpers.cmake /opt/homebrew/share/cmake/Modules/CMakeSystemSpecificInformation.cmake /opt/homebrew/share/cmake/Modules/CMakeSystemSpecificInitialize.cmake /opt/homebrew/share/cmake/Modules/CheckCSourceCompiles.cmake /opt/homebrew/share/cmake/Modules/CheckIncludeFile.cmake /opt/homebrew/share/cmake/Modules/CheckLibraryExists.cmake /opt/homebrew/share/cmake/Modules/Compiler/AppleClang-C.cmake /opt/homebrew/share/cmake/Modules/Compiler/AppleClang-CXX.cmake /opt/homebrew/share/cmake/Modules/Compiler/CMakeCommonCompilerMacros.cmake /opt/homebrew/share/cmake/Modules/Compiler/Clang.cmake /opt/homebrew/share/cmake/Modules/Compiler/GNU.cmake /opt/homebrew/share/cmake/Modules/ExternalProject/shared_internal_commands.cmake /opt/homebrew/share/cmake/Modules/FetchContent.cmake /opt/homebrew/share/cmake/Modules/FetchContent/CMakeLists.cmake.in /opt/homebrew/share/cmake/Modules/FindGit.cmake /opt/homebrew/share/cmake/Modules/FindOpenGL.cmake /opt/homebrew/share/cmake/Modules/FindPackageHandleStandardArgs.cmake /opt/homebrew/share/cmake/Modules/FindPackageMessage.cmake /opt/homebrew/share/cmake/Modules/FindThreads.cmake /opt/homebrew/share/cmake/Modules/GNUInstallDirs.cmake /opt/homebrew/share/cmake/Modules/Internal/CMakeCLinkerInformation.cmake /opt/homebrew/share/cmake/Modules/Internal/CMakeCXXLinkerInformation.cmake /opt/homebrew/share/cmake/Modules/Internal/CMakeCommonLinkerInformation.cmake /opt/homebrew/share/cmake/Modules/Internal/CheckSourceCompiles.cmake /opt/homebrew/share/cmake/Modules/Linker/AppleClang-C.cmake /opt/homebrew/share/cmake/Modules/Linker/AppleClang-CXX.cmake /opt/homebrew/share/cmake/Modules/Linker/AppleClang.cmake /opt/homebrew/share/cmake/Modules/Platform/Apple-AppleClang-C.cmake /opt/homebrew/share/cmake/Modules/Platform/Apple-AppleClang-CXX.cmake /opt/homebrew/share/cmake/Modules/Platform/Apple-Clang-C.cmake /opt/homebrew/share/cmake/Modules/Platform/Apple-Clang-CXX.cmake /opt/homebrew/share/cmake/Modules/Platform/Apple-Clang.cmake /opt/homebrew/share/cmake/Modules/Platform/Darwin-Initialize.cmake /opt/homebrew/share/cmake/Modules/Platform/Darwin.cmake /opt/homebrew/share/cmake/Modules/Platform/Linker/Apple-AppleClang-C.cmake /opt/homebrew/share/cmake/Modules/Platform/Linker/Apple-AppleClang-CXX.cmake /opt/homebrew/share/cmake/Modules/Platform/Linker/Apple-AppleClang.cmake /opt/homebrew/share/cmake/Modules/Platform/UnixPaths.cmake /opt/homebrew/share/cmake/Modules/WriteBasicConfigVersionFile.cmake CMakeCache.txt CMakeFiles/4.3.1/CMakeCCompiler.cmake CMakeFiles/4.3.1/CMakeCXXCompiler.cmake CMakeFiles/4.3.1/CMakeSystem.cmake _deps/glfw-src/CMake/cmake_uninstall.cmake.in _deps/glfw-src/CMake/glfw3.pc.in _deps/glfw-src/CMake/glfw3Config.cmake.in _deps/glfw-src/CMakeLists.txt _deps/glfw-src/src/CMakeLists.txt _deps/glm-src/CMakeLists.txt _deps/glm-src/glm/CMakeLists.txt
   pool = console
 
 
 #############################################
 # A missing CMake input file is not an error.
 
-build /Users/dhurianvitoldas/Documents/Development/GeoFPS/CMakeLists.txt /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/CMakeFiles/VerifyGlobs.cmake /opt/homebrew/share/cmake/Modules/BasicConfigVersion-SameMajorVersion.cmake.in /opt/homebrew/share/cmake/Modules/CMakeCCompiler.cmake.in /opt/homebrew/share/cmake/Modules/CMakeCCompilerABI.c /opt/homebrew/share/cmake/Modules/CMakeCInformation.cmake /opt/homebrew/share/cmake/Modules/CMakeCXXCompiler.cmake.in /opt/homebrew/share/cmake/Modules/CMakeCXXCompilerABI.cpp /opt/homebrew/share/cmake/Modules/CMakeCXXInformation.cmake /opt/homebrew/share/cmake/Modules/CMakeCommonLanguageInclude.cmake /opt/homebrew/share/cmake/Modules/CMakeCompilerIdDetection.cmake /opt/homebrew/share/cmake/Modules/CMakeDependentOption.cmake /opt/homebrew/share/cmake/Modules/CMakeDetermineCCompiler.cmake /opt/homebrew/share/cmake/Modules/CMakeDetermineCXXCompiler.cmake /opt/homebrew/share/cmake/Modules/CMakeDetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/CMakeDetermineCompilerABI.cmake /opt/homebrew/share/cmake/Modules/CMakeDetermineCompilerId.cmake /opt/homebrew/share/cmake/Modules/CMakeDetermineCompilerSupport.cmake /opt/homebrew/share/cmake/Modules/CMakeDetermineSystem.cmake /opt/homebrew/share/cmake/Modules/CMakeFindBinUtils.cmake /opt/homebrew/share/cmake/Modules/CMakeGenericSystem.cmake /opt/homebrew/share/cmake/Modules/CMakeInitializeConfigs.cmake /opt/homebrew/share/cmake/Modules/CMakeLanguageInformation.cmake /opt/homebrew/share/cmake/Modules/CMakeNinjaFindMake.cmake /opt/homebrew/share/cmake/Modules/CMakePackageConfigHelpers.cmake /opt/homebrew/share/cmake/Modules/CMakeParseImplicitIncludeInfo.cmake /opt/homebrew/share/cmake/Modules/CMakeParseImplicitLinkInfo.cmake /opt/homebrew/share/cmake/Modules/CMakeParseLibraryArchitecture.cmake /opt/homebrew/share/cmake/Modules/CMakeSystem.cmake.in /opt/homebrew/share/cmake/Modules/CMakeSystemSpecificInformation.cmake /opt/homebrew/share/cmake/Modules/CMakeSystemSpecificInitialize.cmake /opt/homebrew/share/cmake/Modules/CMakeTestCCompiler.cmake /opt/homebrew/share/cmake/Modules/CMakeTestCXXCompiler.cmake /opt/homebrew/share/cmake/Modules/CMakeTestCompilerCommon.cmake /opt/homebrew/share/cmake/Modules/CheckCSourceCompiles.cmake /opt/homebrew/share/cmake/Modules/CheckIncludeFile.cmake /opt/homebrew/share/cmake/Modules/CheckLibraryExists.cmake /opt/homebrew/share/cmake/Modules/Compiler/ADSP-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/ARMCC-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/ARMClang-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/AppleClang-C.cmake /opt/homebrew/share/cmake/Modules/Compiler/AppleClang-CXX.cmake /opt/homebrew/share/cmake/Modules/Compiler/AppleClang-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/Borland-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/Bruce-C-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/CMakeCommonCompilerMacros.cmake /opt/homebrew/share/cmake/Modules/Compiler/Clang-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/Clang-DetermineCompilerInternal.cmake /opt/homebrew/share/cmake/Modules/Compiler/Clang.cmake /opt/homebrew/share/cmake/Modules/Compiler/Compaq-C-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/Compaq-CXX-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/Cray-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/CrayClang-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/Diab-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/Embarcadero-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/Fujitsu-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/FujitsuClang-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/GHS-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/GNU-C-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/GNU-CXX-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/GNU.cmake /opt/homebrew/share/cmake/Modules/Compiler/HP-C-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/HP-CXX-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/IAR-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/IBMCPP-C-DetermineVersionInternal.cmake /opt/homebrew/share/cmake/Modules/Compiler/IBMCPP-CXX-DetermineVersionInternal.cmake /opt/homebrew/share/cmake/Modules/Compiler/IBMClang-C-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/IBMClang-CXX-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/Intel-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/IntelLLVM-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/LCC-C-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/LCC-CXX-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/MSVC-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/NVHPC-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/NVIDIA-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/OpenWatcom-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/OrangeC-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/PGI-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/PathScale-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/Renesas-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/SCO-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/SDCC-C-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/SunPro-C-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/SunPro-CXX-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/TI-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/TIClang-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/Tasking-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/TinyCC-C-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/VisualAge-C-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/VisualAge-CXX-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/Watcom-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/XL-C-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/XL-CXX-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/XLClang-C-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/XLClang-CXX-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/zOS-C-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/Compiler/zOS-CXX-DetermineCompiler.cmake /opt/homebrew/share/cmake/Modules/ExternalProject/shared_internal_commands.cmake /opt/homebrew/share/cmake/Modules/FetchContent.cmake /opt/homebrew/share/cmake/Modules/FetchContent/CMakeLists.cmake.in /opt/homebrew/share/cmake/Modules/FindGit.cmake /opt/homebrew/share/cmake/Modules/FindOpenGL.cmake /opt/homebrew/share/cmake/Modules/FindPackageHandleStandardArgs.cmake /opt/homebrew/share/cmake/Modules/FindPackageMessage.cmake /opt/homebrew/share/cmake/Modules/FindThreads.cmake /opt/homebrew/share/cmake/Modules/GNUInstallDirs.cmake /opt/homebrew/share/cmake/Modules/Internal/CMakeCLinkerInformation.cmake /opt/homebrew/share/cmake/Modules/Internal/CMakeCXXLinkerInformation.cmake /opt/homebrew/share/cmake/Modules/Internal/CMakeCommonLinkerInformation.cmake /opt/homebrew/share/cmake/Modules/Internal/CMakeDetermineLinkerId.cmake /opt/homebrew/share/cmake/Modules/Internal/CMakeInspectCLinker.cmake /opt/homebrew/share/cmake/Modules/Internal/CMakeInspectCXXLinker.cmake /opt/homebrew/share/cmake/Modules/Internal/CheckSourceCompiles.cmake /opt/homebrew/share/cmake/Modules/Internal/FeatureTesting.cmake /opt/homebrew/share/cmake/Modules/Linker/AppleClang-C.cmake /opt/homebrew/share/cmake/Modules/Linker/AppleClang-CXX.cmake /opt/homebrew/share/cmake/Modules/Linker/AppleClang.cmake /opt/homebrew/share/cmake/Modules/Platform/Apple-AppleClang-C.cmake /opt/homebrew/share/cmake/Modules/Platform/Apple-AppleClang-CXX.cmake /opt/homebrew/share/cmake/Modules/Platform/Apple-Clang-C.cmake /opt/homebrew/share/cmake/Modules/Platform/Apple-Clang-CXX.cmake /opt/homebrew/share/cmake/Modules/Platform/Apple-Clang.cmake /opt/homebrew/share/cmake/Modules/Platform/Darwin-Determine-CXX.cmake /opt/homebrew/share/cmake/Modules/Platform/Darwin-Initialize.cmake /opt/homebrew/share/cmake/Modules/Platform/Darwin.cmake /opt/homebrew/share/cmake/Modules/Platform/Linker/Apple-AppleClang-C.cmake /opt/homebrew/share/cmake/Modules/Platform/Linker/Apple-AppleClang-CXX.cmake /opt/homebrew/share/cmake/Modules/Platform/Linker/Apple-AppleClang.cmake /opt/homebrew/share/cmake/Modules/Platform/UnixPaths.cmake /opt/homebrew/share/cmake/Modules/WriteBasicConfigVersionFile.cmake CMakeCache.txt CMakeFiles/4.3.1/CMakeCCompiler.cmake CMakeFiles/4.3.1/CMakeCXXCompiler.cmake CMakeFiles/4.3.1/CMakeSystem.cmake _deps/glfw-src/CMake/cmake_uninstall.cmake.in _deps/glfw-src/CMake/glfw3.pc.in _deps/glfw-src/CMake/glfw3Config.cmake.in _deps/glfw-src/CMakeLists.txt _deps/glfw-src/src/CMakeLists.txt _deps/glm-src/CMakeLists.txt _deps/glm-src/glm/CMakeLists.txt: phony
+build /Users/dhurianvitoldas/Documents/Development/GeoFPS/CMakeLists.txt /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/CMakeFiles/VerifyGlobs.cmake /opt/homebrew/share/cmake/Modules/BasicConfigVersion-SameMajorVersion.cmake.in /opt/homebrew/share/cmake/Modules/CMakeCInformation.cmake /opt/homebrew/share/cmake/Modules/CMakeCXXInformation.cmake /opt/homebrew/share/cmake/Modules/CMakeCommonLanguageInclude.cmake /opt/homebrew/share/cmake/Modules/CMakeDependentOption.cmake /opt/homebrew/share/cmake/Modules/CMakeGenericSystem.cmake /opt/homebrew/share/cmake/Modules/CMakeInitializeConfigs.cmake /opt/homebrew/share/cmake/Modules/CMakeLanguageInformation.cmake /opt/homebrew/share/cmake/Modules/CMakePackageConfigHelpers.cmake /opt/homebrew/share/cmake/Modules/CMakeSystemSpecificInformation.cmake /opt/homebrew/share/cmake/Modules/CMakeSystemSpecificInitialize.cmake /opt/homebrew/share/cmake/Modules/CheckCSourceCompiles.cmake /opt/homebrew/share/cmake/Modules/CheckIncludeFile.cmake /opt/homebrew/share/cmake/Modules/CheckLibraryExists.cmake /opt/homebrew/share/cmake/Modules/Compiler/AppleClang-C.cmake /opt/homebrew/share/cmake/Modules/Compiler/AppleClang-CXX.cmake /opt/homebrew/share/cmake/Modules/Compiler/CMakeCommonCompilerMacros.cmake /opt/homebrew/share/cmake/Modules/Compiler/Clang.cmake /opt/homebrew/share/cmake/Modules/Compiler/GNU.cmake /opt/homebrew/share/cmake/Modules/ExternalProject/shared_internal_commands.cmake /opt/homebrew/share/cmake/Modules/FetchContent.cmake /opt/homebrew/share/cmake/Modules/FetchContent/CMakeLists.cmake.in /opt/homebrew/share/cmake/Modules/FindGit.cmake /opt/homebrew/share/cmake/Modules/FindOpenGL.cmake /opt/homebrew/share/cmake/Modules/FindPackageHandleStandardArgs.cmake /opt/homebrew/share/cmake/Modules/FindPackageMessage.cmake /opt/homebrew/share/cmake/Modules/FindThreads.cmake /opt/homebrew/share/cmake/Modules/GNUInstallDirs.cmake /opt/homebrew/share/cmake/Modules/Internal/CMakeCLinkerInformation.cmake /opt/homebrew/share/cmake/Modules/Internal/CMakeCXXLinkerInformation.cmake /opt/homebrew/share/cmake/Modules/Internal/CMakeCommonLinkerInformation.cmake /opt/homebrew/share/cmake/Modules/Internal/CheckSourceCompiles.cmake /opt/homebrew/share/cmake/Modules/Linker/AppleClang-C.cmake /opt/homebrew/share/cmake/Modules/Linker/AppleClang-CXX.cmake /opt/homebrew/share/cmake/Modules/Linker/AppleClang.cmake /opt/homebrew/share/cmake/Modules/Platform/Apple-AppleClang-C.cmake /opt/homebrew/share/cmake/Modules/Platform/Apple-AppleClang-CXX.cmake /opt/homebrew/share/cmake/Modules/Platform/Apple-Clang-C.cmake /opt/homebrew/share/cmake/Modules/Platform/Apple-Clang-CXX.cmake /opt/homebrew/share/cmake/Modules/Platform/Apple-Clang.cmake /opt/homebrew/share/cmake/Modules/Platform/Darwin-Initialize.cmake /opt/homebrew/share/cmake/Modules/Platform/Darwin.cmake /opt/homebrew/share/cmake/Modules/Platform/Linker/Apple-AppleClang-C.cmake /opt/homebrew/share/cmake/Modules/Platform/Linker/Apple-AppleClang-CXX.cmake /opt/homebrew/share/cmake/Modules/Platform/Linker/Apple-AppleClang.cmake /opt/homebrew/share/cmake/Modules/Platform/UnixPaths.cmake /opt/homebrew/share/cmake/Modules/WriteBasicConfigVersionFile.cmake CMakeCache.txt CMakeFiles/4.3.1/CMakeCCompiler.cmake CMakeFiles/4.3.1/CMakeCXXCompiler.cmake CMakeFiles/4.3.1/CMakeSystem.cmake _deps/glfw-src/CMake/cmake_uninstall.cmake.in _deps/glfw-src/CMake/glfw3.pc.in _deps/glfw-src/CMake/glfw3Config.cmake.in _deps/glfw-src/CMakeLists.txt _deps/glfw-src/src/CMakeLists.txt _deps/glm-src/CMakeLists.txt _deps/glm-src/glm/CMakeLists.txt: phony
 
 
 #############################################

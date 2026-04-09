@@ -7,8 +7,11 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <glm/gtc/matrix_transform.hpp>
+#include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <iostream>
+#include <limits>
 #include <stdexcept>
 
 namespace GeoFPS
@@ -48,7 +51,13 @@ bool Application::Initialize()
     m_TerrainSettings.gridResolutionZ = 64;
     m_TerrainSettings.heightScale = 1.0;
 
-    return LoadStartupTerrain();
+    if (!LoadStartupTerrain())
+    {
+        return false;
+    }
+
+    FrameCameraToTerrain();
+    return true;
 }
 
 void Application::Run()
@@ -94,12 +103,11 @@ void Application::Update(float)
 
 void Application::Render()
 {
-    BeginImGuiFrame();
-    RenderEditor();
-
     glViewport(0, 0, m_Window.GetWidth(), m_Window.GetHeight());
     glClearColor(0.08f, 0.10f, 0.14f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    BeginImGuiFrame();
 
     if (m_TerrainShader && m_TerrainMesh)
     {
@@ -111,6 +119,7 @@ void Application::Render()
         m_TerrainMesh->Draw();
     }
 
+    RenderEditor();
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     m_Window.SwapBuffers();
@@ -152,13 +161,53 @@ bool Application::RebuildTerrain()
     return true;
 }
 
+void Application::FrameCameraToTerrain()
+{
+    if (m_TerrainPoints.empty())
+    {
+        return;
+    }
+
+    GeoConverter converter(m_GeoReference);
+    glm::vec3 minPoint(std::numeric_limits<float>::max());
+    glm::vec3 maxPoint(std::numeric_limits<float>::lowest());
+
+    for (const auto& point : m_TerrainPoints)
+    {
+        const glm::dvec3 local = converter.ToLocal(point.latitude, point.longitude, point.height);
+        const glm::vec3 current(static_cast<float>(local.x),
+                                static_cast<float>(local.y) * m_TerrainSettings.heightScale,
+                                static_cast<float>(local.z));
+        minPoint = glm::min(minPoint, current);
+        maxPoint = glm::max(maxPoint, current);
+    }
+
+    const glm::vec3 center = 0.5f * (minPoint + maxPoint);
+    const float width = maxPoint.x - minPoint.x;
+    const float depth = maxPoint.z - minPoint.z;
+    const float span = std::max({width, depth, 16.0f});
+    const glm::vec3 cameraPosition(center.x,
+                                   maxPoint.y + std::max(8.0f, span * 0.35f),
+                                   maxPoint.z + std::max(16.0f, span * 0.9f));
+    const glm::vec3 toCenter = glm::normalize(center - cameraPosition);
+    const float yaw = glm::degrees(std::atan2(toCenter.z, toCenter.x));
+    const float pitch = glm::degrees(std::asin(glm::clamp(toCenter.y, -1.0f, 1.0f)));
+
+    m_Camera.SetPosition(cameraPosition);
+    m_Camera.SetYawPitch(yaw, pitch);
+}
+
 void Application::SetupImGui()
 {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGui::StyleColorsDark();
     ImGui_ImplGlfw_InitForOpenGL(m_Window.GetNativeHandle(), true);
+#ifdef __APPLE__
+    ImGui_ImplOpenGL3_Init("#version 150");
+#else
     ImGui_ImplOpenGL3_Init("#version 330");
+#endif
 }
 
 void Application::ShutdownImGui()
