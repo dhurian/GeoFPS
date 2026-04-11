@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Assets/GltfImporter.h"
 #include "Assets/ObjImporter.h"
 #include "Core/Window.h"
 #include "Game/FPSController.h"
@@ -41,12 +42,11 @@ struct ImportedAsset
 {
     std::string name {"Asset 1"};
     std::string path;
-    MeshData meshData;
-    std::unique_ptr<Mesh> mesh;
+    ImportedAssetData assetData;
     glm::vec3 position {0.0f, 0.0f, 0.0f};
     glm::vec3 rotationDegrees {0.0f, 0.0f, 0.0f};
     glm::vec3 scale {1.0f, 1.0f, 1.0f};
-    glm::vec3 color {0.82f, 0.74f, 0.66f};
+    glm::vec3 tint {1.0f, 1.0f, 1.0f};
     bool loaded {false};
 };
 

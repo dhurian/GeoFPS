@@ -1,0 +1,21 @@
+# ninja log v7
+0	16	1775901115317874837	tinygltf-populate-prefix/src/tinygltf-populate-stamp/tinygltf-populate-mkdir	bb7f2c745c4eb4f4
+0	16	1775901115317874837	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/tinygltf-subbuild/tinygltf-populate-prefix/src/tinygltf-populate-stamp/tinygltf-populate-mkdir	bb7f2c745c4eb4f4
+17	2618	1775901117919313658	tinygltf-populate-prefix/src/tinygltf-populate-stamp/tinygltf-populate-download	c304aaf5d137fcf8
+17	2618	1775901117919313658	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/tinygltf-subbuild/tinygltf-populate-prefix/src/tinygltf-populate-stamp/tinygltf-populate-download	c304aaf5d137fcf8
+2618	2645	1775901117920274902	tinygltf-populate-prefix/src/tinygltf-populate-stamp/tinygltf-populate-update	e6d1150fc606bff3
+2618	2645	1775901117920274902	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/tinygltf-subbuild/tinygltf-populate-prefix/src/tinygltf-populate-stamp/tinygltf-populate-update	e6d1150fc606bff3
+2645	2660	1775901117961585983	tinygltf-populate-prefix/src/tinygltf-populate-stamp/tinygltf-populate-patch	c5d137f4a9ad069c
+2645	2660	1775901117961585983	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/tinygltf-subbuild/tinygltf-populate-prefix/src/tinygltf-populate-stamp/tinygltf-populate-patch	c5d137f4a9ad069c
+2660	2676	1775901117976951957	tinygltf-populate-prefix/src/tinygltf-populate-stamp/tinygltf-populate-configure	9dca3be26861cc53
+2660	2676	1775901117976951957	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/tinygltf-subbuild/tinygltf-populate-prefix/src/tinygltf-populate-stamp/tinygltf-populate-configure	9dca3be26861cc53
+2676	2691	1775901117992485804	tinygltf-populate-prefix/src/tinygltf-populate-stamp/tinygltf-populate-build	5f99f46ea28c593
+2676	2691	1775901117992485804	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/tinygltf-subbuild/tinygltf-populate-prefix/src/tinygltf-populate-stamp/tinygltf-populate-build	5f99f46ea28c593
+2691	2708	1775901118008957270	tinygltf-populate-prefix/src/tinygltf-populate-stamp/tinygltf-populate-install	dc4f89c4d4d5634f
+2691	2708	1775901118008957270	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/tinygltf-subbuild/tinygltf-populate-prefix/src/tinygltf-populate-stamp/tinygltf-populate-install	dc4f89c4d4d5634f
+2708	2724	1775901118024959823	tinygltf-populate-prefix/src/tinygltf-populate-stamp/tinygltf-populate-test	b2ce912feae06abf
+2708	2724	1775901118024959823	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/tinygltf-subbuild/tinygltf-populate-prefix/src/tinygltf-populate-stamp/tinygltf-populate-test	b2ce912feae06abf
+2724	2745	1775901118046248089	CMakeFiles/tinygltf-populate-complete	a3e5c4c903a02af1
+2724	2745	1775901118046248089	tinygltf-populate-prefix/src/tinygltf-populate-stamp/tinygltf-populate-done	a3e5c4c903a02af1
+2724	2745	1775901118046248089	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/tinygltf-subbuild/CMakeFiles/tinygltf-populate-complete	a3e5c4c903a02af1
+2724	2745	1775901118046248089	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/tinygltf-subbuild/tinygltf-populate-prefix/src/tinygltf-populate-stamp/tinygltf-populate-done	a3e5c4c903a02af1

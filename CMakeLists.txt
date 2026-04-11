@@ -64,6 +64,16 @@ if(NOT stb_POPULATED)
   FetchContent_Populate(stb)
 endif()
 
+FetchContent_Declare(
+  tinygltf
+  GIT_REPOSITORY https://github.com/syoyo/tinygltf.git
+  GIT_TAG v2.9.5
+)
+FetchContent_GetProperties(tinygltf)
+if(NOT tinygltf_POPULATED)
+  FetchContent_Populate(tinygltf)
+endif()
+
 # Dear ImGui
 FetchContent_Declare(
   imgui
@@ -98,6 +108,7 @@ add_executable(GeoFPS ${GEOFPS_SOURCES})
 target_include_directories(GeoFPS PRIVATE
   src
   ${stb_SOURCE_DIR}
+  ${tinygltf_SOURCE_DIR}
 )
 target_link_libraries(GeoFPS PRIVATE
   glfw

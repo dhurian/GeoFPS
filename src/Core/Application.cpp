@@ -99,6 +99,14 @@ void LoadProfessionalUiFont()
     io.Fonts->AddFontDefault();
 }
 
+std::string ToLower(std::string value)
+{
+    std::transform(value.begin(), value.end(), value.begin(), [](unsigned char character) {
+        return static_cast<char>(std::tolower(character));
+    });
+    return value;
+}
+
 void ApplyProfessionalImGuiStyle()
 {
     ImGuiStyle& style = ImGui::GetStyle();
@@ -322,7 +330,7 @@ void Application::Render()
 
         for (const ImportedAsset& asset : m_ImportedAssets)
         {
-            if (!asset.loaded || !asset.mesh)
+            if (!asset.loaded)
             {
                 continue;
             }
@@ -335,8 +343,21 @@ void Application::Render()
             model = glm::scale(model, asset.scale);
 
             m_AssetShader->SetMat4("uModel", model);
-            m_AssetShader->SetVec3("uBaseColor", asset.color);
-            asset.mesh->Draw();
+
+            for (const ImportedPrimitiveData& primitive : asset.assetData.primitives)
+            {
+                if (!primitive.mesh)
+                {
+                    continue;
+                }
+
+                m_AssetShader->SetVec3("uTintColor", asset.tint);
+                m_AssetShader->SetInt("uUseBaseColorTexture", primitive.hasBaseColorTexture ? 1 : 0);
+                m_AssetShader->SetVec4("uBaseColorFactor", primitive.baseColorFactor);
+                m_AssetShader->SetInt("uBaseColorTexture", 0);
+                primitive.baseColorTexture.Bind(0);
+                primitive.mesh->Draw();
+            }
         }
     }
 
@@ -570,25 +591,59 @@ bool Application::LoadImportedAsset(ImportedAsset& asset)
     if (asset.path.empty())
     {
         asset.loaded = false;
-        asset.mesh.reset();
+        asset.assetData.primitives.clear();
         m_StatusMessage = "Asset path is empty.";
         return false;
     }
 
+    asset.assetData.primitives.clear();
+
+    const size_t extensionOffset = asset.path.find_last_of('.');
+    const std::string extension = extensionOffset == std::string::npos ? std::string() : ToLower(asset.path.substr(extensionOffset));
     std::string errorMessage;
-    MeshData meshData;
-    if (!ObjImporter::Load(asset.path, meshData, errorMessage))
+
+    if (extension == ".glb" || extension == ".gltf")
+    {
+        if (!GltfImporter::Load(asset.path, asset.assetData, errorMessage))
+        {
+            asset.loaded = false;
+            m_StatusMessage = "Failed to load asset: " + (errorMessage.empty() ? asset.path : errorMessage);
+            return false;
+        }
+    }
+    else if (extension == ".obj")
+    {
+        ImportedPrimitiveData primitiveData;
+        if (!ObjImporter::Load(asset.path, primitiveData.meshData, errorMessage))
+        {
+            asset.loaded = false;
+            m_StatusMessage = "Failed to load asset: " + (errorMessage.empty() ? asset.path : errorMessage);
+            return false;
+        }
+
+        primitiveData.materialName = "OBJ Material";
+        primitiveData.baseColorFactor = glm::vec4(0.82f, 0.74f, 0.66f, 1.0f);
+        asset.assetData.primitives.push_back(std::move(primitiveData));
+    }
+    else
     {
         asset.loaded = false;
-        asset.mesh.reset();
-        m_StatusMessage = "Failed to load asset: " + (errorMessage.empty() ? asset.path : errorMessage);
+        m_StatusMessage = "Unsupported asset format. Use .glb, .gltf, or .obj.";
         return false;
     }
 
-    asset.meshData = std::move(meshData);
-    asset.mesh = std::make_unique<Mesh>(asset.meshData);
+    for (ImportedPrimitiveData& primitive : asset.assetData.primitives)
+    {
+        primitive.mesh = std::make_unique<Mesh>(primitive.meshData);
+        primitive.hasBaseColorTexture =
+            !primitive.baseColorPixels.empty() && primitive.baseColorTexture.LoadFromMemory(primitive.baseColorPixels.data(),
+                                                                                            primitive.baseColorWidth,
+                                                                                            primitive.baseColorHeight,
+                                                                                            primitive.baseColorChannels);
+    }
+
     asset.loaded = true;
-    m_StatusMessage = "Loaded Blender asset: " + asset.name;
+    m_StatusMessage = "Loaded asset: " + asset.name;
     return true;
 }
 
@@ -1182,13 +1237,13 @@ void Application::RenderEditor()
 
         char assetPathBuffer[512];
         std::snprintf(assetPathBuffer, sizeof(assetPathBuffer), "%s", activeAsset->path.c_str());
-        if (ImGui::InputText("OBJ Path", assetPathBuffer, sizeof(assetPathBuffer)))
+        if (ImGui::InputText("Asset Path", assetPathBuffer, sizeof(assetPathBuffer)))
         {
             activeAsset->path = assetPathBuffer;
         }
 
-        ImGui::TextWrapped("Export from Blender as Wavefront OBJ for now. Triangulated meshes with normals work best.");
-        if (ImGui::Button("Load Asset From OBJ"))
+        ImGui::TextWrapped("Preferred Blender export is .glb. .gltf and .obj also load, but .glb carries materials most cleanly.");
+        if (ImGui::Button("Load Asset"))
         {
             LoadImportedAsset(*activeAsset);
         }
@@ -1196,13 +1251,25 @@ void Application::RenderEditor()
         ImGui::DragFloat3("Asset Position", glm::value_ptr(activeAsset->position), 0.1f);
         ImGui::DragFloat3("Asset Rotation", glm::value_ptr(activeAsset->rotationDegrees), 0.5f);
         ImGui::DragFloat3("Asset Scale", glm::value_ptr(activeAsset->scale), 0.05f, 0.01f, 1000.0f);
-        ImGui::ColorEdit3("Asset Color", glm::value_ptr(activeAsset->color));
+        ImGui::ColorEdit3("Asset Tint", glm::value_ptr(activeAsset->tint));
 
         ImGui::Text("Asset: %s", activeAsset->loaded ? "loaded" : "not loaded");
         if (activeAsset->loaded)
         {
-            ImGui::Text("Vertices: %zu", activeAsset->meshData.vertices.size());
-            ImGui::Text("Triangles: %zu", activeAsset->meshData.indices.size() / 3);
+            size_t vertexCount = 0;
+            size_t triangleCount = 0;
+            size_t texturedPrimitiveCount = 0;
+            for (const ImportedPrimitiveData& primitive : activeAsset->assetData.primitives)
+            {
+                vertexCount += primitive.meshData.vertices.size();
+                triangleCount += primitive.meshData.indices.size() / 3u;
+                texturedPrimitiveCount += primitive.hasBaseColorTexture ? 1u : 0u;
+            }
+
+            ImGui::Text("Primitives: %zu", activeAsset->assetData.primitives.size());
+            ImGui::Text("Vertices: %zu", vertexCount);
+            ImGui::Text("Triangles: %zu", triangleCount);
+            ImGui::Text("Textured Materials: %zu", texturedPrimitiveCount);
         }
     }
 

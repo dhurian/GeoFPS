@@ -1,0 +1,14 @@
+# Target labels
+ tinygltf-populate
+# Source files and their labels
+/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/tinygltf-subbuild/CMakeFiles/tinygltf-populate
+/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/tinygltf-subbuild/CMakeFiles/tinygltf-populate.rule
+/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/tinygltf-subbuild/CMakeFiles/tinygltf-populate-complete.rule
+/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/tinygltf-subbuild/tinygltf-populate-prefix/src/tinygltf-populate-stamp/tinygltf-populate-build.rule
+/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/tinygltf-subbuild/tinygltf-populate-prefix/src/tinygltf-populate-stamp/tinygltf-populate-configure.rule
+/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/tinygltf-subbuild/tinygltf-populate-prefix/src/tinygltf-populate-stamp/tinygltf-populate-download.rule
+/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/tinygltf-subbuild/tinygltf-populate-prefix/src/tinygltf-populate-stamp/tinygltf-populate-install.rule
+/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/tinygltf-subbuild/tinygltf-populate-prefix/src/tinygltf-populate-stamp/tinygltf-populate-mkdir.rule
+/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/tinygltf-subbuild/tinygltf-populate-prefix/src/tinygltf-populate-stamp/tinygltf-populate-patch.rule
+/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/tinygltf-subbuild/tinygltf-populate-prefix/src/tinygltf-populate-stamp/tinygltf-populate-test.rule
+/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/tinygltf-subbuild/tinygltf-populate-prefix/src/tinygltf-populate-stamp/tinygltf-populate-update.rule

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 namespace GeoFPS
 {
@@ -16,6 +17,7 @@ class Texture
     Texture& operator=(Texture&& other) noexcept;
 
     bool LoadFromFile(const std::string& path);
+    bool LoadFromMemory(const unsigned char* pixels, int width, int height, int channels);
     void Bind(unsigned int slot = 0) const;
     void Reset();
 

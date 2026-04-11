@@ -1,9 +1,9 @@
 #include "Renderer/Texture.h"
 
 #include <glad/glad.h>
-#define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 #include <utility>
+#include <vector>
 
 namespace GeoFPS
 {
@@ -26,6 +26,28 @@ unsigned int GetFallbackTextureId()
     }
 
     return fallbackTextureId;
+}
+
+bool UploadTexture(unsigned int& textureId, int& storedWidth, int& storedHeight, const unsigned char* pixels, int width, int height)
+{
+    if (pixels == nullptr || width <= 0 || height <= 0)
+    {
+        return false;
+    }
+
+    glGenTextures(1, &textureId);
+    glBindTexture(GL_TEXTURE_2D, textureId);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    storedWidth = width;
+    storedHeight = height;
+    return true;
 }
 } // namespace
 
@@ -67,29 +89,37 @@ bool Texture::LoadFromFile(const std::string& path)
         return false;
     }
 
-    glGenTextures(1, &m_TextureId);
-    glBindTexture(GL_TEXTURE_2D, m_TextureId);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexImage2D(GL_TEXTURE_2D,
-                 0,
-                 GL_RGBA8,
-                 width,
-                 height,
-                 0,
-                 GL_RGBA,
-                 GL_UNSIGNED_BYTE,
-                 pixels);
-    glGenerateMipmap(GL_TEXTURE_2D);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    const bool uploaded = UploadTexture(m_TextureId, m_Width, m_Height, pixels, width, height);
 
     stbi_image_free(pixels);
+    return uploaded;
+}
 
-    m_Width = width;
-    m_Height = height;
-    return true;
+bool Texture::LoadFromMemory(const unsigned char* pixels, int width, int height, int channels)
+{
+    Reset();
+    if (pixels == nullptr || width <= 0 || height <= 0)
+    {
+        return false;
+    }
+
+    if (channels == 4)
+    {
+        return UploadTexture(m_TextureId, m_Width, m_Height, pixels, width, height);
+    }
+
+    std::vector<unsigned char> converted(static_cast<size_t>(width) * static_cast<size_t>(height) * 4u, 255u);
+    for (int pixelIndex = 0; pixelIndex < width * height; ++pixelIndex)
+    {
+        const int sourceOffset = pixelIndex * channels;
+        const int targetOffset = pixelIndex * 4;
+        converted[static_cast<size_t>(targetOffset)] = pixels[sourceOffset];
+        converted[static_cast<size_t>(targetOffset + 1)] = channels > 1 ? pixels[sourceOffset + 1] : pixels[sourceOffset];
+        converted[static_cast<size_t>(targetOffset + 2)] = channels > 2 ? pixels[sourceOffset + 2] : pixels[sourceOffset];
+        converted[static_cast<size_t>(targetOffset + 3)] = channels > 3 ? pixels[sourceOffset + 3] : 255u;
+    }
+
+    return UploadTexture(m_TextureId, m_Width, m_Height, converted.data(), width, height);
 }
 
 void Texture::Bind(unsigned int slot) const
