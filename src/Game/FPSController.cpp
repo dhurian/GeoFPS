@@ -2,6 +2,7 @@
 
 #include "Renderer/Camera.h"
 #include <GLFW/glfw3.h>
+#include <algorithm>
 
 namespace GeoFPS
 {
@@ -24,6 +25,16 @@ void FPSController::SetEnabled(bool enabled)
     m_Enabled = enabled;
 }
 
+void FPSController::SetMoveSpeed(float moveSpeed)
+{
+    m_MoveSpeed = std::max(moveSpeed, 0.5f);
+}
+
+void FPSController::SetSprintMultiplier(float sprintMultiplier)
+{
+    m_SprintMultiplier = std::max(sprintMultiplier, 1.0f);
+}
+
 void FPSController::Update(float deltaTime)
 {
     if (!m_Enabled || m_Window == nullptr || m_Camera == nullptr)
@@ -34,8 +45,9 @@ void FPSController::Update(float deltaTime)
     float speed = m_MoveSpeed;
     if (glfwGetKey(m_Window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
     {
-        speed *= 2.0f;
+        speed *= m_SprintMultiplier;
     }
+    m_CurrentSpeed = speed;
 
     glm::vec3 movement(0.0f);
     const glm::vec3 forwardFlat = glm::normalize(glm::vec3(m_Camera->GetForward().x, 0.0f, m_Camera->GetForward().z));

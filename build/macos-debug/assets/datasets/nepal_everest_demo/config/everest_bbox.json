@@ -1,0 +1,17 @@
+{
+  "name": "Nepal Everest Demo Area",
+  "north": 28.12,
+  "south": 27.86,
+  "west": 86.63,
+  "east": 87.03,
+  "recommended_sources": {
+    "terrain": [
+      "OpenTopography COP30",
+      "OpenTopography NASADEM",
+      "Copernicus DEM 30 m"
+    ],
+    "imagery": [
+      "Copernicus Browser Sentinel-2 L2A"
+    ]
+  }
+}

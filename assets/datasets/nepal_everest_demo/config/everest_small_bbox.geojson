@@ -1,0 +1,23 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Everest Small AOI"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [86.86, 27.94],
+            [86.98, 27.94],
+            [86.98, 28.04],
+            [86.86, 28.04],
+            [86.86, 27.94]
+          ]
+        ]
+      }
+    }
+  ]
+}

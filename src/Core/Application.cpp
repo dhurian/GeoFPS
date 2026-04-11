@@ -85,6 +85,9 @@ void Application::Shutdown()
 
 void Application::ProcessInput(float deltaTime)
 {
+    static bool increaseSpeedPressedLastFrame = false;
+    static bool decreaseSpeedPressedLastFrame = false;
+
     if (m_Window.IsKeyPressed(GLFW_KEY_ESCAPE))
     {
         m_MouseCaptured = false;
@@ -95,6 +98,24 @@ void Application::ProcessInput(float deltaTime)
         m_MouseCaptured = true;
         m_Window.SetCursorCaptured(true);
     }
+
+    const bool increaseSpeedPressed =
+        m_Window.IsKeyPressed(GLFW_KEY_EQUAL) || m_Window.IsKeyPressed(GLFW_KEY_KP_ADD);
+    if (increaseSpeedPressed && !increaseSpeedPressedLastFrame)
+    {
+        m_FPSController.SetMoveSpeed(m_FPSController.GetMoveSpeed() + 4.0f);
+        m_StatusMessage = "Camera speed increased.";
+    }
+    increaseSpeedPressedLastFrame = increaseSpeedPressed;
+
+    const bool decreaseSpeedPressed =
+        m_Window.IsKeyPressed(GLFW_KEY_MINUS) || m_Window.IsKeyPressed(GLFW_KEY_KP_SUBTRACT);
+    if (decreaseSpeedPressed && !decreaseSpeedPressedLastFrame)
+    {
+        m_FPSController.SetMoveSpeed(m_FPSController.GetMoveSpeed() - 4.0f);
+        m_StatusMessage = "Camera speed decreased.";
+    }
+    decreaseSpeedPressedLastFrame = decreaseSpeedPressed;
 
     m_FPSController.SetEnabled(m_MouseCaptured);
     m_FPSController.Update(deltaTime);
@@ -147,10 +168,7 @@ void Application::Render()
         m_TerrainShader->SetVec2("uOverlayAxisU", overlayAxisU);
         m_TerrainShader->SetVec2("uOverlayAxisV", overlayAxisV);
         m_TerrainShader->SetInt("uOverlayTexture", 0);
-        if (overlayReady)
-        {
-            m_OverlayTexture.Bind(0);
-        }
+        m_OverlayTexture.Bind(0);
 
         m_TerrainMesh->Draw();
     }
@@ -620,6 +638,18 @@ void Application::RenderEditor()
     ImGui::SliderInt("Grid Z", &m_TerrainSettings.gridResolutionZ, 8, 256);
     ImGui::SliderFloat("Height Scale", &m_TerrainSettings.heightScale, 0.1f, 5.0f);
 
+    float moveSpeed = m_FPSController.GetMoveSpeed();
+    if (ImGui::SliderFloat("Camera Speed", &moveSpeed, 1.0f, 200.0f, "%.1f"))
+    {
+        m_FPSController.SetMoveSpeed(moveSpeed);
+    }
+
+    float sprintMultiplier = m_FPSController.GetSprintMultiplier();
+    if (ImGui::SliderFloat("Sprint Multiplier", &sprintMultiplier, 1.0f, 10.0f, "%.1f"))
+    {
+        m_FPSController.SetSprintMultiplier(sprintMultiplier);
+    }
+
     if (ImGui::Button("Reload Terrain"))
     {
         if (LoadTerrainDataset(*activeTerrain))
@@ -726,8 +756,9 @@ void Application::RenderEditor()
     const glm::vec3 cameraPos = m_Camera.GetPosition();
     ImGui::Text("Points loaded: %zu", m_TerrainPoints.size());
     ImGui::Text("Camera: %.2f, %.2f, %.2f", cameraPos.x, cameraPos.y, cameraPos.z);
+    ImGui::Text("Move Speed: %.1f (current: %.1f)", m_FPSController.GetMoveSpeed(), m_FPSController.GetCurrentSpeed());
     ImGui::Text("Mouse capture: %s", m_MouseCaptured ? "on" : "off");
-    ImGui::Text("Esc releases mouse, Tab recaptures");
+    ImGui::Text("Esc releases mouse, Tab recaptures, +/- adjusts speed, Shift sprints");
     ImGui::End();
 }
 } // namespace GeoFPS

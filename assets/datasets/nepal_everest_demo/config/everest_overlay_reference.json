@@ -1,0 +1,7 @@
+{
+  "image": "imagery/everest_overlay.jpg",
+  "topLeft": [28.12, 86.63],
+  "topRight": [28.12, 87.03],
+  "bottomLeft": [27.86, 86.63],
+  "bottomRight": [27.86, 87.03]
+}

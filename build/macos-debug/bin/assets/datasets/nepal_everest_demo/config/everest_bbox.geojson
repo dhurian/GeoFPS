@@ -1,0 +1,23 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Everest Demo AOI"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [86.63, 27.86],
+            [87.03, 27.86],
+            [87.03, 28.12],
+            [86.63, 28.12],
+            [86.63, 27.86]
+          ]
+        ]
+      }
+    }
+  ]
+}

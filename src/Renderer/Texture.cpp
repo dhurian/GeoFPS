@@ -7,6 +7,28 @@
 
 namespace GeoFPS
 {
+namespace
+{
+unsigned int GetFallbackTextureId()
+{
+    static unsigned int fallbackTextureId = 0;
+    if (fallbackTextureId == 0)
+    {
+        constexpr unsigned char whitePixel[4] = {255, 255, 255, 255};
+        glGenTextures(1, &fallbackTextureId);
+        glBindTexture(GL_TEXTURE_2D, fallbackTextureId);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, whitePixel);
+        glBindTexture(GL_TEXTURE_2D, 0);
+    }
+
+    return fallbackTextureId;
+}
+} // namespace
+
 Texture::~Texture()
 {
     Reset();
@@ -73,7 +95,7 @@ bool Texture::LoadFromFile(const std::string& path)
 void Texture::Bind(unsigned int slot) const
 {
     glActiveTexture(GL_TEXTURE0 + slot);
-    glBindTexture(GL_TEXTURE_2D, m_TextureId);
+    glBindTexture(GL_TEXTURE_2D, m_TextureId != 0 ? m_TextureId : GetFallbackTextureId());
 }
 
 void Texture::Reset()

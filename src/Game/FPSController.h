@@ -15,6 +15,12 @@ class FPSController
     void AttachCamera(Camera* camera);
     void SetEnabled(bool enabled);
     void Update(float deltaTime);
+    void SetMoveSpeed(float moveSpeed);
+    void SetSprintMultiplier(float sprintMultiplier);
+
+    [[nodiscard]] float GetMoveSpeed() const { return m_MoveSpeed; }
+    [[nodiscard]] float GetSprintMultiplier() const { return m_SprintMultiplier; }
+    [[nodiscard]] float GetCurrentSpeed() const { return m_CurrentSpeed; }
 
   private:
     GLFWwindow* m_Window {nullptr};
@@ -24,6 +30,8 @@ class FPSController
     double m_LastMouseX {0.0};
     double m_LastMouseY {0.0};
     float m_MoveSpeed {12.0f};
+    float m_SprintMultiplier {2.0f};
+    float m_CurrentSpeed {12.0f};
     float m_MouseSensitivity {0.08f};
 };
 } // namespace GeoFPS

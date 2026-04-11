@@ -1,5 +1,5 @@
 # ninja log v7
-3	16	1775754497071296780	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/CMakeFiles/cmake.verify_globs	1528edb493f5e36b
+5	18	1775755858908873278	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/CMakeFiles/cmake.verify_globs	1528edb493f5e36b
 12	502	1775751785998338329	_deps/glfw-build/src/CMakeFiles/glfw.dir/vulkan.c.o	99e1475b788c9278
 11	507	1775751785997421708	_deps/glfw-build/src/CMakeFiles/glfw.dir/context.c.o	e84cd869d7f47840
 12	508	1775751785997685248	_deps/glfw-build/src/CMakeFiles/glfw.dir/init.c.o	3c04dd83bef5620f
@@ -43,12 +43,20 @@
 70	1384	1775753229491901184	CMakeFiles/GeoFPS.dir/src/Renderer/Shader.cpp.o	4f1580ed0271541c
 71	1363	1775753229492749767	CMakeFiles/GeoFPS.dir/src/Terrain/TerrainImporter.cpp.o	9648adabf12a38fc
 77	1019	1775754497144651694	CMakeFiles/GeoFPS.dir/src/main.cpp.o	b97e9ebafb26ad83
-1086	1334	1775754498153936559	bin/GeoFPS	a1c34d36ced16d64
-17	4004	1775754522872229912	build.ninja	7e0da22e39e699ea
-17	4004	1775754522867452332	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/cmake_install.cmake	7e0da22e39e699ea
-17	4004	1775754522868460590	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-build/cmake_install.cmake	7e0da22e39e699ea
-17	4004	1775754522870250230	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-build/src/cmake_install.cmake	7e0da22e39e699ea
-17	4004	1775754522870570149	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glm-build/cmake_install.cmake	7e0da22e39e699ea
-17	4004	1775754522871265196	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glm-build/glm/cmake_install.cmake	7e0da22e39e699ea
-71	1180	1775753229492269517	CMakeFiles/GeoFPS.dir/src/Renderer/Texture.cpp.o	ff2aacce1329e0f9
-2	11	1775754522889761551	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/CMakeFiles/cmake.verify_globs	1528edb493f5e36b
+729	955	1775755859632469695	bin/GeoFPS	a1c34d36ced16d64
+17	4004	1775755868625866898	build.ninja	7e0da22e39e699ea
+17	4004	1775755868620952305	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/cmake_install.cmake	7e0da22e39e699ea
+17	4004	1775755868622089525	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-build/cmake_install.cmake	7e0da22e39e699ea
+17	4004	1775755868623888211	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-build/src/cmake_install.cmake	7e0da22e39e699ea
+17	4004	1775755868624188589	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glm-build/cmake_install.cmake	7e0da22e39e699ea
+17	4004	1775755868624916305	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glm-build/glm/cmake_install.cmake	7e0da22e39e699ea
+81	729	1775755858984200864	CMakeFiles/GeoFPS.dir/src/Renderer/Texture.cpp.o	ff2aacce1329e0f9
+2	12	1775755868642407614	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/CMakeFiles/cmake.verify_globs	1528edb493f5e36b
+1	12	1775756004772564760	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/CMakeFiles/cmake.verify_globs	1528edb493f5e36b
+25	726	1775756004796236093	CMakeFiles/GeoFPS.dir/src/Core/Application.cpp.o	54d031782d928bc3
+726	859	1775756005496832301	bin/GeoFPS	a1c34d36ced16d64
+17	31	1775894362771952736	/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/CMakeFiles/cmake.verify_globs	1528edb493f5e36b
+130	808	1775894362884912563	CMakeFiles/GeoFPS.dir/src/Game/FPSController.cpp.o	a1d3a4d5dec0ad30
+130	1049	1775894362885101229	CMakeFiles/GeoFPS.dir/src/main.cpp.o	b97e9ebafb26ad83
+130	1136	1775894362884442313	CMakeFiles/GeoFPS.dir/src/Core/Application.cpp.o	54d031782d928bc3
+1136	1395	1775894363890667052	bin/GeoFPS	a1c34d36ced16d64
