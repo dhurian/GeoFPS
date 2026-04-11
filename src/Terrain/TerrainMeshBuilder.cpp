@@ -16,6 +16,12 @@ struct Bounds
     double maxZ {std::numeric_limits<double>::lowest()};
 };
 
+struct HeightSample
+{
+    double totalHeight {0.0};
+    int count {0};
+};
+
 void AccumulateBounds(Bounds& bounds, const glm::dvec3& point)
 {
     bounds.minX = std::min(bounds.minX, point.x);
@@ -24,27 +30,59 @@ void AccumulateBounds(Bounds& bounds, const glm::dvec3& point)
     bounds.maxZ = std::max(bounds.maxZ, point.z);
 }
 
-float EstimateHeight(const std::vector<glm::dvec3>& points, double x, double z)
+float ResolveHeightSample(const std::vector<HeightSample>& heightGrid,
+                          int gridResolutionX,
+                          int gridResolutionZ,
+                          int targetX,
+                          int targetZ)
 {
-    double weightedHeight = 0.0;
-    double totalWeight = 0.0;
+    const auto gridIndex = [gridResolutionX](int x, int z) {
+        return static_cast<size_t>(z * gridResolutionX + x);
+    };
 
-    for (const auto& point : points)
+    const HeightSample& directSample = heightGrid[gridIndex(targetX, targetZ)];
+    if (directSample.count > 0)
     {
-        const double dx = point.x - x;
-        const double dz = point.z - z;
-        const double distanceSquared = dx * dx + dz * dz;
-        const double weight = 1.0 / std::max(distanceSquared, 0.0001);
-        weightedHeight += point.y * weight;
-        totalWeight += weight;
+        return static_cast<float>(directSample.totalHeight / static_cast<double>(directSample.count));
     }
 
-    if (totalWeight <= 0.0)
+    const int maxRadius = std::max(gridResolutionX, gridResolutionZ);
+    for (int radius = 1; radius < maxRadius; ++radius)
     {
-        return 0.0f;
+        double weightedHeight = 0.0;
+        double totalWeight = 0.0;
+
+        const int minZ = std::max(targetZ - radius, 0);
+        const int maxZ = std::min(targetZ + radius, gridResolutionZ - 1);
+        const int minX = std::max(targetX - radius, 0);
+        const int maxX = std::min(targetX + radius, gridResolutionX - 1);
+
+        for (int z = minZ; z <= maxZ; ++z)
+        {
+            for (int x = minX; x <= maxX; ++x)
+            {
+                const HeightSample& sample = heightGrid[gridIndex(x, z)];
+                if (sample.count == 0)
+                {
+                    continue;
+                }
+
+                const int dx = x - targetX;
+                const int dz = z - targetZ;
+                const double distanceSquared = static_cast<double>((dx * dx) + (dz * dz));
+                const double weight = 1.0 / std::max(distanceSquared, 1.0);
+                weightedHeight += (sample.totalHeight / static_cast<double>(sample.count)) * weight;
+                totalWeight += weight;
+            }
+        }
+
+        if (totalWeight > 0.0)
+        {
+            return static_cast<float>(weightedHeight / totalWeight);
+        }
     }
 
-    return static_cast<float>(weightedHeight / totalWeight);
+    return 0.0f;
 }
 } // namespace
 
@@ -71,7 +109,31 @@ MeshData TerrainMeshBuilder::BuildFromGeographicPoints(const std::vector<Terrain
     const double width = std::max(bounds.maxX - bounds.minX, 1.0);
     const double depth = std::max(bounds.maxZ - bounds.minZ, 1.0);
 
-    meshData.vertices.reserve(static_cast<size_t>(settings.gridResolutionX * settings.gridResolutionZ));
+    const size_t vertexCount = static_cast<size_t>(settings.gridResolutionX * settings.gridResolutionZ);
+    meshData.vertices.reserve(vertexCount);
+
+    std::vector<HeightSample> heightGrid(vertexCount);
+    const auto gridIndex = [&settings](int x, int z) {
+        return static_cast<size_t>(z * settings.gridResolutionX + x);
+    };
+
+    for (const auto& point : localPoints)
+    {
+        const double normalizedX = std::clamp((point.x - bounds.minX) / width, 0.0, 1.0);
+        const double normalizedZ = std::clamp((point.z - bounds.minZ) / depth, 0.0, 1.0);
+        const int xIndex = std::clamp(
+            static_cast<int>(std::round(normalizedX * static_cast<double>(settings.gridResolutionX - 1))),
+            0,
+            settings.gridResolutionX - 1);
+        const int zIndex = std::clamp(
+            static_cast<int>(std::round(normalizedZ * static_cast<double>(settings.gridResolutionZ - 1))),
+            0,
+            settings.gridResolutionZ - 1);
+
+        HeightSample& sample = heightGrid[gridIndex(xIndex, zIndex)];
+        sample.totalHeight += point.y;
+        sample.count += 1;
+    }
 
     for (int zIndex = 0; zIndex < settings.gridResolutionZ; ++zIndex)
     {
@@ -81,7 +143,9 @@ MeshData TerrainMeshBuilder::BuildFromGeographicPoints(const std::vector<Terrain
         {
             const double xT = static_cast<double>(xIndex) / static_cast<double>(settings.gridResolutionX - 1);
             const double x = bounds.minX + xT * width;
-            const float height = EstimateHeight(localPoints, x, z) * settings.heightScale;
+            const float height = ResolveHeightSample(
+                                     heightGrid, settings.gridResolutionX, settings.gridResolutionZ, xIndex, zIndex) *
+                                 settings.heightScale;
 
             Vertex vertex;
             vertex.position = glm::vec3(static_cast<float>(x), height, static_cast<float>(z));

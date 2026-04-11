@@ -17,4 +17,12 @@ glm::dvec3 GeoConverter::ToLocal(double latitude, double longitude, double heigh
     const double y = height - m_Reference.originHeight;
     return {x, y, z};
 }
+
+glm::dvec3 GeoConverter::ToGeographic(const glm::dvec3& localPosition) const
+{
+    const double longitude = m_Reference.originLongitude + (localPosition.x / m_MetersPerDegreeLongitude);
+    const double latitude = m_Reference.originLatitude + (localPosition.z / m_MetersPerDegreeLatitude);
+    const double height = m_Reference.originHeight + localPosition.y;
+    return {latitude, longitude, height};
+}
 } // namespace GeoFPS

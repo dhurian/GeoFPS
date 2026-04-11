@@ -16,6 +16,7 @@ class GeoConverter
   public:
     explicit GeoConverter(const GeoReference& reference);
     [[nodiscard]] glm::dvec3 ToLocal(double latitude, double longitude, double height) const;
+    [[nodiscard]] glm::dvec3 ToGeographic(const glm::dvec3& localPosition) const;
 
   private:
     GeoReference m_Reference;

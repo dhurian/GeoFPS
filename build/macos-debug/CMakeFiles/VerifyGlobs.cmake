@@ -4,6 +4,7 @@
 # GEOFPS_SOURCES at CMakeLists.txt:92 (file)
 file(GLOB_RECURSE NEW_GLOB LIST_DIRECTORIES false "/Users/dhurianvitoldas/Documents/Development/GeoFPS/src/*.cpp")
 set(OLD_GLOB
+  "/Users/dhurianvitoldas/Documents/Development/GeoFPS/src/Assets/ObjImporter.cpp"
   "/Users/dhurianvitoldas/Documents/Development/GeoFPS/src/Core/Application.cpp"
   "/Users/dhurianvitoldas/Documents/Development/GeoFPS/src/Core/Window.cpp"
   "/Users/dhurianvitoldas/Documents/Development/GeoFPS/src/Game/FPSController.cpp"

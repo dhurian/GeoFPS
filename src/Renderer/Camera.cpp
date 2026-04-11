@@ -1,5 +1,6 @@
 #include "Renderer/Camera.h"
 
+#include <algorithm>
 #include <glm/gtc/matrix_transform.hpp>
 #include <cmath>
 
@@ -19,6 +20,16 @@ void Camera::SetYawPitch(float yawDegrees, float pitchDegrees)
 {
     m_YawDegrees = yawDegrees;
     m_PitchDegrees = glm::clamp(pitchDegrees, -89.0f, 89.0f);
+}
+
+void Camera::SetNearClip(float nearClip)
+{
+    m_NearClip = glm::clamp(nearClip, 0.1f, m_FarClip - 1.0f);
+}
+
+void Camera::SetFarClip(float farClip)
+{
+    m_FarClip = std::max(farClip, m_NearClip + 1.0f);
 }
 
 void Camera::Move(const glm::vec3& delta)

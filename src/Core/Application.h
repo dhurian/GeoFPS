@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Assets/ObjImporter.h"
 #include "Core/Window.h"
 #include "Game/FPSController.h"
 #include "Mapping/GeoImage.h"
@@ -36,6 +37,19 @@ struct TerrainDataset
     int activeOverlayIndex {0};
 };
 
+struct ImportedAsset
+{
+    std::string name {"Asset 1"};
+    std::string path;
+    MeshData meshData;
+    std::unique_ptr<Mesh> mesh;
+    glm::vec3 position {0.0f, 0.0f, 0.0f};
+    glm::vec3 rotationDegrees {0.0f, 0.0f, 0.0f};
+    glm::vec3 scale {1.0f, 1.0f, 1.0f};
+    glm::vec3 color {0.82f, 0.74f, 0.66f};
+    bool loaded {false};
+};
+
 class Application
 {
   public:
@@ -66,20 +80,29 @@ class Application
     void SetupImGui();
     void ShutdownImGui();
     void BeginImGuiFrame();
+    void RenderMiniMap();
+    void RenderCameraHud();
     void RenderEditor();
+    bool LoadImportedAsset(ImportedAsset& asset);
+    bool DeleteImportedAsset(int index);
+    ImportedAsset* GetActiveImportedAsset();
+    const ImportedAsset* GetActiveImportedAsset() const;
 
     Window m_Window;
     Camera m_Camera;
     FPSController m_FPSController;
     std::unique_ptr<Shader> m_TerrainShader;
+    std::unique_ptr<Shader> m_AssetShader;
     std::unique_ptr<Mesh> m_TerrainMesh;
     Texture m_OverlayTexture;
     std::vector<TerrainDataset> m_TerrainDatasets;
+    std::vector<ImportedAsset> m_ImportedAssets;
     std::vector<TerrainPoint> m_TerrainPoints;
     GeoReference m_GeoReference {};
     TerrainBuildSettings m_TerrainSettings {};
     bool m_MouseCaptured {true};
     int m_ActiveTerrainIndex {0};
+    int m_ActiveImportedAssetIndex {0};
     std::string m_StatusMessage;
 };
 } // namespace GeoFPS
