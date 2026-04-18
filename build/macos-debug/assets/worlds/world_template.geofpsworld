@@ -1,0 +1,82 @@
+# GeoFPS world file template
+# Fill this in, then use File -> Load World File in GeoFPS.
+
+world_name=My World
+active_terrain_index=0
+active_asset_index=0
+
+sun.use_geographic=1
+sun.year=2026
+sun.month=4
+sun.day=12
+sun.local_time_hours=16.0
+sun.utc_offset_hours=2.0
+sun.illuminance=1.0
+sun.ambient_strength=0.22
+sun.sky_brightness=1.0
+sun.manual_azimuth_degrees=220.0
+sun.manual_elevation_degrees=32.0
+
+[terrain]
+name=Base Terrain
+path=assets/data/sample_terrain.csv
+grid_x=64
+grid_z=64
+height_scale=1.0
+origin_latitude=55.6761
+origin_longitude=12.5683
+origin_height=0.0
+active_overlay_index=0
+  [overlay]
+  name=Overlay 1
+  image_path=
+  enabled=0
+  opacity=0.85
+  top_left_latitude=55.6761
+  top_left_longitude=12.5683
+  top_right_latitude=55.6761
+  top_right_longitude=12.5783
+  bottom_left_latitude=55.6661
+  bottom_left_longitude=12.5683
+  bottom_right_latitude=55.6661
+  bottom_right_longitude=12.5783
+  [/overlay]
+[/terrain]
+
+[asset]
+name=Tower 1
+path=assets/models/tower.glb
+position_mode=geographic
+latitude=55.67650000
+longitude=12.56900000
+height=8.0
+position_x=0.0
+position_y=0.0
+position_z=0.0
+rotation_z=0.0
+scale_x=1.0
+scale_y=1.0
+scale_z=1.0
+tint_r=1.0
+tint_g=1.0
+tint_b=1.0
+[/asset]
+
+[asset]
+name=Substation Building
+path=assets/models/substation_building.glb
+position_mode=local
+latitude=0.0
+longitude=0.0
+height=0.0
+position_x=25.0
+position_y=3.0
+position_z=-10.0
+rotation_z=90.0
+scale_x=1.0
+scale_y=1.0
+scale_z=1.0
+tint_r=1.0
+tint_g=1.0
+tint_b=1.0
+[/asset]

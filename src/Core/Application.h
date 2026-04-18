@@ -43,11 +43,45 @@ struct ImportedAsset
     std::string name {"Asset 1"};
     std::string path;
     ImportedAssetData assetData;
+    bool selected {false};
+    bool useGeographicPlacement {false};
+    double latitude {0.0};
+    double longitude {0.0};
+    double height {0.0};
     glm::vec3 position {0.0f, 0.0f, 0.0f};
     glm::vec3 rotationDegrees {0.0f, 0.0f, 0.0f};
     glm::vec3 scale {1.0f, 1.0f, 1.0f};
     glm::vec3 tint {1.0f, 1.0f, 1.0f};
     bool loaded {false};
+};
+
+struct AssetClipboardEntry
+{
+    std::string name;
+    std::string path;
+    bool useGeographicPlacement {false};
+    double latitude {0.0};
+    double longitude {0.0};
+    double height {0.0};
+    glm::vec3 position {0.0f, 0.0f, 0.0f};
+    float rotationZDegrees {0.0f};
+    glm::vec3 scale {1.0f, 1.0f, 1.0f};
+    glm::vec3 tint {1.0f, 1.0f, 1.0f};
+};
+
+struct SunSettings
+{
+    bool useGeographicSun {true};
+    int year {2026};
+    int month {4};
+    int day {12};
+    float localTimeHours {16.0f};
+    float utcOffsetHours {2.0f};
+    float illuminance {1.0f};
+    float ambientStrength {0.22f};
+    float skyBrightness {1.0f};
+    float manualAzimuthDegrees {220.0f};
+    float manualElevationDegrees {32.0f};
 };
 
 class Application
@@ -83,10 +117,24 @@ class Application
     void RenderMiniMap();
     void RenderCameraHud();
     void RenderEditor();
+    void RenderTerrainDatasetWindow();
+    void RenderSunWindow();
+    void RenderAerialOverlayWindow();
+    void RenderBlenderAssetsWindow();
     bool LoadImportedAsset(ImportedAsset& asset);
     bool DeleteImportedAsset(int index);
     ImportedAsset* GetActiveImportedAsset();
     const ImportedAsset* GetActiveImportedAsset() const;
+    size_t GetSelectedImportedAssetCount() const;
+    void CopySelectedImportedAssets();
+    void PasteCopiedImportedAssets();
+    void RenderSunControls();
+    float SampleTerrainHeightAt(double latitude, double longitude) const;
+    bool SaveWorldToFile(const std::string& path);
+    bool LoadWorldFromFile(const std::string& path);
+    bool LoadBlenderAssetsFromFile(const std::string& path);
+    bool WriteCurrentWorldReadout(const std::string& path) const;
+    void UpdateImportedAssetPositionFromGeographic(ImportedAsset& asset) const;
 
     Window m_Window;
     Camera m_Camera;
@@ -101,8 +149,19 @@ class Application
     GeoReference m_GeoReference {};
     TerrainBuildSettings m_TerrainSettings {};
     bool m_MouseCaptured {true};
+    bool m_ShowTerrainDatasetWindow {false};
+    bool m_ShowSunWindow {false};
+    bool m_ShowAerialOverlayWindow {false};
+    bool m_ShowBlenderAssetsWindow {false};
     int m_ActiveTerrainIndex {0};
     int m_ActiveImportedAssetIndex {0};
+    int m_SelectedCityPresetIndex {0};
+    SunSettings m_SunSettings {};
+    std::string m_WorldName {"World 1"};
+    std::string m_WorldFilePath {"assets/worlds/world_template.geofpsworld"};
+    std::string m_BlenderAssetsFilePath {"assets/worlds/blender_assets_template.txt"};
+    std::string m_WorldReadoutFilePath {"assets/worlds/current_world_readout.txt"};
+    std::vector<AssetClipboardEntry> m_AssetClipboard;
     std::string m_StatusMessage;
 };
 } // namespace GeoFPS

@@ -1,0 +1,22 @@
+# GeoFPS blender assets import template
+# Use File -> Import Blender Assets File
+
+[asset]
+name=Tower 1
+path=/Users/dhurianvitoldas/Documents/Development/GeoFPS/BlenderFolder/TowerV3.glb
+position_mode=local
+latitude=0.0
+longitude=0.0
+height=8.0
+position_x=0.0
+position_y=0.0
+position_z=0.0
+rotation_z=0.0
+scale_x=1.0
+scale_y=1.0
+scale_z=1.0
+tint_r=1.0
+tint_g=1.0
+tint_b=1.0
+[/asset]
+

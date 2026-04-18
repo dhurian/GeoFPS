@@ -201,6 +201,33 @@ build CMakeFiles/GeoFPS.dir/src/Core/Application.cpp.o: CXX_COMPILER__GeoFPS_uns
   OBJECT_FILE_DIR = CMakeFiles/GeoFPS.dir/src/Core
   TARGET_SUPPORT_DIR = CMakeFiles/GeoFPS.dir
 
+build CMakeFiles/GeoFPS.dir/src/Core/ApplicationPersistence.cpp.o: CXX_COMPILER__GeoFPS_unscanned_Debug /Users/dhurianvitoldas/Documents/Development/GeoFPS/src/Core/ApplicationPersistence.cpp || cmake_object_order_depends_target_GeoFPS
+  CONFIG = Debug
+  DEP_FILE = CMakeFiles/GeoFPS.dir/src/Core/ApplicationPersistence.cpp.o.d
+  FLAGS = -g -std=c++20 -arch arm64 -Wall -Wextra -Wpedantic
+  INCLUDES = -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/stb-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/tinygltf-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glm-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glad-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src/backends -iframework /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks
+  OBJECT_DIR = CMakeFiles/GeoFPS.dir
+  OBJECT_FILE_DIR = CMakeFiles/GeoFPS.dir/src/Core
+  TARGET_SUPPORT_DIR = CMakeFiles/GeoFPS.dir
+
+build CMakeFiles/GeoFPS.dir/src/Core/ApplicationScene.cpp.o: CXX_COMPILER__GeoFPS_unscanned_Debug /Users/dhurianvitoldas/Documents/Development/GeoFPS/src/Core/ApplicationScene.cpp || cmake_object_order_depends_target_GeoFPS
+  CONFIG = Debug
+  DEP_FILE = CMakeFiles/GeoFPS.dir/src/Core/ApplicationScene.cpp.o.d
+  FLAGS = -g -std=c++20 -arch arm64 -Wall -Wextra -Wpedantic
+  INCLUDES = -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/stb-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/tinygltf-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glm-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glad-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src/backends -iframework /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks
+  OBJECT_DIR = CMakeFiles/GeoFPS.dir
+  OBJECT_FILE_DIR = CMakeFiles/GeoFPS.dir/src/Core
+  TARGET_SUPPORT_DIR = CMakeFiles/GeoFPS.dir
+
+build CMakeFiles/GeoFPS.dir/src/Core/ApplicationUI.cpp.o: CXX_COMPILER__GeoFPS_unscanned_Debug /Users/dhurianvitoldas/Documents/Development/GeoFPS/src/Core/ApplicationUI.cpp || cmake_object_order_depends_target_GeoFPS
+  CONFIG = Debug
+  DEP_FILE = CMakeFiles/GeoFPS.dir/src/Core/ApplicationUI.cpp.o.d
+  FLAGS = -g -std=c++20 -arch arm64 -Wall -Wextra -Wpedantic
+  INCLUDES = -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/stb-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/tinygltf-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glm-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glad-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src/backends -iframework /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks
+  OBJECT_DIR = CMakeFiles/GeoFPS.dir
+  OBJECT_FILE_DIR = CMakeFiles/GeoFPS.dir/src/Core
+  TARGET_SUPPORT_DIR = CMakeFiles/GeoFPS.dir
+
 build CMakeFiles/GeoFPS.dir/src/Core/Window.cpp.o: CXX_COMPILER__GeoFPS_unscanned_Debug /Users/dhurianvitoldas/Documents/Development/GeoFPS/src/Core/Window.cpp || cmake_object_order_depends_target_GeoFPS
   CONFIG = Debug
   DEP_FILE = CMakeFiles/GeoFPS.dir/src/Core/Window.cpp.o.d
@@ -308,7 +335,7 @@ build CMakeFiles/GeoFPS.dir/src/main.cpp.o: CXX_COMPILER__GeoFPS_unscanned_Debug
 #############################################
 # Link the executable bin/GeoFPS
 
-build bin/GeoFPS: CXX_EXECUTABLE_LINKER__GeoFPS_Debug CMakeFiles/GeoFPS.dir/src/Assets/GltfImporter.cpp.o CMakeFiles/GeoFPS.dir/src/Assets/ObjImporter.cpp.o CMakeFiles/GeoFPS.dir/src/Core/Application.cpp.o CMakeFiles/GeoFPS.dir/src/Core/Window.cpp.o CMakeFiles/GeoFPS.dir/src/Game/FPSController.cpp.o CMakeFiles/GeoFPS.dir/src/Math/GeoConverter.cpp.o CMakeFiles/GeoFPS.dir/src/Renderer/Camera.cpp.o CMakeFiles/GeoFPS.dir/src/Renderer/Mesh.cpp.o CMakeFiles/GeoFPS.dir/src/Renderer/Shader.cpp.o CMakeFiles/GeoFPS.dir/src/Renderer/Texture.cpp.o CMakeFiles/GeoFPS.dir/src/Terrain/TerrainImporter.cpp.o CMakeFiles/GeoFPS.dir/src/Terrain/TerrainMeshBuilder.cpp.o CMakeFiles/GeoFPS.dir/src/ThirdParty/StbImageImpl.cpp.o CMakeFiles/GeoFPS.dir/src/main.cpp.o | _deps/glfw-build/src/libglfw3.a _deps/glm-build/glm/libglm.a libglad.a libimgui.a /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks/OpenGL.framework _deps/glfw-build/src/libglfw3.a || _deps/glfw-build/src/libglfw3.a _deps/glm-build/glm/libglm.a libglad.a libimgui.a
+build bin/GeoFPS: CXX_EXECUTABLE_LINKER__GeoFPS_Debug CMakeFiles/GeoFPS.dir/src/Assets/GltfImporter.cpp.o CMakeFiles/GeoFPS.dir/src/Assets/ObjImporter.cpp.o CMakeFiles/GeoFPS.dir/src/Core/Application.cpp.o CMakeFiles/GeoFPS.dir/src/Core/ApplicationPersistence.cpp.o CMakeFiles/GeoFPS.dir/src/Core/ApplicationScene.cpp.o CMakeFiles/GeoFPS.dir/src/Core/ApplicationUI.cpp.o CMakeFiles/GeoFPS.dir/src/Core/Window.cpp.o CMakeFiles/GeoFPS.dir/src/Game/FPSController.cpp.o CMakeFiles/GeoFPS.dir/src/Math/GeoConverter.cpp.o CMakeFiles/GeoFPS.dir/src/Renderer/Camera.cpp.o CMakeFiles/GeoFPS.dir/src/Renderer/Mesh.cpp.o CMakeFiles/GeoFPS.dir/src/Renderer/Shader.cpp.o CMakeFiles/GeoFPS.dir/src/Renderer/Texture.cpp.o CMakeFiles/GeoFPS.dir/src/Terrain/TerrainImporter.cpp.o CMakeFiles/GeoFPS.dir/src/Terrain/TerrainMeshBuilder.cpp.o CMakeFiles/GeoFPS.dir/src/ThirdParty/StbImageImpl.cpp.o CMakeFiles/GeoFPS.dir/src/main.cpp.o | _deps/glfw-build/src/libglfw3.a _deps/glm-build/glm/libglm.a libglad.a libimgui.a /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks/OpenGL.framework _deps/glfw-build/src/libglfw3.a || _deps/glfw-build/src/libglfw3.a _deps/glm-build/glm/libglm.a libglad.a libimgui.a
   CONFIG = Debug
   FLAGS = -g -arch arm64
   LINK_FLAGS = -Wl,-search_paths_first -Wl,-headerpad_max_install_names

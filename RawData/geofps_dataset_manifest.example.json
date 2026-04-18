@@ -1,0 +1,29 @@
+{
+  "name": "nepal_everest_demo",
+  "display_name": "Nepal Everest Demo",
+  "bbox": {
+    "south": 27.86,
+    "north": 28.12,
+    "west": 86.63,
+    "east": 87.03
+  },
+  "terrain": {
+    "source": "local_ascii",
+    "path": "RawData/rasters_AW3D30/output_AW3D30.asc",
+    "demtype": "COP30",
+    "sample_step": 4
+  },
+  "imagery": {
+    "source": "copernicus_browser",
+    "path": "assets/datasets/nepal_everest_demo/imagery/2025-12-24-00_00_2025-12-24-23_59_Sentinel-2_L2A_True_color_Small.jpg",
+    "enabled": true,
+    "opacity": 0.85
+  },
+  "output": {
+    "dataset_dir": "assets/datasets/nepal_everest_demo",
+    "world_path": "assets/worlds/nepal_everest_demo.geofpsworld",
+    "grid_x": 128,
+    "grid_z": 128,
+    "height_scale": 1.0
+  }
+}

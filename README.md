@@ -45,6 +45,17 @@ latitude/longitude/height into local engine-space meters.
 - `src/Terrain/TerrainMeshBuilder.cpp`
 - `assets/data/sample_terrain.csv`
 
+## Preparing terrain and aerial map data
+
+Use the data preparation workflow in `docs/DATA_PIPELINE.md` to turn a DEM and
+an aerial/satellite image into a GeoFPS-ready dataset and `.geofpsworld` file.
+
+The entry point is:
+
+```bash
+python3 RawData/prepare_geofps_dataset.py RawData/geofps_dataset_manifest.example.json --force
+```
+
 ## Build
 
 ### macOS
