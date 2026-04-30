@@ -119,7 +119,16 @@ target_link_libraries(GeoFPS PRIVATE
 )
 
 if(APPLE)
-  target_link_libraries(GeoFPS PRIVATE "-framework Cocoa" "-framework IOKit" "-framework CoreVideo")
+  set_source_files_properties(src/Terrain/TerrainIsolineMetal.mm PROPERTIES
+    LANGUAGE CXX
+    COMPILE_FLAGS "-x objective-c++"
+  )
+  set_source_files_properties(src/Core/NativeFileDialog.mm PROPERTIES
+    LANGUAGE CXX
+    COMPILE_FLAGS "-x objective-c++"
+  )
+  target_sources(GeoFPS PRIVATE src/Terrain/TerrainIsolineMetal.mm src/Core/NativeFileDialog.mm)
+  target_link_libraries(GeoFPS PRIVATE "-framework Cocoa" "-framework IOKit" "-framework CoreVideo" "-framework Metal" "-framework Foundation")
 endif()
 
 if(MSVC)
@@ -140,3 +149,24 @@ add_custom_command(TARGET GeoFPS POST_BUILD
           ${CMAKE_SOURCE_DIR}/assets
           ${CMAKE_BINARY_DIR}/assets
 )
+
+if(GEOFPS_BUILD_TESTS)
+  add_executable(GeoFPSTests
+    tests/TerrainProfileTests.cpp
+    src/Core/WorldFileParser.cpp
+    src/Math/GeoConverter.cpp
+    src/Terrain/TerrainImporter.cpp
+    src/Terrain/TerrainMeshBuilder.cpp
+    src/Terrain/TerrainProfile.cpp
+  )
+  target_include_directories(GeoFPSTests PRIVATE
+    src
+    ${imgui_SOURCE_DIR}
+    ${imgui_SOURCE_DIR}/backends
+  )
+  target_link_libraries(GeoFPSTests PRIVATE glm)
+  if(APPLE)
+    target_sources(GeoFPSTests PRIVATE src/Terrain/TerrainIsolineMetal.mm)
+    target_link_libraries(GeoFPSTests PRIVATE "-framework Metal" "-framework Foundation")
+  endif()
+endif()

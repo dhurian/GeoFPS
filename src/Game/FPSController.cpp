@@ -3,6 +3,7 @@
 #include "Renderer/Camera.h"
 #include <GLFW/glfw3.h>
 #include <algorithm>
+#include <cmath>
 
 namespace GeoFPS
 {
@@ -27,30 +28,47 @@ void FPSController::SetEnabled(bool enabled)
 
 void FPSController::SetMoveSpeed(float moveSpeed)
 {
-    m_MoveSpeed = std::max(moveSpeed, 0.5f);
+    m_MoveSpeed = std::clamp(moveSpeed, 0.5f, 3000.0f);
 }
 
 void FPSController::SetSprintMultiplier(float sprintMultiplier)
 {
-    m_SprintMultiplier = std::max(sprintMultiplier, 1.0f);
+    m_SprintMultiplier = std::clamp(sprintMultiplier, 1.0f, 20.0f);
+}
+
+void FPSController::ResetMouseState()
+{
+    m_FirstMouse = true;
+    m_SmoothedMouseDeltaX = 0.0f;
+    m_SmoothedMouseDeltaY = 0.0f;
 }
 
 void FPSController::Update(float deltaTime)
 {
-    if (!m_Enabled || m_Window == nullptr || m_Camera == nullptr)
+    if (m_Window == nullptr || m_Camera == nullptr)
     {
         return;
     }
 
+    const float frameDelta = std::clamp(deltaTime, 0.0f, 0.05f);
     float speed = m_MoveSpeed;
-    if (glfwGetKey(m_Window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
+    if (glfwGetKey(m_Window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS || glfwGetKey(m_Window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS)
     {
         speed *= m_SprintMultiplier;
     }
     m_CurrentSpeed = speed;
 
     glm::vec3 movement(0.0f);
-    const glm::vec3 forwardFlat = glm::normalize(glm::vec3(m_Camera->GetForward().x, 0.0f, m_Camera->GetForward().z));
+    const glm::vec3 forward = m_Camera->GetForward();
+    glm::vec3 forwardFlat(forward.x, 0.0f, forward.z);
+    if (glm::dot(forwardFlat, forwardFlat) <= 1e-8f)
+    {
+        forwardFlat = glm::vec3(1.0f, 0.0f, 0.0f);
+    }
+    else
+    {
+        forwardFlat = glm::normalize(forwardFlat);
+    }
     const glm::vec3 right = m_Camera->GetRight();
 
     if (glfwGetKey(m_Window, GLFW_KEY_W) == GLFW_PRESS)
@@ -81,7 +99,13 @@ void FPSController::Update(float deltaTime)
     if (glm::length(movement) > 0.0f)
     {
         movement = glm::normalize(movement);
-        m_Camera->Move(movement * speed * deltaTime);
+        m_Camera->Move(movement * speed * frameDelta);
+    }
+
+    if (!m_Enabled)
+    {
+        ResetMouseState();
+        return;
     }
 
     double mouseX = 0.0;
@@ -91,14 +115,23 @@ void FPSController::Update(float deltaTime)
     {
         m_LastMouseX = mouseX;
         m_LastMouseY = mouseY;
+        m_SmoothedMouseDeltaX = 0.0f;
+        m_SmoothedMouseDeltaY = 0.0f;
         m_FirstMouse = false;
     }
 
-    const float deltaX = static_cast<float>(mouseX - m_LastMouseX) * m_MouseSensitivity;
-    const float deltaY = static_cast<float>(m_LastMouseY - mouseY) * m_MouseSensitivity;
+    const float rawDeltaX = static_cast<float>(mouseX - m_LastMouseX) * m_MouseSensitivity;
+    const float rawDeltaY = static_cast<float>(m_LastMouseY - mouseY) * m_MouseSensitivity;
     m_LastMouseX = mouseX;
     m_LastMouseY = mouseY;
 
-    m_Camera->SetYawPitch(m_Camera->GetYaw() + deltaX, m_Camera->GetPitch() + deltaY);
+    const float smoothingAlpha = std::clamp(1.0f - std::exp(-m_MouseSmoothingResponse * frameDelta),
+                                            0.0f,
+                                            1.0f);
+    m_SmoothedMouseDeltaX += (rawDeltaX - m_SmoothedMouseDeltaX) * smoothingAlpha;
+    m_SmoothedMouseDeltaY += (rawDeltaY - m_SmoothedMouseDeltaY) * smoothingAlpha;
+
+    m_Camera->SetYawPitch(m_Camera->GetYaw() + m_SmoothedMouseDeltaX,
+                          m_Camera->GetPitch() + m_SmoothedMouseDeltaY);
 }
 } // namespace GeoFPS

@@ -128,6 +128,12 @@ void Texture::Bind(unsigned int slot) const
     glBindTexture(GL_TEXTURE_2D, m_TextureId != 0 ? m_TextureId : GetFallbackTextureId());
 }
 
+void Texture::BindFallback(unsigned int slot)
+{
+    glActiveTexture(GL_TEXTURE0 + slot);
+    glBindTexture(GL_TEXTURE_2D, GetFallbackTextureId());
+}
+
 void Texture::Reset()
 {
     if (m_TextureId != 0)

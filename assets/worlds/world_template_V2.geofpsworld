@@ -1,0 +1,265 @@
+# GeoFPS world file
+world_name=My World
+active_terrain_index=0
+active_asset_index=0
+sun.use_geographic=0
+sun.year=2026
+sun.month=4
+sun.day=12
+sun.local_time_hours=16.00000000
+sun.utc_offset_hours=2.00000000
+sun.illuminance=1.00000000
+sun.ambient_strength=0.22000000
+sun.sky_brightness=1.00000000
+sun.manual_azimuth_degrees=220.00000000
+sun.manual_elevation_degrees=32.00000000
+
+[terrain]
+name=Base Terrain
+tile_manifest=assets/datasets/nepal_everest_demo/terrain_tiles/tile_manifest.json
+path=/Users/dhurianvitoldas/Documents/Development/GeoFPS/assets/datasets/nepal_everest_demo/terrain/everest_terrain.csv
+visible=1
+grid_x=512
+grid_z=512
+height_scale=1.00000000
+smoothing_passes=0
+import_sample_step=1
+chunk_resolution=96
+coordinate_mode=geographic
+origin_latitude=28.11986111
+origin_longitude=86.63013889
+origin_height=6002.00000000
+active_overlay_index=0
+  [overlay]
+  name=Overlay 1
+  image_path=/Users/dhurianvitoldas/Documents/Development/GeoFPS/assets/datasets/nepal_everest_demo/imagery/2025-12-24-00_00_2025-12-24-23_59_Sentinel-2_L2A_True_color_Large.jpg
+  enabled=1
+  opacity=0.65000000
+  top_left_latitude=28.11986111
+  top_left_longitude=86.63013889
+  top_right_latitude=28.11986111
+  top_right_longitude=87.02986111
+  bottom_left_latitude=27.86013889
+  bottom_left_longitude=86.63013889
+  bottom_right_latitude=27.86013889
+  bottom_right_longitude=87.02986111
+  [/overlay]
+[/terrain]
+
+[asset]
+name=Tower 1
+path=assets/models/tower.glb
+position_mode=geographic
+latitude=55.67650000
+longitude=12.56900000
+height=8.00000000
+position_x=-7271336.00000000
+position_y=-5994.00000000
+position_z=3067605.00000000
+rotation_z=0.00000000
+scale_x=1.00000000
+scale_y=1.00000000
+scale_z=1.00000000
+tint_r=1.00000000
+tint_g=1.00000000
+tint_b=1.00000000
+[/asset]
+
+[terrain_profile]
+name=Profile 1
+visible=1
+show_in_world=1
+color_r=1.00000000
+color_g=0.20000000
+color_b=0.10000000
+color_a=1.00000000
+thickness=3.00000000
+world_thickness_m=0.25000000
+sample_spacing_m=10.00000000
+terrain=Base Terrain
+  [vertex]
+  latitude=28.10223710
+  longitude=86.63551977
+  auxiliary=0
+  [/vertex]
+  [vertex]
+  latitude=28.09260196
+  longitude=86.63797662
+  auxiliary=1
+  [/vertex]
+  [vertex]
+  latitude=28.06606152
+  longitude=86.64474412
+  auxiliary=0
+  [/vertex]
+  [vertex]
+  latitude=28.05590439
+  longitude=86.64813618
+  auxiliary=1
+  [/vertex]
+  [vertex]
+  latitude=28.03171666
+  longitude=86.65621389
+  auxiliary=1
+  [/vertex]
+  [vertex]
+  latitude=28.01803037
+  longitude=86.66078454
+  auxiliary=1
+  [/vertex]
+  [vertex]
+  latitude=28.00391368
+  longitude=86.66549893
+  auxiliary=0
+  [/vertex]
+  [vertex]
+  latitude=27.99252976
+  longitude=86.67021593
+  auxiliary=1
+  [/vertex]
+  [vertex]
+  latitude=27.95567956
+  longitude=86.68548504
+  auxiliary=1
+  [/vertex]
+  [vertex]
+  latitude=27.93974206
+  longitude=86.69208885
+  auxiliary=1
+  [/vertex]
+  [vertex]
+  latitude=27.91115575
+  longitude=86.70393376
+  auxiliary=0
+  [/vertex]
+  [vertex]
+  latitude=27.91967417
+  longitude=86.71482528
+  auxiliary=1
+  [/vertex]
+  [vertex]
+  latitude=27.93540046
+  longitude=86.73493268
+  auxiliary=1
+  [/vertex]
+  [vertex]
+  latitude=27.94362103
+  longitude=86.74544338
+  auxiliary=0
+  [/vertex]
+  [vertex]
+  latitude=27.96347979
+  longitude=86.77988159
+  auxiliary=1
+  [/vertex]
+  [vertex]
+  latitude=27.97306508
+  longitude=86.79650399
+  auxiliary=1
+  [/vertex]
+  [vertex]
+  latitude=27.97665342
+  longitude=86.80272674
+  auxiliary=1
+  [/vertex]
+  [vertex]
+  latitude=27.99371033
+  longitude=86.83230610
+  auxiliary=0
+  [/vertex]
+  [vertex]
+  latitude=27.98789500
+  longitude=86.83614363
+  auxiliary=1
+  [/vertex]
+  [vertex]
+  latitude=27.96277282
+  longitude=86.85272177
+  auxiliary=1
+  [/vertex]
+  [vertex]
+  latitude=27.94362103
+  longitude=86.86536003
+  auxiliary=0
+  [/vertex]
+  [vertex]
+  latitude=27.93269479
+  longitude=86.89381772
+  auxiliary=1
+  [/vertex]
+  [vertex]
+  latitude=27.91764881
+  longitude=86.93300535
+  auxiliary=0
+  [/vertex]
+  [vertex]
+  latitude=27.93894189
+  longitude=86.94257237
+  auxiliary=1
+  [/vertex]
+  [vertex]
+  latitude=27.95614335
+  longitude=86.95030102
+  auxiliary=1
+  [/vertex]
+  [vertex]
+  latitude=27.96841818
+  longitude=86.95581613
+  auxiliary=1
+  [/vertex]
+  [vertex]
+  latitude=27.99463789
+  longitude=86.96759669
+  auxiliary=0
+  [/vertex]
+  [vertex]
+  latitude=28.00685303
+  longitude=86.97538349
+  auxiliary=1
+  [/vertex]
+  [vertex]
+  latitude=28.03042198
+  longitude=86.99040801
+  auxiliary=1
+  [/vertex]
+  [vertex]
+  latitude=28.05046733
+  longitude=87.00318635
+  auxiliary=1
+  [/vertex]
+  [vertex]
+  latitude=28.06698908
+  longitude=87.01371849
+  auxiliary=0
+  [/vertex]
+  [vertex]
+  latitude=28.04225618
+  longitude=87.01546287
+  auxiliary=1
+  [/vertex]
+  [vertex]
+  latitude=28.01734405
+  longitude=87.01721989
+  auxiliary=1
+  [/vertex]
+  [vertex]
+  latitude=27.99601639
+  longitude=87.01872411
+  auxiliary=1
+  [/vertex]
+  [vertex]
+  latitude=27.97979663
+  longitude=87.01986807
+  auxiliary=0
+  [/vertex]
+  [vertex]
+  latitude=28.11615079
+  longitude=86.83384347
+  auxiliary=0
+  [/vertex]
+  [vertex]
+  latitude=28.11800596
+  longitude=86.83538087
+  auxiliary=0
+  [/vertex]
+[/terrain_profile]

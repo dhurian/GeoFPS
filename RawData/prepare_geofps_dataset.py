@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any
 
 from convert_esri_ascii_to_terrain_csv import convert_ascii_to_csv
+from split_terrain_csv_to_tiles import split_terrain_csv_to_tiles
 
 
 OPENTOPOGRAPHY_GLOBALDEM_URL = "https://portal.opentopography.org/API/globaldem"
@@ -287,6 +288,7 @@ def write_world_file(
     repo_root: Path,
     manifest: dict[str, Any],
     terrain_csv_path: Path,
+    terrain_tile_manifest_path: Path | None,
     imagery_path: Path | None,
     origin: tuple[float, float, float],
 ) -> Path:
@@ -299,6 +301,9 @@ def write_world_file(
 
     world_path.parent.mkdir(parents=True, exist_ok=True)
     terrain_rel = repo_relative(repo_root, terrain_csv_path)
+    terrain_tile_manifest_rel = (
+        repo_relative(repo_root, terrain_tile_manifest_path) if terrain_tile_manifest_path is not None else ""
+    )
     imagery_rel = repo_relative(repo_root, imagery_path) if imagery_path is not None else ""
     enabled = 1 if imagery.get("enabled", imagery_path is not None) and imagery_path is not None else 0
     opacity = float(imagery.get("opacity", 0.85))
@@ -325,10 +330,14 @@ sun.manual_elevation_degrees=32.0
 
 [terrain]
 name={manifest.get("display_name", manifest["name"])}
+{"tile_manifest=" + terrain_tile_manifest_rel if terrain_tile_manifest_rel else ""}
 path={terrain_rel}
-grid_x={int(output.get("grid_x", 128))}
-grid_z={int(output.get("grid_z", 128))}
+grid_x={int(output.get("grid_x", 512))}
+grid_z={int(output.get("grid_z", 512))}
 height_scale={float(output.get("height_scale", 1.0))}
+smoothing_passes={int(output.get("smoothing_passes", 0))}
+import_sample_step={int(output.get("import_sample_step", 1))}
+chunk_resolution={int(output.get("chunk_resolution", 96))}
 origin_latitude={origin_lat:.8f}
 origin_longitude={origin_lon:.8f}
 origin_height={origin_height:.3f}
@@ -357,6 +366,7 @@ def write_dataset_readme(
     dataset_dir: Path,
     manifest: dict[str, Any],
     terrain_csv_path: Path,
+    terrain_tile_manifest_path: Path | None,
     imagery_path: Path | None,
     world_path: Path,
     repo_root: Path,
@@ -379,6 +389,8 @@ def write_dataset_readme(
         f"- Terrain CSV: `{repo_relative(repo_root, terrain_csv_path)}`",
         f"- World file: `{repo_relative(repo_root, world_path)}`",
     ]
+    if terrain_tile_manifest_path is not None:
+        lines.append(f"- Terrain tile manifest: `{repo_relative(repo_root, terrain_tile_manifest_path)}`")
     if imagery_path is not None:
         lines.append(f"- Aerial overlay image: `{repo_relative(repo_root, imagery_path)}`")
     else:
@@ -455,6 +467,22 @@ def main() -> int:
 
     imagery_path = copy_imagery(repo_root, manifest, imagery_dir, args.force)
     origin = read_first_terrain_point(terrain_csv_path)
+    terrain_tile_manifest_path = None
+    terrain_manifest = manifest["terrain"]
+    if bool(terrain_manifest.get("tile_output_enabled", False)):
+        terrain_tile_manifest_path = split_terrain_csv_to_tiles(
+            terrain_csv_path,
+            dataset_dir / "terrain_tiles",
+            name=manifest["name"],
+            tile_size_degrees=float(terrain_manifest.get("tile_size_degrees", 0.01)),
+            tile_overlap_samples=int(terrain_manifest.get("tile_overlap_samples", 1)),
+            coordinate_mode=terrain_manifest.get("coordinate_mode", "geographic"),
+            crs=terrain_manifest.get("crs", "EPSG:4326"),
+            origin_latitude=origin[0],
+            origin_longitude=origin[1],
+            origin_height=origin[2],
+            force=args.force,
+        )
 
     write_bbox_files(config_dir, manifest["bbox"])
     write_overlay_reference(
@@ -464,11 +492,21 @@ def main() -> int:
         bool(manifest["imagery"].get("enabled", imagery_path is not None)),
         float(manifest["imagery"].get("opacity", 0.85)),
     )
-    world_path = write_world_file(repo_root, manifest, terrain_csv_path, imagery_path, origin)
-    write_dataset_readme(dataset_dir, manifest, terrain_csv_path, imagery_path, world_path, repo_root)
+    world_path = write_world_file(repo_root, manifest, terrain_csv_path, terrain_tile_manifest_path, imagery_path, origin)
+    write_dataset_readme(
+        dataset_dir,
+        manifest,
+        terrain_csv_path,
+        terrain_tile_manifest_path,
+        imagery_path,
+        world_path,
+        repo_root,
+    )
     write_sources(dataset_dir, manifest)
 
     print(f"Wrote {written_rows} terrain points: {repo_relative(repo_root, terrain_csv_path)}")
+    if terrain_tile_manifest_path is not None:
+        print(f"Wrote terrain tiles: {repo_relative(repo_root, terrain_tile_manifest_path)}")
     if imagery_path is not None:
         print(f"Prepared overlay image: {repo_relative(repo_root, imagery_path)}")
     print(f"Wrote world file: {repo_relative(repo_root, world_path)}")

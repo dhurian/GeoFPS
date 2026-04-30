@@ -1,0 +1,31 @@
+# Build outputs
+build/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+compile_commands.json
+
+# Generated binaries and logs
+*.o
+*.obj
+*.a
+*.dylib
+*.so
+*.dll
+*.exe
+*.log
+
+# Runtime/generated app state
+imgui.ini
+assets/worlds/current_world_readout.txt
+assets/worlds/terrain_profiles.geofpsprofile
+
+# macOS / editor clutter
+.DS_Store
+**/.DS_Store
+.vscode/
+
+# Python caches from RawData utilities
+__pycache__/
+*.py[cod]

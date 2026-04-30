@@ -30,6 +30,7 @@ class Mesh
     Mesh& operator=(Mesh&& other) noexcept;
 
     void Draw() const;
+    [[nodiscard]] unsigned int GetTriangleCount() const { return m_IndexCount / 3u; }
 
   private:
     void Release();

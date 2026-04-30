@@ -20,6 +20,7 @@ class Camera
     [[nodiscard]] glm::vec3 GetRight() const;
     [[nodiscard]] glm::vec3 GetUp() const;
     [[nodiscard]] glm::mat4 GetViewMatrix() const;
+    [[nodiscard]] glm::mat4 GetViewMatrixRotationOnly() const;
     [[nodiscard]] glm::mat4 GetProjectionMatrix() const;
 
     [[nodiscard]] float GetYaw() const { return m_YawDegrees; }

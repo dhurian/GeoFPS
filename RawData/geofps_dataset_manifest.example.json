@@ -11,7 +11,12 @@
     "source": "local_ascii",
     "path": "RawData/rasters_AW3D30/output_AW3D30.asc",
     "demtype": "COP30",
-    "sample_step": 4
+    "sample_step": 4,
+    "tile_output_enabled": true,
+    "tile_size_degrees": 0.01,
+    "tile_overlap_samples": 1,
+    "coordinate_mode": "geographic",
+    "crs": "EPSG:4326"
   },
   "imagery": {
     "source": "copernicus_browser",
@@ -22,8 +27,11 @@
   "output": {
     "dataset_dir": "assets/datasets/nepal_everest_demo",
     "world_path": "assets/worlds/nepal_everest_demo.geofpsworld",
-    "grid_x": 128,
-    "grid_z": 128,
-    "height_scale": 1.0
+    "grid_x": 512,
+    "grid_z": 512,
+    "height_scale": 1.0,
+    "smoothing_passes": 0,
+    "import_sample_step": 1,
+    "chunk_resolution": 96
   }
 }

@@ -2,6 +2,7 @@
 
 #include <glm/glm.hpp>
 #include <string>
+#include <unordered_map>
 
 namespace GeoFPS
 {
@@ -24,6 +25,9 @@ class Shader
     void SetVec3(const std::string& name, const glm::vec3& value) const;
 
   private:
+    [[nodiscard]] int GetUniformLocation(const std::string& name) const;
+
     unsigned int m_ProgramId {0};
+    mutable std::unordered_map<std::string, int> m_UniformLocations;
 };
 } // namespace GeoFPS

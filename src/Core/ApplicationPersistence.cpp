@@ -1,5 +1,6 @@
 #include "Core/Application.h"
 #include "Core/ApplicationInternal.h"
+#include "Core/WorldFileParser.h"
 
 #include <filesystem>
 #include <fstream>
@@ -9,25 +10,132 @@
 namespace GeoFPS
 {
 using namespace ApplicationInternal;
+
+namespace
+{
+const char* CoordinateModeName(TerrainCoordinateMode mode)
+{
+    if (mode == TerrainCoordinateMode::LocalMeters)
+    {
+        return "local_meters";
+    }
+    if (mode == TerrainCoordinateMode::Projected)
+    {
+        return "projected";
+    }
+    return "geographic";
+}
+
+SunSettings ToApplicationSunSettings(const ParsedSunSettings& parsed)
+{
+    SunSettings settings;
+    settings.useGeographicSun = parsed.useGeographicSun;
+    settings.year = parsed.year;
+    settings.month = parsed.month;
+    settings.day = parsed.day;
+    settings.localTimeHours = parsed.localTimeHours;
+    settings.utcOffsetHours = parsed.utcOffsetHours;
+    settings.illuminance = parsed.illuminance;
+    settings.ambientStrength = parsed.ambientStrength;
+    settings.skyBrightness = parsed.skyBrightness;
+    settings.manualAzimuthDegrees = parsed.manualAzimuthDegrees;
+    settings.manualElevationDegrees = parsed.manualElevationDegrees;
+    return settings;
+}
+
+SkySettings ToApplicationSkySettings(const ParsedSkySettings& parsed)
+{
+    SkySettings settings;
+    settings.enabled           = parsed.enabled;
+    settings.useSunDrivenColor = parsed.useSunDrivenColor;
+    settings.zenithColor       = {parsed.zenithR,  parsed.zenithG,  parsed.zenithB};
+    settings.horizonColor      = {parsed.horizonR, parsed.horizonG, parsed.horizonB};
+    settings.horizonSharpness  = parsed.horizonSharpness;
+    settings.showSunDisk       = parsed.showSunDisk;
+    settings.sunDiskSize       = parsed.sunDiskSize;
+    settings.sunDiskIntensity  = parsed.sunDiskIntensity;
+    settings.cloudsEnabled     = parsed.cloudsEnabled;
+    settings.cloudCoverage     = parsed.cloudCoverage;
+    settings.cloudDensity      = parsed.cloudDensity;
+    settings.cloudScale        = parsed.cloudScale;
+    settings.cloudSpeedX       = parsed.cloudSpeedX;
+    settings.cloudSpeedY       = parsed.cloudSpeedY;
+    settings.cloudAltitude     = parsed.cloudAltitude;
+    settings.cloudAutoColor    = parsed.cloudAutoColor;
+    settings.cloudColor        = {parsed.cloudColorR, parsed.cloudColorG, parsed.cloudColorB};
+    return settings;
+}
+
+OverlayEntry ToOverlayEntry(const ParsedOverlayDefinition& parsed)
+{
+    OverlayEntry overlay;
+    overlay.name = parsed.name;
+    overlay.image = parsed.image;
+    return overlay;
+}
+
+TerrainDataset ToTerrainDataset(const ParsedTerrainDefinition& parsed)
+{
+    TerrainDataset terrain;
+    terrain.name = parsed.name;
+    terrain.path = parsed.path;
+    terrain.tileManifestPath = parsed.tileManifestPath;
+    terrain.hasTileManifest = parsed.hasTileManifest && !parsed.tileManifestPath.empty();
+    terrain.visible = parsed.visible;
+    terrain.settings = parsed.settings;
+    terrain.geoReference = parsed.geoReference;
+    terrain.activeOverlayIndex = parsed.activeOverlayIndex;
+    terrain.overlays.reserve(parsed.overlays.size());
+    for (const ParsedOverlayDefinition& overlay : parsed.overlays)
+    {
+        terrain.overlays.push_back(ToOverlayEntry(overlay));
+    }
+    return terrain;
+}
+
+ImportedAsset ToImportedAsset(const ParsedAssetDefinition& parsed)
+{
+    ImportedAsset asset;
+    asset.name = parsed.name;
+    asset.path = parsed.path;
+    asset.useGeographicPlacement = parsed.useGeographicPlacement;
+    asset.latitude = parsed.latitude;
+    asset.longitude = parsed.longitude;
+    asset.height = parsed.height;
+    asset.position = parsed.position;
+    asset.rotationDegrees = parsed.rotationDegrees;
+    asset.scale = parsed.scale;
+    asset.tint = parsed.tint;
+    asset.showLabel = parsed.showLabel;
+    return asset;
+}
+} // namespace
+
 bool Application::SaveWorldToFile(const std::string& path)
 {
-    if (path.empty())
+    const std::string targetPathString = Trim(path);
+    if (targetPathString.empty())
     {
         m_StatusMessage = "World file path is empty.";
         return false;
     }
 
     std::error_code errorCode;
-    const std::filesystem::path targetPath(path);
+    const std::filesystem::path targetPath(targetPathString);
     if (targetPath.has_parent_path())
     {
         std::filesystem::create_directories(targetPath.parent_path(), errorCode);
+        if (errorCode)
+        {
+            m_StatusMessage = "Failed to create world file folder: " + targetPath.parent_path().string();
+            return false;
+        }
     }
 
-    std::ofstream file(path);
+    std::ofstream file(targetPath);
     if (!file.is_open())
     {
-        m_StatusMessage = "Failed to save world file: " + path;
+        m_StatusMessage = "Failed to save world file: " + targetPathString;
         return false;
     }
 
@@ -46,16 +154,64 @@ bool Application::SaveWorldToFile(const std::string& path)
     file << "sun.ambient_strength=" << m_SunSettings.ambientStrength << '\n';
     file << "sun.sky_brightness=" << m_SunSettings.skyBrightness << '\n';
     file << "sun.manual_azimuth_degrees=" << m_SunSettings.manualAzimuthDegrees << '\n';
-    file << "sun.manual_elevation_degrees=" << m_SunSettings.manualElevationDegrees << "\n\n";
+    file << "sun.manual_elevation_degrees=" << m_SunSettings.manualElevationDegrees << '\n';
+    file << "sky.enabled="            << (m_SkySettings.enabled           ? 1 : 0) << '\n';
+    file << "sky.use_sun_color="      << (m_SkySettings.useSunDrivenColor ? 1 : 0) << '\n';
+    file << "sky.zenith_r="           << m_SkySettings.zenithColor.r      << '\n';
+    file << "sky.zenith_g="           << m_SkySettings.zenithColor.g      << '\n';
+    file << "sky.zenith_b="           << m_SkySettings.zenithColor.b      << '\n';
+    file << "sky.horizon_r="          << m_SkySettings.horizonColor.r     << '\n';
+    file << "sky.horizon_g="          << m_SkySettings.horizonColor.g     << '\n';
+    file << "sky.horizon_b="          << m_SkySettings.horizonColor.b     << '\n';
+    file << "sky.horizon_sharpness="  << m_SkySettings.horizonSharpness   << '\n';
+    file << "sky.show_sun_disk="      << (m_SkySettings.showSunDisk       ? 1 : 0) << '\n';
+    file << "sky.sun_disk_size="      << m_SkySettings.sunDiskSize        << '\n';
+    file << "sky.sun_disk_intensity=" << m_SkySettings.sunDiskIntensity   << '\n';
+    file << "sky.clouds_enabled="    << (m_SkySettings.cloudsEnabled     ? 1 : 0) << '\n';
+    file << "sky.cloud_coverage="    << m_SkySettings.cloudCoverage      << '\n';
+    file << "sky.cloud_density="     << m_SkySettings.cloudDensity       << '\n';
+    file << "sky.cloud_scale="       << m_SkySettings.cloudScale         << '\n';
+    file << "sky.cloud_speed_x="     << m_SkySettings.cloudSpeedX        << '\n';
+    file << "sky.cloud_speed_y="     << m_SkySettings.cloudSpeedY        << '\n';
+    file << "sky.cloud_altitude="    << m_SkySettings.cloudAltitude      << '\n';
+    file << "sky.cloud_auto_color="  << (m_SkySettings.cloudAutoColor    ? 1 : 0) << '\n';
+    file << "sky.cloud_color_r="     << m_SkySettings.cloudColor.r       << '\n';
+    file << "sky.cloud_color_g="     << m_SkySettings.cloudColor.g       << '\n';
+    file << "sky.cloud_color_b="     << m_SkySettings.cloudColor.b       << "\n\n";
 
     for (const TerrainDataset& terrain : m_TerrainDatasets)
     {
         file << "[terrain]\n";
         file << "name=" << terrain.name << '\n';
+        if (terrain.hasTileManifest && !terrain.tileManifestPath.empty())
+        {
+            file << "tile_manifest=" << terrain.tileManifestPath << '\n';
+        }
         file << "path=" << terrain.path << '\n';
+        file << "visible=" << (terrain.visible ? 1 : 0) << '\n';
         file << "grid_x=" << terrain.settings.gridResolutionX << '\n';
         file << "grid_z=" << terrain.settings.gridResolutionZ << '\n';
         file << "height_scale=" << terrain.settings.heightScale << '\n';
+        file << "smoothing_passes=" << terrain.settings.smoothingPasses << '\n';
+        file << "import_sample_step=" << terrain.settings.importSampleStep << '\n';
+        file << "chunk_resolution=" << terrain.settings.chunkResolution << '\n';
+        file << "color_by_height=" << (terrain.settings.colorByHeight ? 1 : 0) << '\n';
+        file << "auto_height_color_range=" << (terrain.settings.autoHeightColorRange ? 1 : 0) << '\n';
+        file << "height_color_min=" << terrain.settings.heightColorMin << '\n';
+        file << "height_color_max=" << terrain.settings.heightColorMax << '\n';
+        file << "low_height_color_r=" << terrain.settings.lowHeightColor.r << '\n';
+        file << "low_height_color_g=" << terrain.settings.lowHeightColor.g << '\n';
+        file << "low_height_color_b=" << terrain.settings.lowHeightColor.b << '\n';
+        file << "mid_height_color_r=" << terrain.settings.midHeightColor.r << '\n';
+        file << "mid_height_color_g=" << terrain.settings.midHeightColor.g << '\n';
+        file << "mid_height_color_b=" << terrain.settings.midHeightColor.b << '\n';
+        file << "high_height_color_r=" << terrain.settings.highHeightColor.r << '\n';
+        file << "high_height_color_g=" << terrain.settings.highHeightColor.g << '\n';
+        file << "high_height_color_b=" << terrain.settings.highHeightColor.b << '\n';
+        file << "coordinate_mode=" << CoordinateModeName(terrain.settings.coordinateMode) << '\n';
+        file << "crs=" << terrain.settings.crs.id << '\n';
+        file << "crs_false_easting=" << terrain.settings.crs.falseEasting << '\n';
+        file << "crs_false_northing=" << terrain.settings.crs.falseNorthing << '\n';
         file << "origin_latitude=" << terrain.geoReference.originLatitude << '\n';
         file << "origin_longitude=" << terrain.geoReference.originLongitude << '\n';
         file << "origin_height=" << terrain.geoReference.originHeight << '\n';
@@ -101,192 +257,129 @@ bool Application::SaveWorldToFile(const std::string& path)
         file << "tint_r=" << asset.tint.r << '\n';
         file << "tint_g=" << asset.tint.g << '\n';
         file << "tint_b=" << asset.tint.b << '\n';
+        file << "show_label=" << (asset.showLabel ? 1 : 0) << '\n';
         file << "[/asset]\n\n";
     }
 
-    m_StatusMessage = "Saved world file: " + path;
+    for (const TerrainProfile& profile : m_TerrainProfiles)
+    {
+        file << "[terrain_profile]\n";
+        file << "name=" << profile.name << '\n';
+        file << "visible=" << (profile.visible ? 1 : 0) << '\n';
+        file << "show_in_world=" << (profile.showInWorld ? 1 : 0) << '\n';
+        file << "color_r=" << profile.color.r << '\n';
+        file << "color_g=" << profile.color.g << '\n';
+        file << "color_b=" << profile.color.b << '\n';
+        file << "color_a=" << profile.color.a << '\n';
+        file << "thickness=" << profile.thickness << '\n';
+        file << "world_thickness_m=" << profile.worldThicknessMeters << '\n';
+        file << "world_ground_offset_m=" << profile.worldGroundOffsetMeters << '\n';
+        file << "sample_spacing_m=" << profile.sampleSpacingMeters << '\n';
+        file << "use_local_coordinates=" << (profile.useLocalCoordinates ? 1 : 0) << '\n';
+        for (const std::string& terrainName : profile.includedTerrainNames)
+        {
+            file << "terrain=" << terrainName << '\n';
+        }
+        for (const TerrainProfileVertex& vertex : profile.vertices)
+        {
+            file << "  [vertex]\n";
+            file << "  latitude=" << vertex.latitude << '\n';
+            file << "  longitude=" << vertex.longitude << '\n';
+            file << "  auxiliary=" << (vertex.auxiliary ? 1 : 0) << '\n';
+            file << "  local_x=" << vertex.localPosition.x << '\n';
+            file << "  local_y=" << vertex.localPosition.y << '\n';
+            file << "  local_z=" << vertex.localPosition.z << '\n';
+            file << "  [/vertex]\n";
+        }
+        file << "[/terrain_profile]\n\n";
+    }
+
+    file.flush();
+    if (!file.good())
+    {
+        m_StatusMessage = "Failed while writing world file: " + targetPathString;
+        return false;
+    }
+
+    m_WorldFilePath = targetPathString;
+    m_StatusMessage = "Saved world file: " + targetPathString;
     return true;
 }
 
 bool Application::LoadWorldFromFile(const std::string& path)
 {
-    if (path.empty())
+    const std::string sourcePathString = Trim(path);
+    if (sourcePathString.empty())
     {
         m_StatusMessage = "World file path is empty.";
         return false;
     }
 
-    std::ifstream file(path);
+    std::error_code existsError;
+    if (!std::filesystem::exists(sourcePathString, existsError))
+    {
+        m_StatusMessage = "World file does not exist: " + sourcePathString;
+        return false;
+    }
+
+    std::ifstream file(sourcePathString);
     if (!file.is_open())
     {
-        m_StatusMessage = "Failed to load world file: " + path;
+        m_StatusMessage = "Failed to load world file: " + sourcePathString;
         return false;
     }
 
-    std::cout << "[GeoFPS] Loading world file: " << path << '\n';
+    std::cout << "[GeoFPS] Loading world file: " << sourcePathString << '\n';
+
+    ParsedWorldFile parsedWorld;
+    const WorldFileParseResult parseResult = ParseWorldFile(file, parsedWorld);
+    for (const WorldFileParseDiagnostic& diagnostic : parseResult.diagnostics)
+    {
+        if (diagnostic.warning)
+        {
+            std::cout << "[GeoFPS] World parse warning";
+            if (diagnostic.lineNumber > 0)
+            {
+                std::cout << " line " << diagnostic.lineNumber;
+            }
+            std::cout << ": " << diagnostic.message << '\n';
+        }
+    }
+    if (!parseResult.success)
+    {
+        const std::string parseError = parseResult.ErrorMessage();
+        m_StatusMessage = parseError.empty() ? "Failed to parse world file: " + sourcePathString
+                                             : parseError + " " + sourcePathString;
+        return false;
+    }
 
     std::vector<TerrainDataset> terrains;
+    terrains.reserve(parsedWorld.terrains.size());
+    for (const ParsedTerrainDefinition& parsedTerrain : parsedWorld.terrains)
+    {
+        std::cout << "[GeoFPS] Parsed terrain '" << parsedTerrain.name << "' path='" << parsedTerrain.path
+                  << "' tile_manifest='" << parsedTerrain.tileManifestPath << "' with "
+                  << parsedTerrain.overlays.size() << " overlay definition(s)\n";
+        terrains.push_back(ToTerrainDataset(parsedTerrain));
+    }
+
     std::vector<ImportedAsset> assets;
-    TerrainDataset* currentTerrain = nullptr;
-    OverlayEntry* currentOverlay = nullptr;
-    ImportedAsset* currentAsset = nullptr;
-    int activeTerrainIndex = 0;
-    int activeAssetIndex = 0;
-    SunSettings loadedSun = m_SunSettings;
-    std::string loadedWorldName = m_WorldName;
-
-    std::string line;
-    int lineNumber = 0;
-    while (std::getline(file, line))
+    assets.reserve(parsedWorld.assets.size());
+    for (const ParsedAssetDefinition& parsedAsset : parsedWorld.assets)
     {
-        ++lineNumber;
-        const bool indented = !line.empty() && (line[0] == ' ' || line[0] == '\t');
-        const std::string trimmed = Trim(line);
-        if (trimmed.empty() || trimmed[0] == '#')
-        {
-            continue;
-        }
-
-        if (trimmed == "[terrain]")
-        {
-            terrains.emplace_back();
-            currentTerrain = &terrains.back();
-            currentOverlay = nullptr;
-            currentAsset = nullptr;
-            std::cout << "[GeoFPS] Line " << lineNumber << ": begin terrain block\n";
-            continue;
-        }
-        if (trimmed == "[/terrain]")
-        {
-            if (currentTerrain != nullptr)
-            {
-                std::cout << "[GeoFPS] Line " << lineNumber << ": end terrain block '" << currentTerrain->name << "'\n";
-            }
-            currentTerrain = nullptr;
-            currentOverlay = nullptr;
-            continue;
-        }
-        if (trimmed == "[overlay]" && currentTerrain != nullptr)
-        {
-            currentTerrain->overlays.emplace_back();
-            currentOverlay = &currentTerrain->overlays.back();
-            currentAsset = nullptr;
-            std::cout << "[GeoFPS] Line " << lineNumber << ": begin overlay block for terrain '" << currentTerrain->name << "'\n";
-            continue;
-        }
-        if (trimmed == "[/overlay]")
-        {
-            if (currentOverlay != nullptr)
-            {
-                std::cout << "[GeoFPS] Line " << lineNumber << ": end overlay block '" << currentOverlay->name << "'\n";
-            }
-            currentOverlay = nullptr;
-            continue;
-        }
-        if (trimmed == "[asset]")
-        {
-            assets.emplace_back();
-            currentAsset = &assets.back();
-            currentTerrain = nullptr;
-            currentOverlay = nullptr;
-            std::cout << "[GeoFPS] Line " << lineNumber << ": begin asset block\n";
-            continue;
-        }
-        if (trimmed == "[/asset]")
-        {
-            if (currentAsset != nullptr)
-            {
-                std::cout << "[GeoFPS] Line " << lineNumber << ": end asset block '" << currentAsset->name
-                          << "' path='" << currentAsset->path << "'\n";
-            }
-            currentAsset = nullptr;
-            continue;
-        }
-
-        const size_t separator = trimmed.find('=');
-        if (separator == std::string::npos)
-        {
-            continue;
-        }
-
-        const std::string key = Trim(trimmed.substr(0, separator));
-        const std::string value = Trim(trimmed.substr(separator + 1));
-
-        if (currentOverlay != nullptr && indented)
-        {
-            if (key == "name") currentOverlay->name = value;
-            else if (key == "image_path") currentOverlay->image.imagePath = value;
-            else if (key == "enabled") currentOverlay->image.enabled = ParseBool(value);
-            else if (key == "opacity") currentOverlay->image.opacity = static_cast<float>(ParseDouble(value, currentOverlay->image.opacity));
-            else if (key == "top_left_latitude") currentOverlay->image.topLeft.latitude = ParseDouble(value);
-            else if (key == "top_left_longitude") currentOverlay->image.topLeft.longitude = ParseDouble(value);
-            else if (key == "top_right_latitude") currentOverlay->image.topRight.latitude = ParseDouble(value);
-            else if (key == "top_right_longitude") currentOverlay->image.topRight.longitude = ParseDouble(value);
-            else if (key == "bottom_left_latitude") currentOverlay->image.bottomLeft.latitude = ParseDouble(value);
-            else if (key == "bottom_left_longitude") currentOverlay->image.bottomLeft.longitude = ParseDouble(value);
-            else if (key == "bottom_right_latitude") currentOverlay->image.bottomRight.latitude = ParseDouble(value);
-            else if (key == "bottom_right_longitude") currentOverlay->image.bottomRight.longitude = ParseDouble(value);
-            continue;
-        }
-
-        if (currentTerrain != nullptr)
-        {
-            if (key == "name") currentTerrain->name = value;
-            else if (key == "path") currentTerrain->path = value;
-            else if (key == "grid_x") currentTerrain->settings.gridResolutionX = ParseInt(value, currentTerrain->settings.gridResolutionX);
-            else if (key == "grid_z") currentTerrain->settings.gridResolutionZ = ParseInt(value, currentTerrain->settings.gridResolutionZ);
-            else if (key == "height_scale") currentTerrain->settings.heightScale = static_cast<float>(ParseDouble(value, currentTerrain->settings.heightScale));
-            else if (key == "origin_latitude") currentTerrain->geoReference.originLatitude = ParseDouble(value);
-            else if (key == "origin_longitude") currentTerrain->geoReference.originLongitude = ParseDouble(value);
-            else if (key == "origin_height") currentTerrain->geoReference.originHeight = ParseDouble(value);
-            else if (key == "active_overlay_index") currentTerrain->activeOverlayIndex = ParseInt(value, 0);
-            continue;
-        }
-
-        if (currentAsset != nullptr)
-        {
-            if (key == "name") currentAsset->name = value;
-            else if (key == "path") currentAsset->path = value;
-            else if (key == "position_mode") currentAsset->useGeographicPlacement = ToLower(value) == "geographic";
-            else if (key == "latitude") currentAsset->latitude = ParseDouble(value);
-            else if (key == "longitude") currentAsset->longitude = ParseDouble(value);
-            else if (key == "height") currentAsset->height = ParseDouble(value);
-            else if (key == "position_x") currentAsset->position.x = static_cast<float>(ParseDouble(value));
-            else if (key == "position_y") currentAsset->position.y = static_cast<float>(ParseDouble(value));
-            else if (key == "position_z") currentAsset->position.z = static_cast<float>(ParseDouble(value));
-            else if (key == "rotation_z") currentAsset->rotationDegrees.z = static_cast<float>(ParseDouble(value));
-            else if (key == "scale_x") currentAsset->scale.x = static_cast<float>(ParseDouble(value, 1.0));
-            else if (key == "scale_y") currentAsset->scale.y = static_cast<float>(ParseDouble(value, 1.0));
-            else if (key == "scale_z") currentAsset->scale.z = static_cast<float>(ParseDouble(value, 1.0));
-            else if (key == "tint_r") currentAsset->tint.r = static_cast<float>(ParseDouble(value, 1.0));
-            else if (key == "tint_g") currentAsset->tint.g = static_cast<float>(ParseDouble(value, 1.0));
-            else if (key == "tint_b") currentAsset->tint.b = static_cast<float>(ParseDouble(value, 1.0));
-            continue;
-        }
-
-        if (key == "world_name") loadedWorldName = value;
-        else if (key == "active_terrain_index") activeTerrainIndex = ParseInt(value, 0);
-        else if (key == "active_asset_index") activeAssetIndex = ParseInt(value, 0);
-        else if (key == "sun.use_geographic") loadedSun.useGeographicSun = ParseBool(value);
-        else if (key == "sun.year") loadedSun.year = ParseInt(value, loadedSun.year);
-        else if (key == "sun.month") loadedSun.month = ParseInt(value, loadedSun.month);
-        else if (key == "sun.day") loadedSun.day = ParseInt(value, loadedSun.day);
-        else if (key == "sun.local_time_hours") loadedSun.localTimeHours = static_cast<float>(ParseDouble(value, loadedSun.localTimeHours));
-        else if (key == "sun.utc_offset_hours") loadedSun.utcOffsetHours = static_cast<float>(ParseDouble(value, loadedSun.utcOffsetHours));
-        else if (key == "sun.illuminance") loadedSun.illuminance = static_cast<float>(ParseDouble(value, loadedSun.illuminance));
-        else if (key == "sun.ambient_strength") loadedSun.ambientStrength = static_cast<float>(ParseDouble(value, loadedSun.ambientStrength));
-        else if (key == "sun.sky_brightness") loadedSun.skyBrightness = static_cast<float>(ParseDouble(value, loadedSun.skyBrightness));
-        else if (key == "sun.manual_azimuth_degrees") loadedSun.manualAzimuthDegrees = static_cast<float>(ParseDouble(value, loadedSun.manualAzimuthDegrees));
-        else if (key == "sun.manual_elevation_degrees") loadedSun.manualElevationDegrees = static_cast<float>(ParseDouble(value, loadedSun.manualElevationDegrees));
+        std::cout << "[GeoFPS] Parsed asset '" << parsedAsset.name << "' path='" << parsedAsset.path << "'\n";
+        assets.push_back(ToImportedAsset(parsedAsset));
     }
 
-    if (terrains.empty())
-    {
-        m_StatusMessage = "World file has no terrains: " + path;
-        return false;
-    }
+    std::vector<TerrainProfile> profiles = std::move(parsedWorld.profiles);
+    const int activeTerrainIndex = parsedWorld.activeTerrainIndex;
+    const int activeAssetIndex = parsedWorld.activeAssetIndex;
+    const SunSettings loadedSun = ToApplicationSunSettings(parsedWorld.sunSettings);
+    const SkySettings loadedSky = ToApplicationSkySettings(parsedWorld.skySettings);
+    const std::string loadedWorldName = parsedWorld.worldName.empty() ? m_WorldName : parsedWorld.worldName;
 
-    std::cout << "[GeoFPS] Parsed " << terrains.size() << " terrain dataset(s) and " << assets.size() << " asset definition(s)\n";
+    std::cout << "[GeoFPS] Parsed " << terrains.size() << " terrain dataset(s), " << assets.size()
+              << " asset definition(s), and " << profiles.size() << " terrain profile(s)\n";
 
     for (TerrainDataset& terrain : terrains)
     {
@@ -294,15 +387,28 @@ bool Application::LoadWorldFromFile(const std::string& path)
         {
             terrain.overlays.push_back(OverlayEntry {});
         }
+        terrain.activeOverlayIndex = std::clamp(terrain.activeOverlayIndex, 0, static_cast<int>(terrain.overlays.size()) - 1);
         terrain.loaded = false;
         terrain.points.clear();
+        for (TerrainTile& tile : terrain.tiles)
+        {
+            tile.loaded = false;
+            tile.meshLoaded = false;
+            tile.points.clear();
+            tile.chunks.clear();
+        }
     }
 
     m_WorldName = loadedWorldName;
-    m_WorldFilePath = path;
+    m_WorldFilePath = sourcePathString;
     m_SunSettings = loadedSun;
+    m_SkySettings = loadedSky;
     m_TerrainDatasets = std::move(terrains);
     m_ImportedAssets = std::move(assets);
+    if (!profiles.empty())
+    {
+        m_TerrainProfiles = std::move(profiles);
+    }
 
     m_ActiveTerrainIndex = std::clamp(activeTerrainIndex, 0, static_cast<int>(m_TerrainDatasets.size()) - 1);
     std::cout << "[GeoFPS] Activating terrain index " << m_ActiveTerrainIndex << '\n';
@@ -310,6 +416,32 @@ bool Application::LoadWorldFromFile(const std::string& path)
     {
         std::cout << "[GeoFPS] Failed to activate terrain index " << m_ActiveTerrainIndex << '\n';
         return false;
+    }
+    for (int terrainIndex = 0; terrainIndex < static_cast<int>(m_TerrainDatasets.size()); ++terrainIndex)
+    {
+        if (terrainIndex == m_ActiveTerrainIndex)
+        {
+            continue;
+        }
+        TerrainDataset& terrain = m_TerrainDatasets[static_cast<size_t>(terrainIndex)];
+        if (!terrain.visible)
+        {
+            continue;
+        }
+        if ((terrain.loaded || LoadTerrainDataset(terrain)) && !terrain.mesh)
+        {
+            RebuildTerrainMesh(terrain);
+        }
+    }
+    for (TerrainDataset& terrain : m_TerrainDatasets)
+    {
+        for (OverlayEntry& overlay : terrain.overlays)
+        {
+            if (terrain.visible && overlay.image.enabled)
+            {
+                LoadOverlayImage(overlay);
+            }
+        }
     }
 
     for (ImportedAsset& asset : m_ImportedAssets)
@@ -335,8 +467,13 @@ bool Application::LoadWorldFromFile(const std::string& path)
     }
 
     m_ActiveImportedAssetIndex = std::clamp(activeAssetIndex, 0, static_cast<int>(m_ImportedAssets.size()) - 1);
+    RebuildAllTerrainProfileSamples();
+    m_MouseCaptured = true;
+    m_Window.SetCursorCaptured(true);
+    m_FPSController.ResetMouseState();
+    m_FPSController.SetEnabled(true);
     std::cout << "[GeoFPS] World load complete. Active asset index " << m_ActiveImportedAssetIndex << '\n';
-    m_StatusMessage = "Loaded world file: " + path;
+    m_StatusMessage = "Loaded world file: " + sourcePathString;
     return true;
 }
 
@@ -345,6 +482,13 @@ bool Application::LoadBlenderAssetsFromFile(const std::string& path)
     if (path.empty())
     {
         m_StatusMessage = "Blender assets file path is empty.";
+        return false;
+    }
+
+    std::error_code existsError;
+    if (!std::filesystem::exists(path, existsError))
+    {
+        m_StatusMessage = "Blender assets file does not exist: " + path;
         return false;
     }
 
@@ -357,76 +501,41 @@ bool Application::LoadBlenderAssetsFromFile(const std::string& path)
 
     std::cout << "[GeoFPS] Importing blender assets from file: " << path << '\n';
 
-    ImportedAsset currentAsset;
-    bool insideAssetBlock = false;
-    std::vector<ImportedAsset> loadedAssets;
-    std::string line;
-    int lineNumber = 0;
-
-    while (std::getline(file, line))
+    std::vector<ParsedAssetDefinition> parsedAssets;
+    const WorldFileParseResult parseResult = ParseBlenderAssetList(file, parsedAssets);
+    for (const WorldFileParseDiagnostic& diagnostic : parseResult.diagnostics)
     {
-        ++lineNumber;
-        const std::string trimmed = Trim(line);
-        if (trimmed.empty() || trimmed[0] == '#')
+        if (diagnostic.warning)
         {
-            continue;
-        }
-
-        if (trimmed == "[asset]")
-        {
-            currentAsset = ImportedAsset {};
-            insideAssetBlock = true;
-            std::cout << "[GeoFPS] Line " << lineNumber << ": begin blender asset block\n";
-            continue;
-        }
-
-        if (trimmed == "[/asset]")
-        {
-            if (insideAssetBlock && !currentAsset.path.empty())
+            std::cout << "[GeoFPS] Blender asset import warning";
+            if (diagnostic.lineNumber > 0)
             {
-                std::cout << "[GeoFPS] Finalizing asset '" << currentAsset.name << "' path='" << currentAsset.path << "'\n";
-                if (currentAsset.useGeographicPlacement)
-                {
-                    UpdateImportedAssetPositionFromGeographic(currentAsset);
-                    std::cout << "[GeoFPS]  geographic placement lat=" << currentAsset.latitude
-                              << " lon=" << currentAsset.longitude << " height=" << currentAsset.height << '\n';
-                }
-                LoadImportedAsset(currentAsset);
-                loadedAssets.push_back(std::move(currentAsset));
+                std::cout << " line " << diagnostic.lineNumber;
             }
-            insideAssetBlock = false;
-            continue;
+            std::cout << ": " << diagnostic.message << '\n';
         }
+    }
+    if (!parseResult.success)
+    {
+        const std::string parseError = parseResult.ErrorMessage();
+        m_StatusMessage = parseError.empty() ? "No blender assets found in file: " + path : parseError + " " + path;
+        return false;
+    }
 
-        if (!insideAssetBlock)
+    std::vector<ImportedAsset> loadedAssets;
+    loadedAssets.reserve(parsedAssets.size());
+    for (const ParsedAssetDefinition& parsedAsset : parsedAssets)
+    {
+        ImportedAsset asset = ToImportedAsset(parsedAsset);
+        std::cout << "[GeoFPS] Finalizing asset '" << asset.name << "' path='" << asset.path << "'\n";
+        if (asset.useGeographicPlacement)
         {
-            continue;
+            UpdateImportedAssetPositionFromGeographic(asset);
+            std::cout << "[GeoFPS]  geographic placement lat=" << asset.latitude
+                      << " lon=" << asset.longitude << " height=" << asset.height << '\n';
         }
-
-        const size_t separator = trimmed.find('=');
-        if (separator == std::string::npos)
-        {
-            continue;
-        }
-
-        const std::string key = Trim(trimmed.substr(0, separator));
-        const std::string value = Trim(trimmed.substr(separator + 1));
-        if (key == "name") currentAsset.name = value;
-        else if (key == "path") currentAsset.path = value;
-        else if (key == "position_mode") currentAsset.useGeographicPlacement = ToLower(value) == "geographic";
-        else if (key == "latitude") currentAsset.latitude = ParseDouble(value);
-        else if (key == "longitude") currentAsset.longitude = ParseDouble(value);
-        else if (key == "height") currentAsset.height = ParseDouble(value);
-        else if (key == "position_x") currentAsset.position.x = static_cast<float>(ParseDouble(value));
-        else if (key == "position_y") currentAsset.position.y = static_cast<float>(ParseDouble(value));
-        else if (key == "position_z") currentAsset.position.z = static_cast<float>(ParseDouble(value));
-        else if (key == "rotation_z") currentAsset.rotationDegrees.z = static_cast<float>(ParseDouble(value));
-        else if (key == "scale_x") currentAsset.scale.x = static_cast<float>(ParseDouble(value, 1.0));
-        else if (key == "scale_y") currentAsset.scale.y = static_cast<float>(ParseDouble(value, 1.0));
-        else if (key == "scale_z") currentAsset.scale.z = static_cast<float>(ParseDouble(value, 1.0));
-        else if (key == "tint_r") currentAsset.tint.r = static_cast<float>(ParseDouble(value, 1.0));
-        else if (key == "tint_g") currentAsset.tint.g = static_cast<float>(ParseDouble(value, 1.0));
-        else if (key == "tint_b") currentAsset.tint.b = static_cast<float>(ParseDouble(value, 1.0));
+        LoadImportedAsset(asset);
+        loadedAssets.push_back(std::move(asset));
     }
 
     if (loadedAssets.empty())
@@ -480,6 +589,7 @@ bool Application::WriteCurrentWorldReadout(const std::string& path) const
     file << "World File: " << m_WorldFilePath << "\n";
     file << "Terrain Dataset Count: " << m_TerrainDatasets.size() << "\n";
     file << "Imported Asset Count: " << m_ImportedAssets.size() << "\n";
+    file << "Terrain Profile Count: " << m_TerrainProfiles.size() << "\n";
     file << "Active Terrain Index: " << m_ActiveTerrainIndex << "\n";
     file << "Active Asset Index: " << m_ActiveImportedAssetIndex << "\n\n";
 
@@ -498,10 +608,21 @@ bool Application::WriteCurrentWorldReadout(const std::string& path) const
         const TerrainDataset& terrain = m_TerrainDatasets[terrainIndex];
         file << "- Terrain " << terrainIndex << ": " << terrain.name << "\n";
         file << "  Path: " << terrain.path << "\n";
+        if (terrain.hasTileManifest && !terrain.tileManifestPath.empty())
+        {
+            file << "  Tile Manifest: " << terrain.tileManifestPath << "\n";
+            file << "  Tile Count: " << terrain.tiles.size() << "\n";
+        }
         file << "  Origin: lat " << terrain.geoReference.originLatitude << ", lon " << terrain.geoReference.originLongitude
              << ", height " << terrain.geoReference.originHeight << "\n";
         file << "  Grid: " << terrain.settings.gridResolutionX << " x " << terrain.settings.gridResolutionZ << "\n";
         file << "  Height Scale: " << terrain.settings.heightScale << "\n";
+        file << "  Smoothing Passes: " << terrain.settings.smoothingPasses << "\n";
+        file << "  Import Sample Step: " << terrain.settings.importSampleStep << "\n";
+        file << "  Chunk Resolution: " << terrain.settings.chunkResolution << "\n";
+        file << "  Color By Height: " << (terrain.settings.colorByHeight ? "true" : "false") << "\n";
+        file << "  Coordinate Mode: " << CoordinateModeName(terrain.settings.coordinateMode) << "\n";
+        file << "  CRS: " << terrain.settings.crs.id << "\n";
         file << "  Overlay Count: " << terrain.overlays.size() << "\n";
     }
 
@@ -523,6 +644,70 @@ bool Application::WriteCurrentWorldReadout(const std::string& path) const
         file << "  Loaded: " << (asset.loaded ? "true" : "false") << "\n";
     }
 
+    file << "\nTerrain Profiles\n";
+    for (size_t profileIndex = 0; profileIndex < m_TerrainProfiles.size(); ++profileIndex)
+    {
+        const TerrainProfile& profile = m_TerrainProfiles[profileIndex];
+        file << "- Profile " << profileIndex << ": " << profile.name << "\n";
+        file << "  Vertices: " << profile.vertices.size() << "\n";
+        file << "  Samples: " << profile.samples.size() << "\n";
+        file << "  Sample Spacing Meters: " << profile.sampleSpacingMeters << "\n";
+        file << "  Visible: " << (profile.visible ? "true" : "false") << "\n";
+    }
+
+    return true;
+}
+
+bool Application::ExportTerrainProfileFile(const std::string& path)
+{
+    const std::string targetPath = Trim(path);
+    if (targetPath.empty())
+    {
+        m_StatusMessage = "Terrain profile export path is empty.";
+        return false;
+    }
+
+    std::cout << "[GeoFPS] Exporting " << m_TerrainProfiles.size() << " terrain profile(s) to " << targetPath << '\n';
+    if (!ExportTerrainProfiles(targetPath, m_TerrainProfiles))
+    {
+        m_StatusMessage = "Failed to export terrain profiles: " + targetPath;
+        std::cout << "[GeoFPS] Terrain profile export failed: " << targetPath << '\n';
+        return false;
+    }
+
+    m_TerrainProfileFilePath = targetPath;
+    m_StatusMessage = "Exported terrain profiles: " + targetPath;
+    std::cout << "[GeoFPS] Terrain profile export complete: " << targetPath << '\n';
+    return true;
+}
+
+bool Application::ImportTerrainProfileFile(const std::string& path)
+{
+    const std::string sourcePath = Trim(path);
+    if (sourcePath.empty())
+    {
+        m_StatusMessage = "Terrain profile import path is empty.";
+        return false;
+    }
+
+    std::cout << "[GeoFPS] Importing terrain profiles from " << sourcePath << '\n';
+    std::vector<TerrainProfile> importedProfiles;
+    std::string errorMessage;
+    if (!ImportTerrainProfiles(sourcePath, importedProfiles, errorMessage))
+    {
+        m_StatusMessage = errorMessage.empty() ? "Failed to import terrain profiles: " + sourcePath : errorMessage;
+        std::cout << "[GeoFPS] Terrain profile import failed: " << m_StatusMessage << '\n';
+        return false;
+    }
+
+    m_TerrainProfiles = std::move(importedProfiles);
+    RebuildAllTerrainProfileSamples();
+    m_ActiveTerrainProfileIndex = std::clamp(m_ActiveTerrainProfileIndex, 0, static_cast<int>(m_TerrainProfiles.size()) - 1);
+    m_SelectedProfileVertexIndex = -1;
+    m_SelectedProfileSampleIndex = -1;
+    m_TerrainProfileFilePath = sourcePath;
+    m_StatusMessage = "Imported terrain profiles: " + sourcePath;
+    std::cout << "[GeoFPS] Terrain profile import complete: " << m_TerrainProfiles.size() << " profile(s)\n";
     return true;
 }
 

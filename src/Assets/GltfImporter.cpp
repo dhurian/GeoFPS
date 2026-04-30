@@ -228,6 +228,16 @@ bool LoadPrimitiveMaterial(const tinygltf::Model& model,
 
     const tinygltf::Material& material = model.materials[static_cast<size_t>(primitive.material)];
     primitiveData.materialName = material.name;
+    primitiveData.metallicFactor = static_cast<float>(material.pbrMetallicRoughness.metallicFactor);
+    primitiveData.roughnessFactor = static_cast<float>(material.pbrMetallicRoughness.roughnessFactor);
+    primitiveData.alphaMode = material.alphaMode.empty() ? "OPAQUE" : material.alphaMode;
+    primitiveData.alphaCutoff = static_cast<float>(material.alphaCutoff);
+    if (material.emissiveFactor.size() == 3)
+    {
+        primitiveData.emissiveFactor = glm::vec3(static_cast<float>(material.emissiveFactor[0]),
+                                                 static_cast<float>(material.emissiveFactor[1]),
+                                                 static_cast<float>(material.emissiveFactor[2]));
+    }
 
     const auto& factor = material.pbrMetallicRoughness.baseColorFactor;
     if (factor.size() == 4)
@@ -238,28 +248,55 @@ bool LoadPrimitiveMaterial(const tinygltf::Model& model,
                                                   static_cast<float>(factor[3]));
     }
 
-    const int textureIndex = material.pbrMetallicRoughness.baseColorTexture.index;
-    if (textureIndex < 0 || textureIndex >= static_cast<int>(model.textures.size()))
-    {
-        return true;
-    }
+    const auto loadTexturePixels = [&](int textureIndex,
+                                       std::vector<unsigned char>& pixels,
+                                       int& width,
+                                       int& height,
+                                       int& channels) {
+        if (textureIndex < 0 || textureIndex >= static_cast<int>(model.textures.size()))
+        {
+            return;
+        }
 
-    const tinygltf::Texture& texture = model.textures[static_cast<size_t>(textureIndex)];
-    if (texture.source < 0 || texture.source >= static_cast<int>(model.images.size()))
-    {
-        return true;
-    }
+        const tinygltf::Texture& texture = model.textures[static_cast<size_t>(textureIndex)];
+        if (texture.source < 0 || texture.source >= static_cast<int>(model.images.size()))
+        {
+            return;
+        }
 
-    const tinygltf::Image& image = model.images[static_cast<size_t>(texture.source)];
-    if (image.image.empty() || image.width <= 0 || image.height <= 0 || image.component <= 0)
-    {
-        return true;
-    }
+        const tinygltf::Image& image = model.images[static_cast<size_t>(texture.source)];
+        if (image.image.empty() || image.width <= 0 || image.height <= 0 || image.component <= 0)
+        {
+            return;
+        }
 
-    primitiveData.baseColorPixels = image.image;
-    primitiveData.baseColorWidth = image.width;
-    primitiveData.baseColorHeight = image.height;
-    primitiveData.baseColorChannels = image.component;
+        pixels = image.image;
+        width = image.width;
+        height = image.height;
+        channels = image.component;
+    };
+
+    loadTexturePixels(material.pbrMetallicRoughness.baseColorTexture.index,
+                      primitiveData.baseColorPixels,
+                      primitiveData.baseColorWidth,
+                      primitiveData.baseColorHeight,
+                      primitiveData.baseColorChannels);
+    loadTexturePixels(material.pbrMetallicRoughness.metallicRoughnessTexture.index,
+                      primitiveData.metallicRoughnessPixels,
+                      primitiveData.metallicRoughnessWidth,
+                      primitiveData.metallicRoughnessHeight,
+                      primitiveData.metallicRoughnessChannels);
+    loadTexturePixels(material.normalTexture.index,
+                      primitiveData.normalPixels,
+                      primitiveData.normalWidth,
+                      primitiveData.normalHeight,
+                      primitiveData.normalChannels);
+    loadTexturePixels(material.emissiveTexture.index,
+                      primitiveData.emissivePixels,
+                      primitiveData.emissiveWidth,
+                      primitiveData.emissiveHeight,
+                      primitiveData.emissiveChannels);
+
     return true;
 }
 

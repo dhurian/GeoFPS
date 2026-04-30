@@ -40,12 +40,11 @@ bool Window::Create(int width, int height, const char* title)
         return false;
     }
 
-    m_Width = width;
-    m_Height = height;
     glfwMakeContextCurrent(m_Handle);
     glfwSwapInterval(1);
     glfwSetWindowUserPointer(m_Handle, this);
     glfwSetFramebufferSizeCallback(m_Handle, FramebufferSizeCallback);
+    glfwGetFramebufferSize(m_Handle, &m_Width, &m_Height);
     m_LastFrameTime = glfwGetTime();
     return true;
 }
@@ -87,6 +86,10 @@ bool Window::IsKeyPressed(int key) const
 void Window::SetCursorCaptured(bool captured)
 {
     glfwSetInputMode(m_Handle, GLFW_CURSOR, captured ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
+    if (glfwRawMouseMotionSupported())
+    {
+        glfwSetInputMode(m_Handle, GLFW_RAW_MOUSE_MOTION, captured ? GLFW_TRUE : GLFW_FALSE);
+    }
 }
 
 void Window::OnFramebufferResized(int width, int height)

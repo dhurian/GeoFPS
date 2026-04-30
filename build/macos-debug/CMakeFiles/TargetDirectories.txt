@@ -1,6 +1,7 @@
 /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/CMakeFiles/glad.dir
 /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/CMakeFiles/imgui.dir
 /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/CMakeFiles/GeoFPS.dir
+/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/CMakeFiles/GeoFPSTests.dir
 /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/CMakeFiles/edit_cache.dir
 /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/CMakeFiles/rebuild_cache.dir
 /Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/CMakeFiles/list_install_components.dir

@@ -63,6 +63,13 @@ glm::mat4 Camera::GetViewMatrix() const
     return glm::lookAt(m_Position, m_Position + GetForward(), glm::vec3(0.0f, 1.0f, 0.0f));
 }
 
+glm::mat4 Camera::GetViewMatrixRotationOnly() const
+{
+    // Strip the translation component so the skybox stays centred on the camera
+    // regardless of position — take only the upper-left 3×3 rotation block.
+    return glm::mat4(glm::mat3(GetViewMatrix()));
+}
+
 glm::mat4 Camera::GetProjectionMatrix() const
 {
     return glm::perspective(glm::radians(m_FieldOfViewDegrees), m_AspectRatio, m_NearClip, m_FarClip);

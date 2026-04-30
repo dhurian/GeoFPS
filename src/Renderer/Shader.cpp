@@ -58,6 +58,13 @@ Shader::~Shader()
 
 bool Shader::LoadFromFiles(const std::string& vertexPath, const std::string& fragmentPath)
 {
+    if (m_ProgramId != 0)
+    {
+        glDeleteProgram(m_ProgramId);
+        m_ProgramId = 0;
+    }
+    m_UniformLocations.clear();
+
     const std::string vertexSource = ReadFile(vertexPath);
     const std::string fragmentSource = ReadFile(fragmentPath);
     if (vertexSource.empty() || fragmentSource.empty())
@@ -87,15 +94,22 @@ bool Shader::LoadFromFiles(const std::string& vertexPath, const std::string& fra
         return false;
     }
 
-    m_ProgramId = glCreateProgram();
-    glAttachShader(m_ProgramId, vertexShader);
-    glAttachShader(m_ProgramId, fragmentShader);
-    glLinkProgram(m_ProgramId);
+    const unsigned int programId = glCreateProgram();
+    glAttachShader(programId, vertexShader);
+    glAttachShader(programId, fragmentShader);
+    glLinkProgram(programId);
 
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);
 
-    return CheckLinkStatus(m_ProgramId);
+    if (!CheckLinkStatus(programId))
+    {
+        glDeleteProgram(programId);
+        return false;
+    }
+
+    m_ProgramId = programId;
+    return true;
 }
 
 void Shader::Bind() const
@@ -105,37 +119,74 @@ void Shader::Bind() const
 
 void Shader::SetFloat(const std::string& name, float value) const
 {
-    const int location = glGetUniformLocation(m_ProgramId, name.c_str());
+    const int location = GetUniformLocation(name);
+    if (location < 0)
+    {
+        return;
+    }
     glUniform1f(location, value);
 }
 
 void Shader::SetInt(const std::string& name, int value) const
 {
-    const int location = glGetUniformLocation(m_ProgramId, name.c_str());
+    const int location = GetUniformLocation(name);
+    if (location < 0)
+    {
+        return;
+    }
     glUniform1i(location, value);
 }
 
 void Shader::SetVec2(const std::string& name, const glm::vec2& value) const
 {
-    const int location = glGetUniformLocation(m_ProgramId, name.c_str());
+    const int location = GetUniformLocation(name);
+    if (location < 0)
+    {
+        return;
+    }
     glUniform2fv(location, 1, &value[0]);
 }
 
 void Shader::SetVec4(const std::string& name, const glm::vec4& value) const
 {
-    const int location = glGetUniformLocation(m_ProgramId, name.c_str());
+    const int location = GetUniformLocation(name);
+    if (location < 0)
+    {
+        return;
+    }
     glUniform4fv(location, 1, &value[0]);
 }
 
 void Shader::SetMat4(const std::string& name, const glm::mat4& value) const
 {
-    const int location = glGetUniformLocation(m_ProgramId, name.c_str());
+    const int location = GetUniformLocation(name);
+    if (location < 0)
+    {
+        return;
+    }
     glUniformMatrix4fv(location, 1, GL_FALSE, &value[0][0]);
 }
 
 void Shader::SetVec3(const std::string& name, const glm::vec3& value) const
 {
-    const int location = glGetUniformLocation(m_ProgramId, name.c_str());
+    const int location = GetUniformLocation(name);
+    if (location < 0)
+    {
+        return;
+    }
     glUniform3fv(location, 1, &value[0]);
+}
+
+int Shader::GetUniformLocation(const std::string& name) const
+{
+    const auto existing = m_UniformLocations.find(name);
+    if (existing != m_UniformLocations.end())
+    {
+        return existing->second;
+    }
+
+    const int location = glGetUniformLocation(m_ProgramId, name.c_str());
+    m_UniformLocations.emplace(name, location);
+    return location;
 }
 } // namespace GeoFPS

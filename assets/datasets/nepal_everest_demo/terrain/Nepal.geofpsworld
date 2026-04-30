@@ -1,0 +1,50 @@
+# GeoFPS world file
+world_name=World 1
+active_terrain_index=0
+active_asset_index=0
+sun.use_geographic=1
+sun.year=2026
+sun.month=4
+sun.day=12
+sun.local_time_hours=16.00000000
+sun.utc_offset_hours=2.00000000
+sun.illuminance=1.00000000
+sun.ambient_strength=0.22000000
+sun.sky_brightness=1.00000000
+sun.manual_azimuth_degrees=220.00000000
+sun.manual_elevation_degrees=32.00000000
+
+[terrain]
+name=Terrain 1
+tile_manifest=assets/datasets/nepal_everest_demo/terrain_tiles/tile_manifest.json
+path=/Users/dhurianvitoldas/Documents/Development/GeoFPS/assets/datasets/nepal_everest_demo/terrain/everest_terrain.csv
+visible=1
+grid_x=512
+grid_z=512
+height_scale=1.00000000
+smoothing_passes=0
+import_sample_step=1
+chunk_resolution=96
+coordinate_mode=geographic
+crs=EPSG:4326
+crs_false_easting=0.00000000
+crs_false_northing=0.00000000
+origin_latitude=28.11986111
+origin_longitude=86.63013889
+origin_height=6002.00000000
+active_overlay_index=0
+  [overlay]
+  name=Overlay 1
+  image_path=/Users/dhurianvitoldas/Documents/Development/GeoFPS/assets/datasets/nepal_everest_demo/imagery/2025-12-24-00_00_2025-12-24-23_59_Sentinel-2_L2A_True_color_Large.jpg
+  enabled=1
+  opacity=0.65000000
+  top_left_latitude=28.11986111
+  top_left_longitude=86.63013889
+  top_right_latitude=28.11986111
+  top_right_longitude=87.02986111
+  bottom_left_latitude=27.86013889
+  bottom_left_longitude=86.63013889
+  bottom_right_latitude=27.86013889
+  bottom_right_longitude=87.02986111
+  [/overlay]
+[/terrain]

@@ -1,45 +1,47 @@
-# GeoFPS world file template
-# Fill this in, then use File -> Load World File in GeoFPS.
-
+# GeoFPS world file
 world_name=My World
 active_terrain_index=0
 active_asset_index=0
-
-sun.use_geographic=1
+sun.use_geographic=0
 sun.year=2026
 sun.month=4
 sun.day=12
-sun.local_time_hours=16.0
-sun.utc_offset_hours=2.0
-sun.illuminance=1.0
-sun.ambient_strength=0.22
-sun.sky_brightness=1.0
-sun.manual_azimuth_degrees=220.0
-sun.manual_elevation_degrees=32.0
+sun.local_time_hours=16.00000000
+sun.utc_offset_hours=2.00000000
+sun.illuminance=1.00000000
+sun.ambient_strength=0.22000000
+sun.sky_brightness=1.00000000
+sun.manual_azimuth_degrees=220.00000000
+sun.manual_elevation_degrees=32.00000000
 
 [terrain]
 name=Base Terrain
-path=assets/data/sample_terrain.csv
-grid_x=64
-grid_z=64
-height_scale=1.0
-origin_latitude=55.6761
-origin_longitude=12.5683
-origin_height=0.0
+tile_manifest=assets/datasets/nepal_everest_demo/terrain_tiles/tile_manifest.json
+path=/Users/dhurianvitoldas/Documents/Development/GeoFPS/assets/datasets/nepal_everest_demo/terrain/everest_terrain.csv
+grid_x=512
+grid_z=512
+height_scale=1.00000000
+smoothing_passes=0
+import_sample_step=1
+chunk_resolution=96
+coordinate_mode=geographic
+origin_latitude=28.11986111
+origin_longitude=86.63013889
+origin_height=6002.00000000
 active_overlay_index=0
   [overlay]
   name=Overlay 1
-  image_path=
-  enabled=0
-  opacity=0.85
-  top_left_latitude=55.6761
-  top_left_longitude=12.5683
-  top_right_latitude=55.6761
-  top_right_longitude=12.5783
-  bottom_left_latitude=55.6661
-  bottom_left_longitude=12.5683
-  bottom_right_latitude=55.6661
-  bottom_right_longitude=12.5783
+  image_path=/Users/dhurianvitoldas/Documents/Development/GeoFPS/assets/datasets/nepal_everest_demo/imagery/2025-12-24-00_00_2025-12-24-23_59_Sentinel-2_L2A_True_color_Large.jpg
+  enabled=1
+  opacity=0.65000000
+  top_left_latitude=28.11986111
+  top_left_longitude=86.63013889
+  top_right_latitude=28.11986111
+  top_right_longitude=87.02986111
+  bottom_left_latitude=27.86013889
+  bottom_left_longitude=86.63013889
+  bottom_right_latitude=27.86013889
+  bottom_right_longitude=87.02986111
   [/overlay]
 [/terrain]
 
@@ -49,34 +51,34 @@ path=assets/models/tower.glb
 position_mode=geographic
 latitude=55.67650000
 longitude=12.56900000
-height=8.0
-position_x=0.0
-position_y=0.0
-position_z=0.0
-rotation_z=0.0
-scale_x=1.0
-scale_y=1.0
-scale_z=1.0
-tint_r=1.0
-tint_g=1.0
-tint_b=1.0
+height=8.00000000
+position_x=74398.44531250
+position_y=-512.40002441
+position_z=840811.06250000
+rotation_z=0.00000000
+scale_x=1.00000000
+scale_y=1.00000000
+scale_z=1.00000000
+tint_r=1.00000000
+tint_g=1.00000000
+tint_b=1.00000000
 [/asset]
 
 [asset]
 name=Substation Building
 path=assets/models/substation_building.glb
 position_mode=local
-latitude=0.0
-longitude=0.0
-height=0.0
-position_x=25.0
-position_y=3.0
-position_z=-10.0
-rotation_z=90.0
-scale_x=1.0
-scale_y=1.0
-scale_z=1.0
-tint_r=1.0
-tint_g=1.0
-tint_b=1.0
+latitude=0.00000000
+longitude=0.00000000
+height=0.00000000
+position_x=25.00000000
+position_y=3.00000000
+position_z=-10.00000000
+rotation_z=90.00000000
+scale_x=1.00000000
+scale_y=1.00000000
+scale_z=1.00000000
+tint_r=1.00000000
+tint_g=1.00000000
+tint_b=1.00000000
 [/asset]
