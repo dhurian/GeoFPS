@@ -107,7 +107,30 @@ ImportedAsset ToImportedAsset(const ParsedAssetDefinition& parsed)
     asset.scale = parsed.scale;
     asset.tint = parsed.tint;
     asset.showLabel = parsed.showLabel;
+    // Restore non-index animation fields (clip index resolved after asset loads).
+    asset.animState.playbackSpeed     = parsed.animSpeed;
+    asset.animState.loop              = parsed.animLoop;
+    asset.animState.isPlaying         = parsed.animPlaying;
+    asset.nodeAnimState.playbackSpeed = parsed.nodeAnimSpeed;
+    asset.nodeAnimState.loop          = parsed.nodeAnimLoop;
+    asset.nodeAnimState.isPlaying     = parsed.nodeAnimPlaying;
     return asset;
+}
+
+// Resolve a saved clip name to a clip index after the asset data is loaded.
+void ResolveAnimClipName(ImportedAsset& asset, const std::string& clipName)
+{
+    if (clipName.empty() || !asset.assetData.hasSkin)
+        return;
+    const auto& anims = asset.assetData.animations;
+    for (int ci = 0; ci < static_cast<int>(anims.size()); ++ci)
+    {
+        if (anims[static_cast<size_t>(ci)].name == clipName)
+        {
+            asset.animState.activeClipIndex = ci;
+            return;
+        }
+    }
 }
 } // namespace
 
@@ -258,6 +281,21 @@ bool Application::SaveWorldToFile(const std::string& path)
         file << "tint_g=" << asset.tint.g << '\n';
         file << "tint_b=" << asset.tint.b << '\n';
         file << "show_label=" << (asset.showLabel ? 1 : 0) << '\n';
+        // Animation state (only meaningful when the asset has a skin).
+        const AnimationState& animState = asset.animState;
+        const std::string clipName = (animState.activeClipIndex >= 0 &&
+                                      animState.activeClipIndex < static_cast<int>(asset.assetData.animations.size()))
+            ? asset.assetData.animations[static_cast<size_t>(animState.activeClipIndex)].name
+            : std::string();
+        file << "anim_clip="    << clipName << '\n';
+        file << "anim_speed="   << animState.playbackSpeed  << '\n';
+        file << "anim_loop="    << (animState.loop     ? 1 : 0) << '\n';
+        file << "anim_playing=" << (animState.isPlaying ? 1 : 0) << '\n';
+        // Node-transform animation state.
+        const NodeAnimationState& ns = asset.nodeAnimState;
+        file << "node_anim_speed="   << ns.playbackSpeed  << '\n';
+        file << "node_anim_loop="    << (ns.loop      ? 1 : 0) << '\n';
+        file << "node_anim_playing=" << (ns.isPlaying ? 1 : 0) << '\n';
         file << "[/asset]\n\n";
     }
 
@@ -444,8 +482,9 @@ bool Application::LoadWorldFromFile(const std::string& path)
         }
     }
 
-    for (ImportedAsset& asset : m_ImportedAssets)
+    for (size_t ai = 0; ai < m_ImportedAssets.size(); ++ai)
     {
+        ImportedAsset& asset = m_ImportedAssets[ai];
         std::cout << "[GeoFPS] Loading asset '" << asset.name << "' from " << asset.path << '\n';
         if (asset.useGeographicPlacement)
         {
@@ -456,6 +495,9 @@ bool Application::LoadWorldFromFile(const std::string& path)
         if (!asset.path.empty())
         {
             LoadImportedAsset(asset);
+            // Resolve the saved animation clip name to an index now that the asset data is loaded.
+            if (ai < parsedWorld.assets.size())
+                ResolveAnimClipName(asset, parsedWorld.assets[ai].animClipName);
         }
     }
 

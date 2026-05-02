@@ -1,6 +1,7 @@
 #include "Renderer/Shader.h"
 
 #include <glad/glad.h>
+#include <glm/gtc/type_ptr.hpp>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -175,6 +176,19 @@ void Shader::SetVec3(const std::string& name, const glm::vec3& value) const
         return;
     }
     glUniform3fv(location, 1, &value[0]);
+}
+
+void Shader::SetMat4Array(const std::string& name, const std::vector<glm::mat4>& matrices) const
+{
+    if (matrices.empty())
+        return;
+    const int location = GetUniformLocation(name + "[0]");
+    if (location < 0)
+        return;
+    glUniformMatrix4fv(location,
+                       static_cast<GLsizei>(matrices.size()),
+                       GL_FALSE,
+                       glm::value_ptr(matrices[0]));
 }
 
 int Shader::GetUniformLocation(const std::string& name) const

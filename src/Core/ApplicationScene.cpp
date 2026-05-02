@@ -1,11 +1,14 @@
 #include "Core/Application.h"
 #include "Core/ApplicationInternal.h"
 
+#include <glm/geometric.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 #include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <exception>
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <limits>
 #include <utility>
@@ -16,6 +19,12 @@ using namespace ApplicationInternal;
 namespace
 {
 constexpr double kPersistenceEpsilon = 1e-10;
+
+double NowMs()
+{
+    using Clock = std::chrono::steady_clock;
+    return std::chrono::duration<double, std::milli>(Clock::now().time_since_epoch()).count();
+}
 
 bool IsUnsetCoordinate(const GeoImageCoordinate& coordinate)
 {
@@ -870,15 +879,101 @@ bool Application::StartTerrainBuildJob(int terrainIndex)
 
 void Application::ProcessBackgroundJobs()
 {
+    m_Diagnostics.meshUploadsThisFrame = 0;
+    m_Diagnostics.tileChunkUploadsThisFrame = 0;
+    m_Diagnostics.meshUploadCpuMs = 0.0f;
+
+    // Limit terrain tile GPU uploads to one chunk per frame. A single tile can
+    // contain many render chunks, and uploading all of them together is enough
+    // to make mouse look feel jerky.
+    int tileChunkUploadsThisFrame = 0;
+    constexpr int kMaxTileChunkUploadsPerFrame = 1;
+
     for (auto iterator = m_TerrainTileBuildJobs.begin(); iterator != m_TerrainTileBuildJobs.end();)
     {
+        if (iterator->uploadStarted)
+        {
+            TerrainTileBuildResult& result = iterator->result;
+            if (result.terrainIndex < 0 || result.terrainIndex >= static_cast<int>(m_TerrainDatasets.size()))
+            {
+                iterator = m_TerrainTileBuildJobs.erase(iterator);
+                continue;
+            }
+
+            TerrainDataset& dataset = m_TerrainDatasets[static_cast<size_t>(result.terrainIndex)];
+            if (result.tileIndex < 0 || result.tileIndex >= static_cast<int>(dataset.tiles.size()))
+            {
+                iterator = m_TerrainTileBuildJobs.erase(iterator);
+                continue;
+            }
+
+            TerrainTile& tile = dataset.tiles[static_cast<size_t>(result.tileIndex)];
+            if (!result.success || tile.path != result.path)
+            {
+                tile.loading = false;
+                std::cerr << "[GeoFPS] Terrain tile FAILED: " << result.statusMessage << '\n';
+                m_StatusMessage = result.statusMessage;
+                iterator = m_TerrainTileBuildJobs.erase(iterator);
+                continue;
+            }
+
+            if (iterator->nextChunkUploadIndex < result.chunks.size())
+            {
+                if (tileChunkUploadsThisFrame >= kMaxTileChunkUploadsPerFrame)
+                {
+                    break;
+                }
+
+                TerrainMeshChunkData& chunkData = result.chunks[iterator->nextChunkUploadIndex];
+                TerrainMeshChunk chunk;
+                chunk.minX = chunkData.minX;
+                chunk.maxX = chunkData.maxX;
+                chunk.minY = chunkData.minY;
+                chunk.maxY = chunkData.maxY;
+                chunk.minZ = chunkData.minZ;
+                chunk.maxZ = chunkData.maxZ;
+                chunk.meshData = std::move(chunkData.meshData);
+                const double uploadStartMs = NowMs();
+                chunk.mesh = std::make_unique<Mesh>(chunk.meshData);
+                m_Diagnostics.meshUploadCpuMs += static_cast<float>(NowMs() - uploadStartMs);
+                ++m_Diagnostics.meshUploadsThisFrame;
+                ++m_Diagnostics.tileChunkUploadsThisFrame;
+                tile.chunks.push_back(std::move(chunk));
+                ++iterator->nextChunkUploadIndex;
+                ++tileChunkUploadsThisFrame;
+            }
+
+            if (iterator->nextChunkUploadIndex < result.chunks.size())
+            {
+                ++iterator;
+                continue;
+            }
+
+            tile.loaded = true;
+            tile.meshLoaded = !tile.chunks.empty() ||
+                              (!tile.terrainMeshData.vertices.empty() && !tile.terrainMeshData.indices.empty());
+            tile.loading = false;
+            if (tile.meshLoaded)
+            {
+                std::cout << "[GeoFPS] Terrain tile loaded (row=" << tile.row
+                          << " col=" << tile.col << "): " << tile.path << '\n';
+            }
+            if (result.terrainIndex == m_ActiveTerrainIndex)
+            {
+                MarkTerrainIsolineSampleGridDirty();
+            }
+
+            iterator = m_TerrainTileBuildJobs.erase(iterator);
+            continue;
+        }
+
+        TerrainTileBuildResult result;
         if (iterator->future.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
         {
             ++iterator;
             continue;
         }
 
-        TerrainTileBuildResult result;
         try
         {
             result = iterator->future.get();
@@ -894,7 +989,6 @@ void Application::ProcessBackgroundJobs()
             if (result.tileIndex >= 0 && result.tileIndex < static_cast<int>(dataset.tiles.size()))
             {
                 TerrainTile& tile = dataset.tiles[static_cast<size_t>(result.tileIndex)];
-                tile.loading = false;
                 if (result.success && tile.path == result.path)
                 {
                     tile.points = std::move(result.points);
@@ -902,29 +996,15 @@ void Application::ProcessBackgroundJobs()
                     tile.terrainMeshData = std::move(result.meshData);
                     tile.chunks.clear();
                     tile.chunks.reserve(result.chunks.size());
-                    for (TerrainMeshChunkData& chunkData : result.chunks)
-                    {
-                        TerrainMeshChunk chunk;
-                        chunk.minX = chunkData.minX;
-                        chunk.maxX = chunkData.maxX;
-                        chunk.minY = chunkData.minY;
-                        chunk.maxY = chunkData.maxY;
-                        chunk.minZ = chunkData.minZ;
-                        chunk.maxZ = chunkData.maxZ;
-                        chunk.meshData = std::move(chunkData.meshData);
-                        chunk.mesh = std::make_unique<Mesh>(chunk.meshData);
-                        tile.chunks.push_back(std::move(chunk));
-                    }
-                    tile.loaded = true;
-                    tile.meshLoaded = !tile.chunks.empty() ||
-                                      (!tile.terrainMeshData.vertices.empty() && !tile.terrainMeshData.indices.empty());
-                    if (result.terrainIndex == m_ActiveTerrainIndex)
-                    {
-                        MarkTerrainIsolineSampleGridDirty();
-                    }
+                    iterator->result = std::move(result);
+                    iterator->nextChunkUploadIndex = 0;
+                    iterator->uploadStarted = true;
+                    continue;
                 }
                 else
                 {
+                    tile.loading = false;
+                    std::cerr << "[GeoFPS] Terrain tile FAILED: " << result.statusMessage << '\n';
                     m_StatusMessage = result.statusMessage;
                 }
             }
@@ -956,13 +1036,19 @@ void Application::ProcessBackgroundJobs()
             TerrainDataset& dataset = m_TerrainDatasets[static_cast<size_t>(iterator->terrainIndex)];
             if (result.success)
             {
+                std::cout << "[GeoFPS] Terrain '" << dataset.name << "' loaded: "
+                          << result.points.size() << " pts, "
+                          << result.meshData.indices.size() / 3u << " tris\n";
                 dataset.points = std::move(result.points);
                 dataset.geoReference = result.geoReference;
                 dataset.settings = result.settings;
                 dataset.heightGrid = std::move(result.heightGrid);
                 dataset.terrainMeshData = std::move(result.meshData);
                 dataset.bounds = result.bounds;
+                double uploadStartMs = NowMs();
                 dataset.mesh = std::make_unique<Mesh>(dataset.terrainMeshData);
+                m_Diagnostics.meshUploadCpuMs += static_cast<float>(NowMs() - uploadStartMs);
+                ++m_Diagnostics.meshUploadsThisFrame;
                 dataset.chunks.clear();
                 dataset.chunks.reserve(result.chunks.size());
                 for (TerrainMeshChunkData& chunkData : result.chunks)
@@ -975,7 +1061,10 @@ void Application::ProcessBackgroundJobs()
                     chunk.minZ = chunkData.minZ;
                     chunk.maxZ = chunkData.maxZ;
                     chunk.meshData = std::move(chunkData.meshData);
+                    uploadStartMs = NowMs();
                     chunk.mesh = std::make_unique<Mesh>(chunk.meshData);
+                    m_Diagnostics.meshUploadCpuMs += static_cast<float>(NowMs() - uploadStartMs);
+                    ++m_Diagnostics.meshUploadsThisFrame;
                     dataset.chunks.push_back(std::move(chunk));
                 }
                 dataset.loaded = true;
@@ -1004,6 +1093,7 @@ void Application::ProcessBackgroundJobs()
             }
             else
             {
+                std::cerr << "[GeoFPS] Terrain '" << dataset.name << "' FAILED: " << result.statusMessage << '\n';
                 dataset.loaded = false;
                 dataset.mesh.reset();
                 dataset.terrainMeshData = {};
@@ -1045,16 +1135,61 @@ void Application::ProcessBackgroundJobs()
             if (result.success)
             {
                 asset.assetData = std::move(result.assetData);
+                size_t totalVerts = 0, totalTris = 0;
                 for (ImportedPrimitiveData& primitive : asset.assetData.primitives)
                 {
+                    const double uploadStartMs = NowMs();
                     primitive.mesh = std::make_unique<Mesh>(primitive.meshData);
+                    m_Diagnostics.meshUploadCpuMs += static_cast<float>(NowMs() - uploadStartMs);
+                    ++m_Diagnostics.meshUploadsThisFrame;
+                    if (primitive.isSkinned && !primitive.skinMeshData.vertices.empty())
+                    {
+                        const double skinUploadStartMs = NowMs();
+                        primitive.skinnedMesh = std::make_unique<AnimatedMesh>(primitive.skinMeshData);
+                        m_Diagnostics.meshUploadCpuMs += static_cast<float>(NowMs() - skinUploadStartMs);
+                        ++m_Diagnostics.meshUploadsThisFrame;
+                    }
                     UploadImportedPrimitiveTextures(primitive);
+                    totalVerts += primitive.meshData.vertices.size();
+                    totalTris  += primitive.meshData.indices.size() / 3u;
                 }
+                // Reset animation state so it matches the new asset data.
+                asset.animState = AnimationState{};
                 asset.loaded = true;
+                std::cout << "[GeoFPS] Asset '" << asset.name << "' loaded: "
+                          << asset.assetData.primitives.size() << " primitives, "
+                          << totalVerts << " vertices, " << totalTris << " triangles";
+                if (asset.assetData.hasSkin)
+                    std::cout << ", skinned (" << asset.assetData.skeleton.joints.size() << " joints, "
+                              << asset.assetData.animations.size() << " clips)";
+                if (asset.assetData.hasNodeAnimation)
+                    std::cout << ", node-anim (" << asset.assetData.nodeAnimations.size() << " clips)";
+                std::cout << '\n';
+
+                // Compute AABB for raycast picking (only on background-loaded assets)
+                asset.aabbMin   = glm::vec3( std::numeric_limits<float>::max());
+                asset.aabbMax   = glm::vec3(-std::numeric_limits<float>::max());
+                asset.aabbValid = false;
+                for (const ImportedPrimitiveData& prim : asset.assetData.primitives)
+                {
+                    for (const Vertex& v : prim.meshData.vertices)
+                    {
+                        asset.aabbMin = glm::min(asset.aabbMin, v.position);
+                        asset.aabbMax = glm::max(asset.aabbMax, v.position);
+                    }
+                }
+                if (asset.aabbMin.x <= asset.aabbMax.x)
+                {
+                    asset.aabbMin  *= asset.scale;
+                    asset.aabbMax  *= asset.scale;
+                    asset.aabbValid = true;
+                }
+
                 m_StatusMessage = result.statusMessage;
             }
             else
             {
+                std::cerr << "[GeoFPS] Asset '" << asset.name << "' FAILED: " << result.statusMessage << '\n';
                 asset.loaded = false;
                 asset.assetData.primitives.clear();
                 m_StatusMessage = result.statusMessage;
@@ -1089,6 +1224,10 @@ void Application::ProcessBackgroundJobs()
 
         if (result.success)
         {
+            size_t totalSamples = 0;
+            for (const auto& p : result.profiles) totalSamples += p.samples.size();
+            std::cout << "[GeoFPS] Profile samples rebuilt: " << result.profiles.size()
+                      << " profiles, " << totalSamples << " total samples\n";
             m_TerrainProfiles = std::move(result.profiles);
             m_ActiveTerrainProfileIndex = m_TerrainProfiles.empty() ?
                                               -1 :
@@ -1273,8 +1412,42 @@ bool Application::LoadImportedAsset(ImportedAsset& asset)
     for (ImportedPrimitiveData& primitive : asset.assetData.primitives)
     {
         primitive.mesh = std::make_unique<Mesh>(primitive.meshData);
+        if (primitive.isSkinned && !primitive.skinMeshData.vertices.empty())
+            primitive.skinnedMesh = std::make_unique<AnimatedMesh>(primitive.skinMeshData);
         UploadImportedPrimitiveTextures(primitive);
     }
+    asset.animState = AnimationState{};
+
+    // ── Compute AABB for raycast picking ──────────────────────────────────────
+    asset.aabbMin   = glm::vec3( std::numeric_limits<float>::max());
+    asset.aabbMax   = glm::vec3(-std::numeric_limits<float>::max());
+    asset.aabbValid = false;
+    for (const ImportedPrimitiveData& prim : asset.assetData.primitives)
+    {
+        for (const Vertex& v : prim.meshData.vertices)
+        {
+            asset.aabbMin = glm::min(asset.aabbMin, v.position);
+            asset.aabbMax = glm::max(asset.aabbMax, v.position);
+        }
+    }
+    if (asset.aabbMin.x <= asset.aabbMax.x)
+    {
+        // Scale AABB to world units (asset.scale applied at render time, so match it)
+        asset.aabbMin *= asset.scale;
+        asset.aabbMax *= asset.scale;
+        asset.aabbValid = true;
+    }
+
+    // Count stats for the terminal log
+    size_t totalVerts = 0, totalTris = 0;
+    for (const ImportedPrimitiveData& prim : asset.assetData.primitives)
+    {
+        totalVerts += prim.meshData.vertices.size();
+        totalTris  += prim.meshData.indices.size() / 3u;
+    }
+    std::cout << "[GeoFPS] Asset '" << asset.name << "' loaded (sync): "
+              << asset.assetData.primitives.size() << " primitives, "
+              << totalVerts << " vertices, " << totalTris << " triangles\n";
 
     asset.loaded = true;
     m_StatusMessage = "Loaded asset: " + asset.name;
@@ -1465,6 +1638,7 @@ bool Application::RebuildTerrainMesh(TerrainDataset& dataset)
     m_StatusMessage = "Terrain mesh rebuilt: " + dataset.name + " (" + std::to_string(meshData.vertices.size()) +
                       " vertices, " + std::to_string(meshData.indices.size() / 3u) + " triangles, " +
                       std::to_string(dataset.chunks.size()) + " chunks)";
+    std::cout << "[GeoFPS] " << m_StatusMessage << '\n';
     return true;
 }
 
@@ -1509,7 +1683,23 @@ void Application::ResetOverlayToTerrainBounds(GeoImageDefinition& imageDefinitio
 
 void Application::ResetOverlayToTerrainBounds(GeoImageDefinition& imageDefinition) const
 {
-    ResetOverlayToTerrainBounds(imageDefinition, m_TerrainPoints);
+    // For non-tiled terrain the points are in m_TerrainPoints — use them directly.
+    if (!m_TerrainPoints.empty())
+    {
+        ResetOverlayToTerrainBounds(imageDefinition, m_TerrainPoints);
+        return;
+    }
+
+    // For tiled terrain m_TerrainPoints is empty; fall back to the active dataset's
+    // geographic bounds which are always populated from the manifest.
+    const TerrainDataset* dataset = GetActiveTerrainDataset();
+    if (dataset != nullptr && dataset->bounds.valid)
+    {
+        imageDefinition.topLeft     = {dataset->bounds.maxLatitude, dataset->bounds.minLongitude};
+        imageDefinition.topRight    = {dataset->bounds.maxLatitude, dataset->bounds.maxLongitude};
+        imageDefinition.bottomLeft  = {dataset->bounds.minLatitude, dataset->bounds.minLongitude};
+        imageDefinition.bottomRight = {dataset->bounds.minLatitude, dataset->bounds.maxLongitude};
+    }
 }
 
 void Application::LoadActiveTerrainIntoScene()
@@ -2006,6 +2196,244 @@ void Application::UpdateImportedAssetPositionFromGeographic(ImportedAsset& asset
     asset.position = glm::vec3(static_cast<float>(localPosition.x),
                                static_cast<float>(localPosition.y),
                                static_cast<float>(localPosition.z));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Navigate camera to active imported asset
+// ─────────────────────────────────────────────────────────────────────────────
+void Application::GoToActiveAsset()
+{
+    const ImportedAsset* asset = GetActiveImportedAsset();
+    if (asset == nullptr || !asset->loaded)
+    {
+        m_StatusMessage = "No loaded asset to navigate to.";
+        return;
+    }
+
+    // Determine a comfortable view distance from the AABB extents
+    float viewDist  = 20.0f;
+    float halfH     = 3.0f;
+    if (asset->aabbValid)
+    {
+        const glm::vec3 extent = (asset->aabbMax - asset->aabbMin) * 0.5f;
+        viewDist = std::max(glm::length(extent) * 2.5f, 5.0f);
+        halfH    = extent.y;
+    }
+
+    // Place camera to the "north" side (–Z) and slightly above the asset centre,
+    // then compute the yaw/pitch so it looks at the asset.
+    const glm::vec3 assetCentre = asset->position + glm::vec3(0.0f, halfH, 0.0f);
+    const glm::vec3 camPos      = assetCentre + glm::vec3(0.0f, halfH * 0.4f + 2.0f, -viewDist);
+
+    // Direction from camera → asset centre
+    const glm::vec3 dir   = glm::normalize(assetCentre - camPos);
+    // Yaw: atan2(x, -z) for FPS convention where yaw=0 looks in –Z
+    const float yaw   = glm::degrees(std::atan2(dir.x, -dir.z));
+    const float pitch = glm::degrees(std::asin(std::clamp(dir.y, -1.0f, 1.0f)));
+
+    QueueCameraTeleport(camPos);
+    SnapCameraView(yaw, pitch);
+
+    m_StatusMessage = "Camera moved to: " + asset->name;
+    std::cout << "[GeoFPS] Camera teleported to asset '" << asset->name
+              << "' at (" << asset->position.x << ", " << asset->position.y
+              << ", " << asset->position.z << "), view dist=" << viewDist << " m\n";
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Gizmo snap helper
+// ─────────────────────────────────────────────────────────────────────────────
+void Application::SnapCameraView(float yaw, float pitch)
+{
+    m_PendingCameraCommand.hasSnapTarget = true;
+    m_PendingCameraCommand.snapTargetYaw = yaw;
+    m_PendingCameraCommand.snapTargetPitch = std::clamp(pitch, -89.0f, 89.0f);
+    m_FPSController.ResetMouseState();
+}
+
+void Application::QueueCameraTeleport(const glm::vec3& position)
+{
+    m_PendingCameraCommand.hasTeleport = true;
+    m_PendingCameraCommand.teleportPosition = position;
+    m_FPSController.ResetMouseState();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Feature: Shared terrain height helper
+// ─────────────────────────────────────────────────────────────────────────────
+float Application::GetTerrainLocalHeightAt(float x, float z) const
+{
+    const TerrainDataset* terrain = GetActiveTerrainDataset();
+    if (!terrain) return 0.0f;
+    const GeoConverter converter(m_GeoReference);
+    const glm::dvec3 geo = converter.ToGeographic({static_cast<double>(x), 0.0, static_cast<double>(z)});
+    return SampleRenderedTerrainLocalHeightAt(*terrain, geo.x, geo.y);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Feature: Raycast asset picking
+// ─────────────────────────────────────────────────────────────────────────────
+void Application::PickAssetAtScreenPos(float pixelX, float pixelY)
+{
+    const int W = m_Window.GetWidth();
+    const int H = m_Window.GetHeight();
+    if (W <= 0 || H <= 0) return;
+
+    // Unproject screen pixel → world-space ray
+    const glm::mat4 invProj = glm::inverse(m_Camera.GetProjectionMatrix());
+    const glm::mat4 invView = glm::inverse(m_Camera.GetViewMatrix());
+
+    const float ndcX =  (2.0f * pixelX / static_cast<float>(W)) - 1.0f;
+    const float ndcY =  1.0f - (2.0f * pixelY / static_cast<float>(H));
+    const glm::vec4 rayClip  = {ndcX, ndcY, -1.0f, 1.0f};
+    glm::vec4 rayEye         = invProj * rayClip;
+    rayEye.z = -1.0f; rayEye.w = 0.0f;
+    const glm::vec3 rayDir   = glm::normalize(glm::vec3(invView * rayEye));
+    const glm::vec3 rayOrigin = m_Camera.GetPosition();
+
+    float bestT   = std::numeric_limits<float>::max();
+    int   bestIdx = -1;
+
+    for (int i = 0; i < static_cast<int>(m_ImportedAssets.size()); ++i)
+    {
+        const ImportedAsset& asset = m_ImportedAssets[static_cast<size_t>(i)];
+        if (!asset.loaded || !asset.aabbValid) continue;
+
+        // Transform AABB to world space (scale already baked; just add position)
+        const glm::vec3 worldMin = asset.position + asset.aabbMin;
+        const glm::vec3 worldMax = asset.position + asset.aabbMax;
+
+        // Slab-method ray/AABB intersection
+        glm::vec3 tMin = (worldMin - rayOrigin) / (rayDir + glm::vec3(1e-12f));
+        glm::vec3 tMax = (worldMax - rayOrigin) / (rayDir + glm::vec3(1e-12f));
+        glm::vec3 t1 = glm::min(tMin, tMax);
+        glm::vec3 t2 = glm::max(tMin, tMax);
+        const float tNear = std::max({t1.x, t1.y, t1.z});
+        const float tFar  = std::min({t2.x, t2.y, t2.z});
+        if (tNear > tFar || tFar < 0.0f) continue;
+        const float t = tNear >= 0.0f ? tNear : tFar;
+        if (t > 0.0f && t < bestT)
+        {
+            bestT   = t;
+            bestIdx = i;
+        }
+    }
+
+    if (bestIdx >= 0)
+    {
+        for (ImportedAsset& a : m_ImportedAssets) a.selected = false;
+        m_ImportedAssets[static_cast<size_t>(bestIdx)].selected = true;
+        m_ActiveImportedAssetIndex = bestIdx;
+        m_StatusMessage = "Selected: " + m_ImportedAssets[static_cast<size_t>(bestIdx)].name;
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Feature: In-world asset label rendering
+// ─────────────────────────────────────────────────────────────────────────────
+void Application::RenderAssetLabels()
+{
+    if (!m_AssetLabelSettings.visible) return;
+    if (m_ImportedAssets.empty()) return;
+
+    const glm::mat4 vp      = GetRenderViewProjectionMatrix();
+    const float W = static_cast<float>(m_Window.GetWidth());
+    const float H = static_cast<float>(m_Window.GetHeight());
+    ImDrawList* dl = ImGui::GetBackgroundDrawList();
+
+    for (const ImportedAsset& asset : m_ImportedAssets)
+    {
+        if (!asset.loaded || !asset.showLabel || asset.name.empty()) continue;
+
+        const glm::vec3 wp = ToRenderRelative(asset.position +
+                                              glm::vec3(0.0f, m_AssetLabelSettings.verticalOffsetMeters, 0.0f));
+        const float dist   = glm::length(wp);
+        if (dist > m_AssetLabelSettings.maxDistanceMeters) continue;
+
+        const glm::vec4 clip = vp * glm::vec4(wp, 1.0f);
+        if (clip.w <= 0.0f) continue;
+        const glm::vec3 ndc = glm::vec3(clip) / clip.w;
+        if (ndc.x < -1.0f || ndc.x > 1.0f || ndc.y < -1.0f || ndc.y > 1.0f) continue;
+
+        const float sx = (ndc.x * 0.5f + 0.5f) * W;
+        const float sy = (1.0f - (ndc.y * 0.5f + 0.5f)) * H;
+        const float alpha = 1.0f - std::clamp(dist / m_AssetLabelSettings.maxDistanceMeters, 0.0f, 1.0f);
+        const ImU32 shadow = IM_COL32(0,   0,   0,   static_cast<int>(alpha * 160.0f));
+        const ImU32 text   = IM_COL32(255, 255, 255, static_cast<int>(alpha * 255.0f));
+
+        dl->AddText(ImVec2(sx + 1.0f, sy + 1.0f), shadow, asset.name.c_str());
+        dl->AddText(ImVec2(sx,         sy        ), text,   asset.name.c_str());
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Feature: Terrain profile CSV / KML export
+// ─────────────────────────────────────────────────────────────────────────────
+bool Application::ExportActiveProfileAsCsv(const std::string& path)
+{
+    if (m_ActiveTerrainProfileIndex < 0 ||
+        m_ActiveTerrainProfileIndex >= static_cast<int>(m_TerrainProfiles.size()))
+    {
+        m_StatusMessage = "No active profile to export.";
+        return false;
+    }
+    const TerrainProfile& profile = m_TerrainProfiles[static_cast<size_t>(m_ActiveTerrainProfileIndex)];
+    if (profile.samples.empty())
+    {
+        m_StatusMessage = "Profile has no samples — rebuild it first.";
+        return false;
+    }
+    std::ofstream file(path);
+    if (!file)
+    {
+        m_StatusMessage = "Could not open file for writing: " + path;
+        return false;
+    }
+    file << "latitude,longitude,height_m,distance_m\n";
+    for (const TerrainProfileSample& s : profile.samples)
+        file << s.latitude << ',' << s.longitude << ',' << s.height << ',' << s.distanceMeters << '\n';
+    m_StatusMessage = "Exported profile CSV: " + path;
+    return file.good();
+}
+
+bool Application::ExportActiveProfileAsKml(const std::string& path)
+{
+    if (m_ActiveTerrainProfileIndex < 0 ||
+        m_ActiveTerrainProfileIndex >= static_cast<int>(m_TerrainProfiles.size()))
+    {
+        m_StatusMessage = "No active profile to export.";
+        return false;
+    }
+    const TerrainProfile& profile = m_TerrainProfiles[static_cast<size_t>(m_ActiveTerrainProfileIndex)];
+    if (profile.samples.empty())
+    {
+        m_StatusMessage = "Profile has no samples — rebuild it first.";
+        return false;
+    }
+    std::ofstream file(path);
+    if (!file)
+    {
+        m_StatusMessage = "Could not open file for writing: " + path;
+        return false;
+    }
+    file << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+         << "<kml xmlns=\"http://www.opengis.net/kml/2.2\">\n"
+         << "<Document>\n"
+         << "  <name>" << profile.name << "</name>\n"
+         << "  <Placemark>\n"
+         << "    <name>" << profile.name << "</name>\n"
+         << "    <LineString>\n"
+         << "      <altitudeMode>absolute</altitudeMode>\n"
+         << "      <coordinates>\n";
+    for (const TerrainProfileSample& s : profile.samples)
+        file << "        " << s.longitude << ',' << s.latitude << ',' << s.height << '\n';
+    file << "      </coordinates>\n"
+         << "    </LineString>\n"
+         << "  </Placemark>\n"
+         << "</Document>\n"
+         << "</kml>\n";
+    m_StatusMessage = "Exported profile KML: " + path;
+    return file.good();
 }
 
 

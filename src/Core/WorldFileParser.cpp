@@ -147,7 +147,14 @@ void ApplyAssetValue(ParsedAssetDefinition& asset, const std::string& key, const
     else if (key == "tint_r") asset.tint.r = static_cast<float>(ParseDouble(value, 1.0));
     else if (key == "tint_g") asset.tint.g = static_cast<float>(ParseDouble(value, 1.0));
     else if (key == "tint_b") asset.tint.b = static_cast<float>(ParseDouble(value, 1.0));
-    else if (key == "show_label") asset.showLabel = ParseBool(value, asset.showLabel);
+    else if (key == "show_label")   asset.showLabel    = ParseBool(value, asset.showLabel);
+    else if (key == "anim_clip")         asset.animClipName    = value;
+    else if (key == "anim_speed")        asset.animSpeed       = static_cast<float>(ParseDouble(value, 1.0));
+    else if (key == "anim_loop")         asset.animLoop        = ParseBool(value, true);
+    else if (key == "anim_playing")      asset.animPlaying     = ParseBool(value, false);
+    else if (key == "node_anim_speed")   asset.nodeAnimSpeed   = static_cast<float>(ParseDouble(value, 1.0));
+    else if (key == "node_anim_loop")    asset.nodeAnimLoop    = ParseBool(value, true);
+    else if (key == "node_anim_playing") asset.nodeAnimPlaying = ParseBool(value, false);
 }
 
 void ValidateAsset(const ParsedAssetDefinition& asset,

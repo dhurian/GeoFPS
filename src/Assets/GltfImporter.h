@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Assets/AnimationData.h"
+#include "Renderer/AnimatedMesh.h"
 #include "Renderer/Mesh.h"
 #include "Renderer/Texture.h"
 #include <glm/glm.hpp>
@@ -12,7 +14,16 @@ namespace GeoFPS
 struct ImportedPrimitiveData
 {
     MeshData meshData;
+    SkinMeshData skinMeshData;
+    std::unique_ptr<AnimatedMesh> skinnedMesh;
+    bool isSkinned {false};
     std::string materialName;
+    /// glTF node index this primitive belongs to.
+    /// -1 means the node's world transform was already baked into vertex positions.
+    /// ≥ 0 means the vertices are in node-local space and the animated world
+    /// transform from NodeAnimationState::nodeWorldTransforms[nodeIndex] must be
+    /// applied as uModel at render time.
+    int nodeIndex {-1};
     glm::vec4 baseColorFactor {1.0f, 1.0f, 1.0f, 1.0f};
     float metallicFactor {0.0f};
     float roughnessFactor {1.0f};
@@ -49,6 +60,15 @@ struct ImportedPrimitiveData
 struct ImportedAssetData
 {
     std::vector<ImportedPrimitiveData> primitives;
+    SkeletonData               skeleton;
+    std::vector<AnimationClip> animations;
+    bool hasSkin {false};
+
+    /// Node hierarchy for node-transform animation (indexed by glTF node index).
+    std::vector<NodeData>          nodes;
+    /// Rigid-body animation clips (no armature/skin required).
+    std::vector<NodeAnimationClip> nodeAnimations;
+    bool hasNodeAnimation {false};
 };
 
 class GltfImporter

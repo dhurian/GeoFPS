@@ -93,6 +93,15 @@ struct ParsedAssetDefinition
     glm::vec3 scale {1.0f, 1.0f, 1.0f};
     glm::vec3 tint {1.0f, 1.0f, 1.0f};
     bool showLabel {true};
+    // Animation playback state (restored after asset loads).
+    std::string animClipName;
+    float animSpeed   {1.0f};
+    bool  animLoop    {true};
+    bool  animPlaying {false};
+    // Node-transform animation state.
+    float nodeAnimSpeed   {1.0f};
+    bool  nodeAnimLoop    {true};
+    bool  nodeAnimPlaying {false};
 };
 
 struct ParsedWorldFile

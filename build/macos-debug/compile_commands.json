@@ -79,9 +79,21 @@
 },
 {
   "directory": "/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug",
+  "command": "/usr/bin/c++ -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/stb-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/tinygltf-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glm-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glad-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src/backends -iframework /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks -g -std=c++20 -arch arm64 -Wall -Wextra -Wpedantic -o CMakeFiles/GeoFPS.dir/src/Core/ApplicationUIAssetPlacement.cpp.o -c /Users/dhurianvitoldas/Documents/Development/GeoFPS/src/Core/ApplicationUIAssetPlacement.cpp",
+  "file": "/Users/dhurianvitoldas/Documents/Development/GeoFPS/src/Core/ApplicationUIAssetPlacement.cpp",
+  "output": "/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/CMakeFiles/GeoFPS.dir/src/Core/ApplicationUIAssetPlacement.cpp.o"
+},
+{
+  "directory": "/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug",
   "command": "/usr/bin/c++ -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/stb-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/tinygltf-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glm-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glad-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src/backends -iframework /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks -g -std=c++20 -arch arm64 -Wall -Wextra -Wpedantic -o CMakeFiles/GeoFPS.dir/src/Core/ApplicationUIAssets.cpp.o -c /Users/dhurianvitoldas/Documents/Development/GeoFPS/src/Core/ApplicationUIAssets.cpp",
   "file": "/Users/dhurianvitoldas/Documents/Development/GeoFPS/src/Core/ApplicationUIAssets.cpp",
   "output": "/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/CMakeFiles/GeoFPS.dir/src/Core/ApplicationUIAssets.cpp.o"
+},
+{
+  "directory": "/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug",
+  "command": "/usr/bin/c++ -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/stb-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/tinygltf-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glm-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glad-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src/backends -iframework /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks -g -std=c++20 -arch arm64 -Wall -Wextra -Wpedantic -o CMakeFiles/GeoFPS.dir/src/Core/ApplicationUIDiagnostics.cpp.o -c /Users/dhurianvitoldas/Documents/Development/GeoFPS/src/Core/ApplicationUIDiagnostics.cpp",
+  "file": "/Users/dhurianvitoldas/Documents/Development/GeoFPS/src/Core/ApplicationUIDiagnostics.cpp",
+  "output": "/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/CMakeFiles/GeoFPS.dir/src/Core/ApplicationUIDiagnostics.cpp.o"
 },
 {
   "directory": "/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug",
@@ -121,6 +133,12 @@
 },
 {
   "directory": "/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug",
+  "command": "/usr/bin/c++ -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/stb-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/tinygltf-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glm-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glad-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src/backends -iframework /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks -g -std=c++20 -arch arm64 -Wall -Wextra -Wpedantic -o CMakeFiles/GeoFPS.dir/src/Game/CameraCommand.cpp.o -c /Users/dhurianvitoldas/Documents/Development/GeoFPS/src/Game/CameraCommand.cpp",
+  "file": "/Users/dhurianvitoldas/Documents/Development/GeoFPS/src/Game/CameraCommand.cpp",
+  "output": "/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/CMakeFiles/GeoFPS.dir/src/Game/CameraCommand.cpp.o"
+},
+{
+  "directory": "/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug",
   "command": "/usr/bin/c++ -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/stb-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/tinygltf-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glm-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glad-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src/backends -iframework /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks -g -std=c++20 -arch arm64 -Wall -Wextra -Wpedantic -o CMakeFiles/GeoFPS.dir/src/Game/FPSController.cpp.o -c /Users/dhurianvitoldas/Documents/Development/GeoFPS/src/Game/FPSController.cpp",
   "file": "/Users/dhurianvitoldas/Documents/Development/GeoFPS/src/Game/FPSController.cpp",
   "output": "/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/CMakeFiles/GeoFPS.dir/src/Game/FPSController.cpp.o"
@@ -130,6 +148,12 @@
   "command": "/usr/bin/c++ -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/stb-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/tinygltf-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glm-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glad-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src/backends -iframework /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks -g -std=c++20 -arch arm64 -Wall -Wextra -Wpedantic -o CMakeFiles/GeoFPS.dir/src/Math/GeoConverter.cpp.o -c /Users/dhurianvitoldas/Documents/Development/GeoFPS/src/Math/GeoConverter.cpp",
   "file": "/Users/dhurianvitoldas/Documents/Development/GeoFPS/src/Math/GeoConverter.cpp",
   "output": "/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/CMakeFiles/GeoFPS.dir/src/Math/GeoConverter.cpp.o"
+},
+{
+  "directory": "/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug",
+  "command": "/usr/bin/c++ -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/stb-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/tinygltf-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glm-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glad-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src/backends -iframework /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks -g -std=c++20 -arch arm64 -Wall -Wextra -Wpedantic -o CMakeFiles/GeoFPS.dir/src/Renderer/AnimatedMesh.cpp.o -c /Users/dhurianvitoldas/Documents/Development/GeoFPS/src/Renderer/AnimatedMesh.cpp",
+  "file": "/Users/dhurianvitoldas/Documents/Development/GeoFPS/src/Renderer/AnimatedMesh.cpp",
+  "output": "/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/CMakeFiles/GeoFPS.dir/src/Renderer/AnimatedMesh.cpp.o"
 },
 {
   "directory": "/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug",
@@ -148,6 +172,12 @@
   "command": "/usr/bin/c++ -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/stb-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/tinygltf-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glm-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glad-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src/backends -iframework /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks -g -std=c++20 -arch arm64 -Wall -Wextra -Wpedantic -o CMakeFiles/GeoFPS.dir/src/Renderer/OpenGLRenderer.cpp.o -c /Users/dhurianvitoldas/Documents/Development/GeoFPS/src/Renderer/OpenGLRenderer.cpp",
   "file": "/Users/dhurianvitoldas/Documents/Development/GeoFPS/src/Renderer/OpenGLRenderer.cpp",
   "output": "/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/CMakeFiles/GeoFPS.dir/src/Renderer/OpenGLRenderer.cpp.o"
+},
+{
+  "directory": "/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug",
+  "command": "/usr/bin/c++ -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/stb-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/tinygltf-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glm-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glad-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src/backends -iframework /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks -g -std=c++20 -arch arm64 -Wall -Wextra -Wpedantic -o CMakeFiles/GeoFPS.dir/src/Renderer/RenderOrigin.cpp.o -c /Users/dhurianvitoldas/Documents/Development/GeoFPS/src/Renderer/RenderOrigin.cpp",
+  "file": "/Users/dhurianvitoldas/Documents/Development/GeoFPS/src/Renderer/RenderOrigin.cpp",
+  "output": "/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/CMakeFiles/GeoFPS.dir/src/Renderer/RenderOrigin.cpp.o"
 },
 {
   "directory": "/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug",
@@ -211,6 +241,12 @@
 },
 {
   "directory": "/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug",
+  "command": "/usr/bin/c++ -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src/backends -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glm-src -g -std=c++20 -arch arm64 -o CMakeFiles/GeoFPSTests.dir/src/Game/CameraCommand.cpp.o -c /Users/dhurianvitoldas/Documents/Development/GeoFPS/src/Game/CameraCommand.cpp",
+  "file": "/Users/dhurianvitoldas/Documents/Development/GeoFPS/src/Game/CameraCommand.cpp",
+  "output": "/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/CMakeFiles/GeoFPSTests.dir/src/Game/CameraCommand.cpp.o"
+},
+{
+  "directory": "/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug",
   "command": "/usr/bin/c++ -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src/backends -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glm-src -g -std=c++20 -arch arm64 -o CMakeFiles/GeoFPSTests.dir/src/Core/WorldFileParser.cpp.o -c /Users/dhurianvitoldas/Documents/Development/GeoFPS/src/Core/WorldFileParser.cpp",
   "file": "/Users/dhurianvitoldas/Documents/Development/GeoFPS/src/Core/WorldFileParser.cpp",
   "output": "/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/CMakeFiles/GeoFPSTests.dir/src/Core/WorldFileParser.cpp.o"
@@ -220,6 +256,18 @@
   "command": "/usr/bin/c++ -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src/backends -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glm-src -g -std=c++20 -arch arm64 -o CMakeFiles/GeoFPSTests.dir/src/Math/GeoConverter.cpp.o -c /Users/dhurianvitoldas/Documents/Development/GeoFPS/src/Math/GeoConverter.cpp",
   "file": "/Users/dhurianvitoldas/Documents/Development/GeoFPS/src/Math/GeoConverter.cpp",
   "output": "/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/CMakeFiles/GeoFPSTests.dir/src/Math/GeoConverter.cpp.o"
+},
+{
+  "directory": "/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug",
+  "command": "/usr/bin/c++ -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src/backends -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glm-src -g -std=c++20 -arch arm64 -o CMakeFiles/GeoFPSTests.dir/src/Renderer/Camera.cpp.o -c /Users/dhurianvitoldas/Documents/Development/GeoFPS/src/Renderer/Camera.cpp",
+  "file": "/Users/dhurianvitoldas/Documents/Development/GeoFPS/src/Renderer/Camera.cpp",
+  "output": "/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/CMakeFiles/GeoFPSTests.dir/src/Renderer/Camera.cpp.o"
+},
+{
+  "directory": "/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug",
+  "command": "/usr/bin/c++ -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src/backends -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glm-src -g -std=c++20 -arch arm64 -o CMakeFiles/GeoFPSTests.dir/src/Renderer/RenderOrigin.cpp.o -c /Users/dhurianvitoldas/Documents/Development/GeoFPS/src/Renderer/RenderOrigin.cpp",
+  "file": "/Users/dhurianvitoldas/Documents/Development/GeoFPS/src/Renderer/RenderOrigin.cpp",
+  "output": "/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/CMakeFiles/GeoFPSTests.dir/src/Renderer/RenderOrigin.cpp.o"
 },
 {
   "directory": "/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug",

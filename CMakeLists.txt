@@ -153,8 +153,11 @@ add_custom_command(TARGET GeoFPS POST_BUILD
 if(GEOFPS_BUILD_TESTS)
   add_executable(GeoFPSTests
     tests/TerrainProfileTests.cpp
+    src/Game/CameraCommand.cpp
     src/Core/WorldFileParser.cpp
     src/Math/GeoConverter.cpp
+    src/Renderer/Camera.cpp
+    src/Renderer/RenderOrigin.cpp
     src/Terrain/TerrainImporter.cpp
     src/Terrain/TerrainMeshBuilder.cpp
     src/Terrain/TerrainProfile.cpp

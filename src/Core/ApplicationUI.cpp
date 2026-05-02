@@ -10,6 +10,8 @@
 #include <GLFW/glfw3.h>
 #include <glm/common.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <algorithm>
+#include <array>
 #include <cstdio>
 #include <cstdint>
 #include <filesystem>
@@ -58,21 +60,6 @@ const char* TerrainCoordinateModeLabel(TerrainCoordinateMode mode)
     return "Geographic lat/lon/height";
 }
 
-glm::vec3 TerrainWorldTranslation(const TerrainDataset& dataset, const GeoReference& worldReference)
-{
-    if (dataset.settings.coordinateMode == TerrainCoordinateMode::LocalMeters)
-    {
-        return glm::vec3(0.0f);
-    }
-
-    const glm::dvec3 localOrigin = GeoConverter(worldReference).ToLocal(dataset.geoReference.originLatitude,
-                                                                        dataset.geoReference.originLongitude,
-                                                                        dataset.geoReference.originHeight);
-    return glm::vec3(static_cast<float>(localOrigin.x),
-                     static_cast<float>(localOrigin.y),
-                     static_cast<float>(localOrigin.z));
-}
-
 bool TerrainDatasetHasCoverage(const TerrainDataset& dataset)
 {
     return dataset.visible && dataset.loaded && dataset.bounds.valid;
@@ -96,7 +83,10 @@ void Application::SetupImGui()
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+    if (m_Diagnostics.platformViewportsEnabled)
+    {
+        io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+    }
     LoadProfessionalUiFont();
     ApplyProfessionalImGuiStyle();
     ImGuiStyle& style = ImGui::GetStyle();
@@ -310,7 +300,7 @@ void Application::RenderMiniMap()
                 targetTerrain != nullptr && targetTerrain->settings.coordinateMode == TerrainCoordinateMode::LocalMeters ?
                     glm::dvec3(targetLatitude, targetHeight, targetLongitude) :
                     targetConverter.ToLocal(targetLatitude, targetLongitude, targetHeight);
-            m_Camera.SetPosition(glm::vec3(static_cast<float>(localTarget.x),
+            QueueCameraTeleport(glm::vec3(static_cast<float>(localTarget.x),
                                            static_cast<float>(localTarget.y),
                                            static_cast<float>(localTarget.z)));
             m_StatusMessage = targetTerrain != nullptr ? "Moved camera from atlas: " + targetTerrain->name :
@@ -358,6 +348,9 @@ void Application::RenderMiniMapWindow()
 
 void Application::RenderCameraHud()
 {
+    // Stats overlay is always evaluated so it persists regardless of active tab.
+    RenderDiagnosticsOverlay();
+
     if (m_TerrainPoints.empty())
     {
         return;
@@ -458,6 +451,38 @@ void Application::RenderTerrainDatasetWindow()
     {
         ImGui::TextColored(ImVec4(1.0f, 0.38f, 0.25f, 1.0f), "Terrain file does not exist.");
     }
+
+    // ── Tile manifest ─────────────────────────────────────────────────────────
+    ImGui::Spacing();
+    ImGui::Checkbox("Use Tile Manifest", &activeTerrain->hasTileManifest);
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("Load terrain from a JSON manifest file that references\n"
+                          "multiple CSV tiles instead of a single CSV file.");
+    if (activeTerrain->hasTileManifest)
+    {
+        char manifestBuffer[512];
+        std::snprintf(manifestBuffer, sizeof(manifestBuffer),
+                      "%s", activeTerrain->tileManifestPath.c_str());
+        ImGui::SetNextItemWidth(-60.0f);
+        if (ImGui::InputText("##manifest_path", manifestBuffer, sizeof(manifestBuffer)))
+            activeTerrain->tileManifestPath = manifestBuffer;
+        ImGui::SameLine();
+        if (ImGui::Button("Browse##manifest"))
+        {
+            const std::string sel = OpenNativeFileDialog(
+                "Load Tile Manifest", {{"JSON Manifest", {".json"}}});
+            if (!sel.empty())
+                activeTerrain->tileManifestPath = sel;
+        }
+        ImGui::TextDisabled("Manifest (JSON)");
+        if (!activeTerrain->tileManifestPath.empty() &&
+            !PathExists(activeTerrain->tileManifestPath))
+        {
+            ImGui::TextColored(ImVec4(1.0f, 0.38f, 0.25f, 1.0f),
+                               "Manifest file does not exist.");
+        }
+    }
+    ImGui::Spacing();
 
     if (ImGui::Button("Load Active Terrain"))
     {
@@ -808,8 +833,8 @@ void Application::RenderTerrainProfilesWindow()
                           ImVec2(mapPaneWidth, 0.0f),
                           false,
                           ImGuiWindowFlags_AlwaysVerticalScrollbar);
-        RenderTerrainProfileGraph(activeProfile);
         RenderTerrainProfileMap(activeProfile);
+        RenderTerrainProfileGraph(activeProfile);
         ImGui::EndChild();
         ImGui::SameLine();
         ImGui::Button("##profile_details_splitter", ImVec2(6.0f, ImGui::GetContentRegionAvail().y));
@@ -831,8 +856,8 @@ void Application::RenderTerrainProfilesWindow()
                           ImVec2(0.0f, 0.0f),
                           false,
                           ImGuiWindowFlags_AlwaysVerticalScrollbar);
-        RenderTerrainProfileGraph(activeProfile);
         RenderTerrainProfileMap(activeProfile);
+        RenderTerrainProfileGraph(activeProfile);
         RenderTerrainProfileDetails(activeProfile);
         ImGui::EndChild();
     }
@@ -848,7 +873,7 @@ void Application::RenderWorldTerrainProfiles()
     }
 
     m_LineShader->Bind();
-    m_LineShader->SetMat4("uView", m_Camera.GetViewMatrix());
+    m_LineShader->SetMat4("uView", GetRenderViewMatrix());
     m_LineShader->SetMat4("uProjection", m_Camera.GetProjectionMatrix());
 
     if (m_ProfileLineVao == 0)
@@ -930,7 +955,7 @@ void Application::RenderWorldTerrainProfiles()
             lineVertices.reserve(samples.size());
             std::vector<bool> validLineVertices;
             validLineVertices.reserve(samples.size());
-            const glm::vec3 terrainTranslation = TerrainWorldTranslation(dataset, m_GeoReference);
+            const glm::dvec3 terrainTranslation = GetDatasetWorldTranslation(dataset);
             for (const TerrainProfileSample& sample : samples)
             {
                 const glm::dvec3 local =
@@ -939,9 +964,10 @@ void Application::RenderWorldTerrainProfiles()
                                               SampleRenderedTerrainLocalHeightAt(dataset, sample.latitude, sample.longitude) +
                                                   profile.worldGroundOffsetMeters :
                                               0.0f;
-                lineVertices.emplace_back(static_cast<float>(local.x) + terrainTranslation.x,
-                                          localHeight + terrainTranslation.y,
-                                          static_cast<float>(local.z) + terrainTranslation.z);
+                const glm::dvec3 worldPosition(local.x + terrainTranslation.x,
+                                                static_cast<double>(localHeight) + terrainTranslation.y,
+                                                local.z + terrainTranslation.z);
+                lineVertices.emplace_back(ToRenderRelative(worldPosition));
                 validLineVertices.push_back(sample.valid);
             }
 
@@ -949,7 +975,7 @@ void Application::RenderWorldTerrainProfiles()
             ribbonVertices.reserve((lineVertices.size() - 1) * 6u);
             const float worldThicknessMeters =
                 std::clamp(profile.worldThicknessMeters, kMinimumVisibleProfileWorldThicknessMeters, 250.0f);
-            const glm::vec3 cameraPosition = m_Camera.GetPosition();
+            const glm::vec3 cameraPosition(0.0f);
             for (size_t index = 0; index + 1 < lineVertices.size(); ++index)
             {
                 if (!validLineVertices[index] || !validLineVertices[index + 1])
@@ -1500,6 +1526,22 @@ void Application::RenderTerrainProfileToolbar(TerrainProfile& activeProfile)
         MarkTerrainIsolinesDirty();
     }
     ImGui::SameLine();
+    if (ImGui::Button("CSV##export_profile_csv"))
+    {
+        const std::string savePath = SaveNativeFileDialog("Export Profile CSV",
+            {{"CSV", {".csv"}}}, activeProfile.name + ".csv");
+        if (!savePath.empty()) ExportActiveProfileAsCsv(savePath);
+    }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Export profile samples as CSV");
+    ImGui::SameLine();
+    if (ImGui::Button("KML##export_profile_kml"))
+    {
+        const std::string savePath = SaveNativeFileDialog("Export Profile KML",
+            {{"KML", {".kml"}}}, activeProfile.name + ".kml");
+        if (!savePath.empty()) ExportActiveProfileAsKml(savePath);
+    }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Export profile as KML LineString");
+    ImGui::SameLine();
     ImGui::TextUnformatted(activeProfile.samples.empty() ? "No profile samples" : "Profile ready");
     if (ImGui::IsItemHovered())
     {
@@ -1600,11 +1642,21 @@ void Application::RenderTerrainProfileMap(TerrainProfile& activeProfile)
     ImDrawList* drawList = ImGui::GetWindowDrawList();
     drawList->PushClipRect(mapTopLeft, mapBottomRight, true);
 
+    // Clamped version — keeps lines, circles, and labels on-screen.
     const auto mapPointFromGeo = [&](double latitude, double longitude) {
         const float v = static_cast<float>((latitude - m_ProfileMapMinLatitude) / latitudeSpan);
         const float u = static_cast<float>((longitude - m_ProfileMapMinLongitude) / longitudeSpan);
         return ImVec2(mapTopLeft.x + (std::clamp(u, 0.0f, 1.0f) * mapWidth),
                       mapBottomRight.y - (std::clamp(v, 0.0f, 1.0f) * mapHeight));
+    };
+    // Unclamped version — used for AddImageQuad corners so the image scales
+    // correctly when zoomed in and corners fall outside the visible canvas.
+    // The PushClipRect above ensures nothing outside the canvas is actually drawn.
+    const auto mapPointFromGeoUnclamped = [&](double latitude, double longitude) {
+        const float v = static_cast<float>((latitude - m_ProfileMapMinLatitude) / latitudeSpan);
+        const float u = static_cast<float>((longitude - m_ProfileMapMinLongitude) / longitudeSpan);
+        return ImVec2(mapTopLeft.x + (u * mapWidth),
+                      mapBottomRight.y - (v * mapHeight));
     };
     GeoConverter profileConverter(profileTerrain != nullptr ? profileTerrain->geoReference : m_GeoReference);
     const TerrainCoordinateMode profileCoordinateMode = profileTerrain != nullptr ?
@@ -1622,16 +1674,16 @@ void Application::RenderTerrainProfileMap(TerrainProfile& activeProfile)
                                                 profileCoordinateMode);
     };
 
-    drawList->AddRectFilled(mapTopLeft, mapBottomRight, IM_COL32(16, 22, 28, 255), 4.0f);
+    drawList->AddRectFilled(mapTopLeft, mapBottomRight, IM_COL32(34, 44, 56, 255), 4.0f);
     const OverlayEntry* overlay = GetActiveOverlayEntry();
     const bool overlayReady = m_ShowProfileAerialImage && overlay != nullptr && overlay->image.enabled && overlay->image.loaded && overlay->texture.IsLoaded();
     if (overlayReady)
     {
         const ImTextureID textureId = static_cast<ImTextureID>(static_cast<uintptr_t>(overlay->texture.GetNativeHandle()));
-        const ImVec2 topLeft = mapPointFromGeo(overlay->image.topLeft.latitude, overlay->image.topLeft.longitude);
-        const ImVec2 topRight = mapPointFromGeo(overlay->image.topRight.latitude, overlay->image.topRight.longitude);
-        const ImVec2 bottomRight = mapPointFromGeo(overlay->image.bottomRight.latitude, overlay->image.bottomRight.longitude);
-        const ImVec2 bottomLeft = mapPointFromGeo(overlay->image.bottomLeft.latitude, overlay->image.bottomLeft.longitude);
+        const ImVec2 topLeft     = mapPointFromGeoUnclamped(overlay->image.topLeft.latitude,     overlay->image.topLeft.longitude);
+        const ImVec2 topRight    = mapPointFromGeoUnclamped(overlay->image.topRight.latitude,    overlay->image.topRight.longitude);
+        const ImVec2 bottomRight = mapPointFromGeoUnclamped(overlay->image.bottomRight.latitude, overlay->image.bottomRight.longitude);
+        const ImVec2 bottomLeft  = mapPointFromGeoUnclamped(overlay->image.bottomLeft.latitude,  overlay->image.bottomLeft.longitude);
         drawList->AddImageQuad(textureId,
                                topLeft,
                                topRight,
@@ -1649,19 +1701,19 @@ void Application::RenderTerrainProfileMap(TerrainProfile& activeProfile)
         {
             const float x = mapTopLeft.x + (mapWidth * static_cast<float>(tick) / 4.0f);
             const float y = mapTopLeft.y + (mapHeight * static_cast<float>(tick) / 4.0f);
-            drawList->AddLine(ImVec2(x, mapTopLeft.y), ImVec2(x, mapBottomRight.y), IM_COL32(52, 68, 82, 255), 1.0f);
-            drawList->AddLine(ImVec2(mapTopLeft.x, y), ImVec2(mapBottomRight.x, y), IM_COL32(52, 68, 82, 255), 1.0f);
+            drawList->AddLine(ImVec2(x, mapTopLeft.y), ImVec2(x, mapBottomRight.y), IM_COL32(68, 86, 104, 255), 1.0f);
+            drawList->AddLine(ImVec2(mapTopLeft.x, y), ImVec2(mapBottomRight.x, y), IM_COL32(68, 86, 104, 255), 1.0f);
         }
     }
-    drawList->AddRect(mapTopLeft, mapBottomRight, IM_COL32(132, 152, 170, 255), 4.0f, 0, 1.5f);
+    drawList->AddRect(mapTopLeft, mapBottomRight, IM_COL32(152, 172, 192, 255), 4.0f, 0, 1.5f);
 
     if (m_IsolineSettings.enabled)
     {
         RebuildTerrainIsolinesIfNeeded();
         for (const TerrainIsolineSegment& segment : m_TerrainIsolines)
         {
-            drawList->AddLine(mapPointFromGeo(segment.start.latitude, segment.start.longitude),
-                              mapPointFromGeo(segment.end.latitude, segment.end.longitude),
+            drawList->AddLine(mapPointFromGeoUnclamped(segment.start.latitude, segment.start.longitude),
+                              mapPointFromGeoUnclamped(segment.end.latitude, segment.end.longitude),
                               ColorU32(segment.color),
                               m_IsolineSettings.thickness);
         }
@@ -1684,8 +1736,8 @@ void Application::RenderTerrainProfileMap(TerrainProfile& activeProfile)
                 ProfileVertexAsGeographic(profile, profile.vertices[index], lineConverter, lineCoordinateMode);
             const TerrainProfileVertex end =
                 ProfileVertexAsGeographic(profile, profile.vertices[index + 1], lineConverter, lineCoordinateMode);
-            drawList->AddLine(mapPointFromGeo(start.latitude, start.longitude),
-                              mapPointFromGeo(end.latitude, end.longitude),
+            drawList->AddLine(mapPointFromGeoUnclamped(start.latitude, start.longitude),
+                              mapPointFromGeoUnclamped(end.latitude, end.longitude),
                               ProfileColorU32(profile),
                               profile.thickness);
         }
@@ -1695,7 +1747,7 @@ void Application::RenderTerrainProfileMap(TerrainProfile& activeProfile)
     {
         for (const TerrainProfileSample& sample : activeProfile.samples)
         {
-            drawList->AddCircleFilled(mapPointFromGeo(sample.latitude, sample.longitude),
+            drawList->AddCircleFilled(mapPointFromGeoUnclamped(sample.latitude, sample.longitude),
                                       sample.valid ? 1.7f : 2.5f,
                                       sample.valid ? IM_COL32(255, 255, 255, 120) : IM_COL32(255, 110, 70, 190),
                                       8);
@@ -1706,7 +1758,7 @@ void Application::RenderTerrainProfileMap(TerrainProfile& activeProfile)
         const TerrainProfileVertex& vertex = activeProfile.vertices[static_cast<size_t>(index)];
         const TerrainProfileVertex geoVertex =
             ProfileVertexAsGeographic(activeProfile, vertex, profileConverter, profileCoordinateMode);
-        const ImVec2 point = mapPointFromGeo(geoVertex.latitude, geoVertex.longitude);
+        const ImVec2 point = mapPointFromGeoUnclamped(geoVertex.latitude, geoVertex.longitude);
         const bool selected = index == m_SelectedProfileVertexIndex;
         const ImU32 vertexColor = vertex.auxiliary ? IM_COL32(90, 230, 255, 255) : ProfileColorU32(activeProfile);
         drawList->AddCircleFilled(point, selected ? 6.0f : 4.5f, selected ? IM_COL32(255, 220, 64, 255) : vertexColor, 18);
@@ -1753,7 +1805,7 @@ void Application::RenderTerrainProfileMap(TerrainProfile& activeProfile)
     }
     if (hasHighlightedSample)
     {
-        const ImVec2 samplePoint = mapPointFromGeo(highlightedSample.latitude, highlightedSample.longitude);
+        const ImVec2 samplePoint = mapPointFromGeoUnclamped(highlightedSample.latitude, highlightedSample.longitude);
         const ImU32 markerColor = !highlightedSample.valid ? IM_COL32(255, 110, 70, 255) :
                                   hoveredSample ? IM_COL32(90, 230, 255, 255) :
                                                   IM_COL32(255, 220, 64, 255);
@@ -1909,7 +1961,7 @@ void Application::RenderTerrainProfileMap(TerrainProfile& activeProfile)
                 const TerrainProfileVertex& vertex = activeProfile.vertices[static_cast<size_t>(index)];
                 const TerrainProfileVertex geoVertex =
                     ProfileVertexAsGeographic(activeProfile, vertex, profileConverter, profileCoordinateMode);
-                const ImVec2 point = mapPointFromGeo(geoVertex.latitude, geoVertex.longitude);
+                const ImVec2 point = mapPointFromGeoUnclamped(geoVertex.latitude, geoVertex.longitude);
                 const float distance = std::hypot(point.x - mousePosition.x, point.y - mousePosition.y);
                 if (distance < nearestDistance)
                 {
@@ -2030,6 +2082,44 @@ void Application::RenderTerrainProfileMap(TerrainProfile& activeProfile)
     }
 }
 
+void Application::SyncProfileMapToGraphZoom(const TerrainProfile& profile)
+{
+    // Compute the geographic bounding box of all samples within the current
+    // zoom distance range, then set the map view to that bbox (with padding).
+    // The map's own clamping will keep it inside the terrain bounds.
+    if (m_ProfileGraphZoomMaxDist <= m_ProfileGraphZoomMinDist)
+        return;
+
+    double minLat = std::numeric_limits<double>::max();
+    double maxLat = std::numeric_limits<double>::lowest();
+    double minLon = std::numeric_limits<double>::max();
+    double maxLon = std::numeric_limits<double>::lowest();
+
+    for (const TerrainProfileSample& sample : profile.samples)
+    {
+        if (!sample.valid) continue;
+        if (sample.distanceMeters < m_ProfileGraphZoomMinDist || sample.distanceMeters > m_ProfileGraphZoomMaxDist) continue;
+        minLat = std::min(minLat, sample.latitude);
+        maxLat = std::max(maxLat, sample.latitude);
+        minLon = std::min(minLon, sample.longitude);
+        maxLon = std::max(maxLon, sample.longitude);
+    }
+
+    if (minLat == std::numeric_limits<double>::max()) return; // no samples in range
+
+    // Add ~20 % padding so the route doesn't fill edge-to-edge on the map
+    const double latSpan = std::max(maxLat - minLat, 1e-6);
+    const double lonSpan = std::max(maxLon - minLon, 1e-6);
+    const double latPad  = latSpan * 0.20;
+    const double lonPad  = lonSpan * 0.20;
+    m_ProfileMapMinLatitude  = minLat - latPad;
+    m_ProfileMapMaxLatitude  = maxLat + latPad;
+    m_ProfileMapMinLongitude = minLon - lonPad;
+    m_ProfileMapMaxLongitude = maxLon + lonPad;
+    // Do NOT set m_ProfileMapViewInitialized to false — we are deliberately
+    // overriding the view; the clamping in RenderTerrainProfileMap will handle bounds.
+}
+
 void Application::RenderTerrainProfileGraph(TerrainProfile& activeProfile)
 {
     if (activeProfile.samples.empty())
@@ -2102,8 +2192,16 @@ void Application::RenderTerrainProfileGraph(TerrainProfile& activeProfile)
                                                             profileTerrain->settings.coordinateMode :
                                                             TerrainCoordinateMode::Geographic;
 
+    // Horizontal zoom range (in metres along path). Negative max = full profile.
+    double zoomedMinDist = (m_ProfileGraphZoomMaxDist > 0.0) ? m_ProfileGraphZoomMinDist : 0.0;
+    double zoomedMaxDist = (m_ProfileGraphZoomMaxDist > 0.0) ? m_ProfileGraphZoomMaxDist : totalDistance;
+    zoomedMinDist = std::clamp(zoomedMinDist, 0.0, totalDistance);
+    zoomedMaxDist = std::clamp(zoomedMaxDist, zoomedMinDist + 1.0, totalDistance);
+    const double zoomedRange  = std::max(zoomedMaxDist - zoomedMinDist, 1.0);
+    const bool   hasGraphZoom = zoomedMinDist > 0.0 || zoomedMaxDist < totalDistance * 0.9999;
+
     const auto graphPointFromSample = [&](const TerrainProfileSample& sample) {
-        const float x = plotTopLeft.x + static_cast<float>(sample.distanceMeters / totalDistance) * plotWidth;
+        const float x = plotTopLeft.x + static_cast<float>((sample.distanceMeters - zoomedMinDist) / zoomedRange) * plotWidth;
         const float y = plotBottomRight.y - static_cast<float>((sample.height - graphMinHeight) / graphHeightRange) * graphHeight;
         return ImVec2(x, std::clamp(y, plotTopLeft.y, plotBottomRight.y));
     };
@@ -2167,25 +2265,30 @@ void Application::RenderTerrainProfileGraph(TerrainProfile& activeProfile)
         return nearestIndex;
     };
 
-    drawList->AddRectFilled(graphTopLeft, graphBottomRight, IM_COL32(18, 22, 27, 255), 4.0f);
-    drawList->AddRectFilled(graphTopLeft, ImVec2(plotTopLeft.x, graphBottomRight.y), IM_COL32(22, 28, 34, 255), 4.0f);
+    drawList->AddRectFilled(graphTopLeft, graphBottomRight, IM_COL32(34, 44, 56, 255), 4.0f);
+    drawList->AddRectFilled(graphTopLeft, ImVec2(plotTopLeft.x, graphBottomRight.y), IM_COL32(42, 54, 66, 255), 4.0f);
     for (int tick = 1; tick < 4; ++tick)
     {
         const float x = plotTopLeft.x + (plotWidth * static_cast<float>(tick) / 4.0f);
         const float y = plotTopLeft.y + (graphHeight * static_cast<float>(tick) / 4.0f);
-        drawList->AddLine(ImVec2(x, plotTopLeft.y), ImVec2(x, plotBottomRight.y), IM_COL32(54, 66, 78, 255), 1.0f);
-        drawList->AddLine(ImVec2(plotTopLeft.x, y), ImVec2(plotBottomRight.x, y), IM_COL32(54, 66, 78, 255), 1.0f);
+        drawList->AddLine(ImVec2(x, plotTopLeft.y), ImVec2(x, plotBottomRight.y), IM_COL32(72, 88, 106, 255), 1.0f);
+        drawList->AddLine(ImVec2(plotTopLeft.x, y), ImVec2(plotBottomRight.x, y), IM_COL32(72, 88, 106, 255), 1.0f);
     }
     char topLabel[64];
     char bottomLabel[64];
-    char lengthLabel[80];
+    char lengthLabel[96];
     std::snprintf(topLabel, sizeof(topLabel), "%.1f m", graphMaxHeight);
     std::snprintf(bottomLabel, sizeof(bottomLabel), "%.1f m", graphMinHeight);
-    std::snprintf(lengthLabel, sizeof(lengthLabel), "Length %.1f m", totalDistance);
+    if (hasGraphZoom)
+        std::snprintf(lengthLabel, sizeof(lengthLabel), "%.0f – %.0f m  (total %.0f m)  Dbl-click to reset", zoomedMinDist, zoomedMaxDist, totalDistance);
+    else
+        std::snprintf(lengthLabel, sizeof(lengthLabel), "Length %.1f m  |  Scroll to zoom", totalDistance);
     drawList->AddText(ImVec2(graphTopLeft.x + 8.0f, graphTopLeft.y + 8.0f), IM_COL32(230, 238, 246, 255), topLabel);
     drawList->AddText(ImVec2(graphTopLeft.x + 8.0f, graphBottomRight.y - 24.0f), IM_COL32(230, 238, 246, 255), bottomLabel);
     drawList->AddText(ImVec2(plotTopLeft.x + 8.0f, graphBottomRight.y - 24.0f), IM_COL32(255, 220, 120, 255), lengthLabel);
-    drawList->AddLine(ImVec2(plotTopLeft.x, plotTopLeft.y), ImVec2(plotTopLeft.x, plotBottomRight.y), IM_COL32(132, 152, 170, 255), 1.2f);
+    drawList->AddLine(ImVec2(plotTopLeft.x, plotTopLeft.y), ImVec2(plotTopLeft.x, plotBottomRight.y), IM_COL32(152, 172, 192, 255), 1.2f);
+    // Clip all profile geometry so zoomed samples don't bleed outside the plot area
+    drawList->PushClipRect(plotTopLeft, plotBottomRight, true);
     for (size_t index = 0; index + 1 < activeProfile.samples.size(); ++index)
     {
         if (!activeProfile.samples[index].valid || !activeProfile.samples[index + 1].valid)
@@ -2225,7 +2328,8 @@ void Application::RenderTerrainProfileGraph(TerrainProfile& activeProfile)
                           markerColor,
                           vertexLabel);
     }
-    drawList->AddRect(graphTopLeft, graphBottomRight, IM_COL32(132, 152, 170, 255), 4.0f, 0, 1.5f);
+    drawList->PopClipRect();
+    drawList->AddRect(graphTopLeft, graphBottomRight, IM_COL32(152, 172, 192, 255), 4.0f, 0, 1.5f);
 
     ImGui::InvisibleButton("##terrain_profile_graph", ImVec2(graphWidth, graphHeight));
     bool foundHoveredSample = false;
@@ -2237,8 +2341,8 @@ void Application::RenderTerrainProfileGraph(TerrainProfile& activeProfile)
         const bool mouseInsidePlot = mousePosition.x >= plotTopLeft.x && mousePosition.x <= plotBottomRight.x &&
                                      mousePosition.y >= plotTopLeft.y && mousePosition.y <= plotBottomRight.y;
         const float clampedMouseX = std::clamp(mousePosition.x, plotTopLeft.x, plotBottomRight.x);
-        const double clickedDistance =
-            (static_cast<double>(clampedMouseX - plotTopLeft.x) / static_cast<double>(plotWidth)) * totalDistance;
+        const double clickedDistance = zoomedMinDist +
+            (static_cast<double>(clampedMouseX - plotTopLeft.x) / static_cast<double>(plotWidth)) * zoomedRange;
         for (int index = 0; index < static_cast<int>(activeProfile.samples.size()); ++index)
         {
             const TerrainProfileSample& candidate = activeProfile.samples[static_cast<size_t>(index)];
@@ -2387,6 +2491,28 @@ void Application::RenderTerrainProfileGraph(TerrainProfile& activeProfile)
             }
         }
     }
+    // Graph zoom: scroll to zoom horizontally, double-click to reset
+    if (ImGui::IsItemHovered())
+    {
+        const ImGuiIO& io = ImGui::GetIO();
+        if (io.MouseWheel != 0.0f)
+        {
+            const float  tX         = std::clamp((io.MousePos.x - plotTopLeft.x) / plotWidth, 0.0f, 1.0f);
+            const double cursorDist = zoomedMinDist + static_cast<double>(tX) * zoomedRange;
+            const double factor     = io.MouseWheel > 0.0f ? 0.70 : 1.4285;
+            const double newRange   = std::clamp(zoomedRange * factor, totalDistance * 0.01, totalDistance);
+            m_ProfileGraphZoomMinDist = std::max(cursorDist - static_cast<double>(tX) * newRange, 0.0);
+            m_ProfileGraphZoomMaxDist = std::min(m_ProfileGraphZoomMinDist + newRange, totalDistance);
+            SyncProfileMapToGraphZoom(activeProfile);
+        }
+        if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && !m_ProfileGraphAuxiliaryInsertMode)
+        {
+            m_ProfileGraphZoomMinDist = 0.0;
+            m_ProfileGraphZoomMaxDist = -1.0;
+            m_ProfileMapViewInitialized = false; // also reset the map to full terrain view
+        }
+    }
+
     if (!foundHoveredSample)
     {
         m_HoveredProfileSampleIndex = -1;
@@ -2401,6 +2527,239 @@ void Application::RenderTerrainProfileGraph(TerrainProfile& activeProfile)
                            invalidSampleCount);
     }
     ImGui::Text("Graph vertices: vertical markers show path vertices and distance from origin. Turn Draw on, then click the height graph to insert a vertex on the top-view line.");
+}
+
+void Application::ProcessOrientationGizmoInput()
+{
+    if (!m_ShowOrientationGizmo)
+    {
+        m_GizmoHovered = false;
+        return;
+    }
+
+    constexpr float RADIUS = 68.0f;
+    constexpr float ARM = 52.0f;
+    constexpr float DRAG_DEG_PER_PX = 0.6f;
+
+    const ImGuiViewport* vp = ImGui::GetMainViewport();
+    const ImVec2 center(vp->Pos.x + vp->Size.x - RADIUS - 20.0f,
+                        vp->Pos.y + 44.0f + RADIUS + 20.0f);
+
+    struct AxisDef {
+        glm::vec3 dir;
+        float snapYaw;
+        float snapPitch;
+    };
+    const std::array<AxisDef, 3> axes = {{
+        {{1, 0, 0}, 180.0f, 0.0f},
+        {{0, 1, 0}, 0.0f, -89.0f},
+        {{0, 0, 1}, -90.0f, 0.0f},
+    }};
+
+    const glm::mat4 rot = m_Camera.GetViewMatrixRotationOnly();
+    struct ProjectedAxis { ImVec2 posTip; ImVec2 negTip; float depth; int idx; };
+    std::array<ProjectedAxis, 3> proj;
+    for (int i = 0; i < 3; ++i)
+    {
+        const glm::vec4 c = rot * glm::vec4(axes[static_cast<size_t>(i)].dir, 0.0f);
+        proj[static_cast<size_t>(i)] = {
+            ImVec2(center.x + c.x * ARM, center.y - c.y * ARM),
+            ImVec2(center.x - c.x * ARM, center.y + c.y * ARM),
+            c.z,
+            i
+        };
+    }
+    std::sort(proj.begin(), proj.end(), [](const ProjectedAxis& a, const ProjectedAxis& b) {
+        return a.depth > b.depth;
+    });
+
+    const ImGuiIO& io = ImGui::GetIO();
+    const ImVec2 mouse = io.MousePos;
+    const float mdx = mouse.x - center.x;
+    const float mdy = mouse.y - center.y;
+    const bool inCircle = (mdx * mdx + mdy * mdy) <= (RADIUS * RADIUS);
+    m_GizmoHovered = inCircle;
+    if (!inCircle)
+    {
+        return;
+    }
+
+    int hovAxis = -1;
+    bool hovNeg = false;
+    float bestDist = 20.0f * 20.0f;
+    for (int i = 0; i < 3; ++i)
+    {
+        const auto& pa = proj[static_cast<size_t>(i)];
+        const float dp = (mouse.x - pa.posTip.x) * (mouse.x - pa.posTip.x) +
+                         (mouse.y - pa.posTip.y) * (mouse.y - pa.posTip.y);
+        if (dp < bestDist)
+        {
+            bestDist = dp;
+            hovAxis = i;
+            hovNeg = false;
+        }
+
+        const float dn = (mouse.x - pa.negTip.x) * (mouse.x - pa.negTip.x) +
+                         (mouse.y - pa.negTip.y) * (mouse.y - pa.negTip.y);
+        if (dn < bestDist)
+        {
+            bestDist = dn;
+            hovAxis = i;
+            hovNeg = true;
+        }
+    }
+
+    if (io.MouseDown[0] && !io.MouseClicked[0])
+    {
+        const ImVec2 delta = io.MouseDelta;
+        if (delta.x != 0.0f || delta.y != 0.0f)
+        {
+            const glm::vec2 lookDelta(delta.x * DRAG_DEG_PER_PX, -delta.y * DRAG_DEG_PER_PX);
+            m_PendingCameraCommand.cancelSnap = true;
+            m_PendingCameraCommand.lookDeltaDegrees += lookDelta;
+            m_Diagnostics.queuedLookDeltaDegrees += lookDelta;
+            m_FPSController.ResetMouseState();
+        }
+        return;
+    }
+
+    if (io.MouseClicked[0])
+    {
+        if (hovAxis >= 0)
+        {
+            const AxisDef& ax = axes[static_cast<size_t>(proj[static_cast<size_t>(hovAxis)].idx)];
+            if (!hovNeg)
+            {
+                SnapCameraView(ax.snapYaw, ax.snapPitch);
+            }
+            else
+            {
+                SnapCameraView(ax.snapYaw + 180.0f, -ax.snapPitch);
+            }
+        }
+        else
+        {
+            SnapCameraView(0.0f, -20.0f);
+        }
+    }
+}
+
+void Application::RenderOrientationGizmo()
+{
+    if (!m_ShowOrientationGizmo)
+    {
+        m_GizmoHovered = false;
+        return;
+    }
+
+    // ── Layout ───────────────────────────────────────────────────────────────
+    constexpr float RADIUS    = 68.0f;
+    constexpr float ARM       = 52.0f;
+    constexpr float TIP_R     = 8.0f;
+    constexpr float TIP_R_DIM = 5.0f;
+    const ImGuiViewport* vp = ImGui::GetMainViewport();
+    const ImVec2 center(vp->Pos.x + vp->Size.x - RADIUS - 20.0f,
+                        vp->Pos.y + 44.0f + RADIUS + 20.0f);
+
+    // ── Axis definitions ─────────────────────────────────────────────────────
+    struct AxisDef {
+        glm::vec3   dir;
+        ImU32       color;
+        ImU32       colorDim;
+        const char* label;
+        float       snapYaw;
+        float       snapPitch;
+    };
+    const std::array<AxisDef, 3> axes = {{
+        { { 1, 0, 0}, IM_COL32(220,  70,  70, 255), IM_COL32(220,  70,  70, 100), "X",  180.0f,   0.0f },
+        { { 0, 1, 0}, IM_COL32( 70, 205, 100, 255), IM_COL32( 70, 205, 100, 100), "Y",    0.0f, -89.0f },
+        { { 0, 0, 1}, IM_COL32( 75, 140, 225, 255), IM_COL32( 75, 140, 225, 100), "Z",  -90.0f,   0.0f },
+    }};
+
+    // ── Project axes through view rotation ───────────────────────────────────
+    const glm::mat4 rot = m_Camera.GetViewMatrixRotationOnly();
+    struct ProjectedAxis { ImVec2 posTip; ImVec2 negTip; float depth; int idx; };
+    std::array<ProjectedAxis, 3> proj;
+    for (int i = 0; i < 3; ++i)
+    {
+        const glm::vec4 c = rot * glm::vec4(axes[static_cast<size_t>(i)].dir, 0.0f);
+        proj[static_cast<size_t>(i)] = {
+            ImVec2(center.x + c.x * ARM, center.y - c.y * ARM),
+            ImVec2(center.x - c.x * ARM, center.y + c.y * ARM),
+            c.z, i
+        };
+    }
+    std::sort(proj.begin(), proj.end(), [](const ProjectedAxis& a, const ProjectedAxis& b){
+        return a.depth > b.depth;
+    });
+
+    // ── Hover detection ───────────────────────────────────────────────────────
+    const ImGuiIO& io  = ImGui::GetIO();
+    const ImVec2 mouse = io.MousePos;
+    const float  mdx   = mouse.x - center.x;
+    const float  mdy   = mouse.y - center.y;
+    const bool inCircle = (mdx * mdx + mdy * mdy) <= (RADIUS * RADIUS);
+    m_GizmoHovered = inCircle;
+
+    // ── Draw background ───────────────────────────────────────────────────────
+    ImDrawList* dl = ImGui::GetForegroundDrawList();
+    const ImU32 bgColor = inCircle ? IM_COL32(28, 38, 52, 200) : IM_COL32(18, 24, 32, 165);
+    dl->AddCircleFilled(center, RADIUS, bgColor, 48);
+    dl->AddCircle      (center, RADIUS, inCircle ? IM_COL32(140, 170, 210, 140) : IM_COL32(90, 110, 130, 90), 48, 1.2f);
+
+    // ── Draw axes ────────────────────────────────────────────────────────────
+    for (const ProjectedAxis& pa : proj)
+    {
+        const AxisDef& ax = axes[static_cast<size_t>(pa.idx)];
+        dl->AddLine(center, pa.negTip, ax.colorDim, 1.5f);
+        dl->AddCircleFilled(pa.negTip, TIP_R_DIM, ax.colorDim, 16);
+        dl->AddLine(center, pa.posTip, ax.color, 3.5f);
+        dl->AddCircleFilled(pa.posTip, TIP_R, ax.color, 16);
+        dl->AddText(ImVec2(pa.posTip.x - 4.0f, pa.posTip.y - 7.0f),
+                    IM_COL32(255, 255, 255, 230), ax.label);
+    }
+
+    if (!inCircle)
+        return;
+
+    // ── Find nearest axis tip ────────────────────────────────────────────────
+    int   hovAxis  = -1;
+    bool  hovNeg   = false;
+    float bestDist = 20.0f * 20.0f;
+    for (int i = 0; i < 3; ++i)
+    {
+        const auto& pa = proj[static_cast<size_t>(i)];
+        const float dp = (mouse.x-pa.posTip.x)*(mouse.x-pa.posTip.x) + (mouse.y-pa.posTip.y)*(mouse.y-pa.posTip.y);
+        if (dp < bestDist) { bestDist = dp; hovAxis = i; hovNeg = false; }
+        const float dn = (mouse.x-pa.negTip.x)*(mouse.x-pa.negTip.x) + (mouse.y-pa.negTip.y)*(mouse.y-pa.negTip.y);
+        if (dn < bestDist) { bestDist = dn; hovAxis = i; hovNeg = true; }
+    }
+
+    // Highlight hovered tip
+    if (hovAxis >= 0)
+    {
+        const ProjectedAxis& pa  = proj[static_cast<size_t>(hovAxis)];
+        const ImVec2&        tip = hovNeg ? pa.negTip : pa.posTip;
+        dl->AddCircle(tip, TIP_R + 4.0f, IM_COL32(255, 255, 255, 220), 16, 2.0f);
+    }
+
+    // ── Drag: free-rotate view ───────────────────────────────────────────────
+    if (io.MouseDown[0] && !io.MouseClicked[0])  // held (not just-pressed)
+    {
+        dl->AddCircle(center, RADIUS - 4.0f, IM_COL32(255, 255, 255, 50), 48, 1.0f);
+        return;  // don't process click-to-snap while dragging
+    }
+
+    // ── Tooltip ──────────────────────────────────────────────────────────────
+    if (hovAxis >= 0)
+    {
+        const AxisDef& ax = axes[static_cast<size_t>(proj[static_cast<size_t>(hovAxis)].idx)];
+        ImGui::SetTooltip("Click: snap to %s%s view\nDrag: orbit freely", hovNeg ? "-" : "+", ax.label);
+    }
+    else
+    {
+        ImGui::SetTooltip("Click: reset view\nDrag: orbit freely\nNumpad 1/3/7 = Front/Right/Top");
+    }
 }
 
 void Application::RenderEditor()
@@ -2484,7 +2843,6 @@ void Application::RenderEditor()
 
     TerrainDataset* activeTerrain = GetActiveTerrainDataset();
     ImportedAsset* activeAsset = GetActiveImportedAsset();
-    const glm::vec3 cameraPos = m_Camera.GetPosition();
 
     if (m_ActiveWorkspaceSection == WorkspaceSection::World)
     {
@@ -2524,10 +2882,9 @@ void Application::RenderEditor()
         }
 
         ImGui::SeparatorText("Camera");
-        float moveSpeed = m_FPSController.GetMoveSpeed();
-        if (ImGui::SliderFloat("Move Speed", &moveSpeed, 1.0f, 200.0f, "%.1f m/s"))
+        if (ImGui::SliderFloat("Move Speed", &m_BaseMoveSpeed, 1.0f, 200.0f, "%.1f m/s"))
         {
-            m_FPSController.SetMoveSpeed(moveSpeed);
+            m_BaseMoveSpeed = std::clamp(m_BaseMoveSpeed, 0.5f, 3000.0f);
         }
         float sprintMultiplier = m_FPSController.GetSprintMultiplier();
         if (ImGui::SliderFloat("Sprint Multiplier", &sprintMultiplier, 1.0f, 10.0f, "%.1fx"))
@@ -2543,6 +2900,29 @@ void Application::RenderEditor()
         if (ImGui::SliderFloat("Far Clip", &farClip, 1000.0f, 200000.0f, "%.0f m"))
         {
             m_Camera.SetFarClip(farClip);
+        }
+
+        // ── Gravity / Terrain Collision ───────────────────────────────────────
+        ImGui::SeparatorText("Gravity & Collision");
+        ImGui::Checkbox("Enable Gravity", &m_GravitySettings.enabled);
+        if (m_GravitySettings.enabled)
+        {
+            ImGui::DragFloat("Player Height (m)", &m_GravitySettings.playerHeightMeters, 0.05f, 0.3f, 5.0f, "%.2f");
+            ImGui::DragFloat("Jump Height (m)",   &m_GravitySettings.jumpHeightMeters,   0.1f,  0.5f, 20.0f, "%.1f");
+            ImGui::DragFloat("Gravity (m/s²)",    &m_GravitySettings.gravityAcceleration, 0.1f, 1.0f, 30.0f, "%.1f");
+            ImGui::Text("On ground: %s   Vertical vel: %.1f m/s",
+                        m_OnGround ? "yes" : "no", m_VerticalVelocity);
+            ImGui::TextDisabled("Space = jump");
+        }
+
+        // ── Elevation-scaled Speed ────────────────────────────────────────────
+        ImGui::SeparatorText("Elevation-Scaled Speed");
+        ImGui::Checkbox("Enable Elevation Speed", &m_ElevationSpeedSettings.enabled);
+        if (m_ElevationSpeedSettings.enabled)
+        {
+            ImGui::DragFloat("Reference Height (m)", &m_ElevationSpeedSettings.referenceHeight, 1.0f, 1.0f, 50000.0f, "%.0f");
+            ImGui::DragFloat("Log Scale",            &m_ElevationSpeedSettings.logScale,        0.01f, 0.01f, 10.0f, "%.2f");
+            ImGui::DragFloat2("Min / Max Multiplier", &m_ElevationSpeedSettings.minMultiplier,  0.01f, 0.01f, 100.0f, "%.2f");
         }
     }
     else if (m_ActiveWorkspaceSection == WorkspaceSection::Terrain)
@@ -2594,6 +2974,38 @@ void Application::RenderEditor()
                     activeTerrain->path = selectedPath;
                 }
             }
+
+            // ── Tile manifest ─────────────────────────────────────────────────
+            ImGui::Spacing();
+            ImGui::Checkbox("Use Tile Manifest##ws", &activeTerrain->hasTileManifest);
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("Load terrain from a JSON manifest file that references\n"
+                                  "multiple CSV tiles instead of a single CSV file.");
+            if (activeTerrain->hasTileManifest)
+            {
+                char manifestBuffer[512];
+                std::snprintf(manifestBuffer, sizeof(manifestBuffer),
+                              "%s", activeTerrain->tileManifestPath.c_str());
+                ImGui::SetNextItemWidth(-60.0f);
+                if (ImGui::InputText("##ws_manifest_path", manifestBuffer, sizeof(manifestBuffer)))
+                    activeTerrain->tileManifestPath = manifestBuffer;
+                ImGui::SameLine();
+                if (ImGui::Button("Browse##ws_manifest"))
+                {
+                    const std::string sel = OpenNativeFileDialog(
+                        "Load Tile Manifest", {{"JSON Manifest", {".json"}}});
+                    if (!sel.empty())
+                        activeTerrain->tileManifestPath = sel;
+                }
+                ImGui::TextDisabled("Manifest (JSON)");
+                if (!activeTerrain->tileManifestPath.empty() &&
+                    !PathExists(activeTerrain->tileManifestPath))
+                {
+                    ImGui::TextColored(ImVec4(1.0f, 0.38f, 0.25f, 1.0f),
+                                       "Manifest file does not exist.");
+                }
+            }
+            ImGui::Spacing();
 
             ImGui::InputDouble("Origin Latitude", &activeTerrain->geoReference.originLatitude, 0.0, 0.0, "%.8f");
             ImGui::InputDouble("Origin Longitude", &activeTerrain->geoReference.originLongitude, 0.0, 0.0, "%.8f");
@@ -2757,6 +3169,17 @@ void Application::RenderEditor()
                 }
             }
             m_StatusMessage = "Loaded or queued visible terrains: " + std::to_string(loadedCount);
+        }
+
+        // ── LOD Tile Streaming ────────────────────────────────────────────────
+        ImGui::SeparatorText("LOD Tile Streaming");
+        ImGui::Checkbox("Enable LOD Streaming", &m_TileLODSettings.enabled);
+        if (m_TileLODSettings.enabled)
+        {
+            ImGui::DragFloat("Near Radius (m)",   &m_TileLODSettings.nearRadiusMeters,   10.0f, 100.0f,   50000.0f, "%.0f");
+            ImGui::DragFloat("Mid Radius (m)",    &m_TileLODSettings.midRadiusMeters,    10.0f, 100.0f,  100000.0f, "%.0f");
+            ImGui::DragFloat("Unload Radius (m)", &m_TileLODSettings.unloadRadiusMeters, 10.0f, 500.0f,  200000.0f, "%.0f");
+            ImGui::DragInt("Max Concurrent Loads", &m_TileLODSettings.maxConcurrentLoads, 1, 1, 16);
         }
     }
     else if (m_ActiveWorkspaceSection == WorkspaceSection::Profiles)
@@ -2942,15 +3365,7 @@ void Application::RenderEditor()
     }
     else
     {
-        ImGui::Text("Scene triangles: %zu", CountSceneTriangles());
-        ImGui::Text("Camera: %.2f, %.2f, %.2f", cameraPos.x, cameraPos.y, cameraPos.z);
-        ImGui::Text("Move speed: %.1f current %.1f", m_FPSController.GetMoveSpeed(), m_FPSController.GetCurrentSpeed());
-        ImGui::Text("Mouse capture: %s", m_MouseCaptured ? "on" : "off");
-        ImGui::Text("FPS controller: %s", m_FPSController.IsEnabled() ? "enabled" : "disabled");
-        ImGui::Text("Terrain datasets: %zu", m_TerrainDatasets.size());
-        ImGui::Text("Imported assets: %zu", m_ImportedAssets.size());
-        ImGui::Text("Terrain profiles: %zu", m_TerrainProfiles.size());
-        ImGui::Text("Controls: Esc releases mouse, Tab recaptures, +/- adjusts speed, Shift sprints.");
+        RenderDiagnosticsPanel();
     }
 
     ImGui::EndChild();

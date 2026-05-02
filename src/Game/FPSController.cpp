@@ -1,20 +1,14 @@
 #include "Game/FPSController.h"
 
-#include "Renderer/Camera.h"
 #include <GLFW/glfw3.h>
 #include <algorithm>
 #include <cmath>
 
 namespace GeoFPS
 {
-void FPSController::AttachWindow(GLFWwindow* window)
+void FPSController::AttachWindow(Window* window)
 {
     m_Window = window;
-}
-
-void FPSController::AttachCamera(Camera* camera)
-{
-    m_Camera = camera;
 }
 
 void FPSController::SetEnabled(bool enabled)
@@ -39,99 +33,80 @@ void FPSController::SetSprintMultiplier(float sprintMultiplier)
 void FPSController::ResetMouseState()
 {
     m_FirstMouse = true;
-    m_SmoothedMouseDeltaX = 0.0f;
-    m_SmoothedMouseDeltaY = 0.0f;
+    m_SmoothedLookX = 0.0f;
+    m_SmoothedLookY = 0.0f;
+    if (m_Window != nullptr)
+    {
+        m_Window->ResetCursorDelta();
+    }
 }
 
-void FPSController::Update(float deltaTime)
+CameraCommandFrame FPSController::BuildFrameCommand(float deltaTime)
 {
-    if (m_Window == nullptr || m_Camera == nullptr)
+    CameraCommandFrame command;
+    if (m_Window == nullptr)
     {
-        return;
+        return command;
     }
 
     const float frameDelta = std::clamp(deltaTime, 0.0f, 0.05f);
     float speed = m_MoveSpeed;
-    if (glfwGetKey(m_Window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS || glfwGetKey(m_Window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS)
+    if (m_Window->IsKeyPressed(GLFW_KEY_LEFT_SHIFT) || m_Window->IsKeyPressed(GLFW_KEY_RIGHT_SHIFT))
     {
         speed *= m_SprintMultiplier;
     }
     m_CurrentSpeed = speed;
 
-    glm::vec3 movement(0.0f);
-    const glm::vec3 forward = m_Camera->GetForward();
-    glm::vec3 forwardFlat(forward.x, 0.0f, forward.z);
-    if (glm::dot(forwardFlat, forwardFlat) <= 1e-8f)
-    {
-        forwardFlat = glm::vec3(1.0f, 0.0f, 0.0f);
-    }
-    else
-    {
-        forwardFlat = glm::normalize(forwardFlat);
-    }
-    const glm::vec3 right = m_Camera->GetRight();
+    glm::vec3 movementAxes(0.0f);
+    if (m_Window->IsKeyPressed(GLFW_KEY_W)) movementAxes.z += 1.0f;
+    if (m_Window->IsKeyPressed(GLFW_KEY_S)) movementAxes.z -= 1.0f;
+    if (m_Window->IsKeyPressed(GLFW_KEY_A)) movementAxes.x -= 1.0f;
+    if (m_Window->IsKeyPressed(GLFW_KEY_D)) movementAxes.x += 1.0f;
+    if (m_Window->IsKeyPressed(GLFW_KEY_Q)) movementAxes.y -= 1.0f;
+    if (m_Window->IsKeyPressed(GLFW_KEY_E)) movementAxes.y += 1.0f;
 
-    if (glfwGetKey(m_Window, GLFW_KEY_W) == GLFW_PRESS)
+    if (glm::length(movementAxes) > 0.0f)
     {
-        movement += forwardFlat;
-    }
-    if (glfwGetKey(m_Window, GLFW_KEY_S) == GLFW_PRESS)
-    {
-        movement -= forwardFlat;
-    }
-    if (glfwGetKey(m_Window, GLFW_KEY_A) == GLFW_PRESS)
-    {
-        movement -= right;
-    }
-    if (glfwGetKey(m_Window, GLFW_KEY_D) == GLFW_PRESS)
-    {
-        movement += right;
-    }
-    if (glfwGetKey(m_Window, GLFW_KEY_Q) == GLFW_PRESS)
-    {
-        movement.y -= 1.0f;
-    }
-    if (glfwGetKey(m_Window, GLFW_KEY_E) == GLFW_PRESS)
-    {
-        movement.y += 1.0f;
-    }
-
-    if (glm::length(movement) > 0.0f)
-    {
-        movement = glm::normalize(movement);
-        m_Camera->Move(movement * speed * frameDelta);
+        command.localMoveAxes = movementAxes;
+        command.moveDistanceMeters = speed * frameDelta;
     }
 
     if (!m_Enabled)
     {
         ResetMouseState();
-        return;
+        return command;
     }
 
-    double mouseX = 0.0;
-    double mouseY = 0.0;
-    glfwGetCursorPos(m_Window, &mouseX, &mouseY);
     if (m_FirstMouse)
     {
-        m_LastMouseX = mouseX;
-        m_LastMouseY = mouseY;
-        m_SmoothedMouseDeltaX = 0.0f;
-        m_SmoothedMouseDeltaY = 0.0f;
+        m_Window->ResetCursorDelta();
         m_FirstMouse = false;
     }
 
-    const float rawDeltaX = static_cast<float>(mouseX - m_LastMouseX) * m_MouseSensitivity;
-    const float rawDeltaY = static_cast<float>(m_LastMouseY - mouseY) * m_MouseSensitivity;
-    m_LastMouseX = mouseX;
-    m_LastMouseY = mouseY;
+    const glm::dvec2 cursorDelta = m_Window->ConsumeCursorDelta();
 
-    const float smoothingAlpha = std::clamp(1.0f - std::exp(-m_MouseSmoothingResponse * frameDelta),
-                                            0.0f,
-                                            1.0f);
-    m_SmoothedMouseDeltaX += (rawDeltaX - m_SmoothedMouseDeltaX) * smoothingAlpha;
-    m_SmoothedMouseDeltaY += (rawDeltaY - m_SmoothedMouseDeltaY) * smoothingAlpha;
+    float rawDeltaX = static_cast<float>(cursorDelta.x) * m_MouseSensitivity;
+    float rawDeltaY = static_cast<float>(-cursorDelta.y) * m_MouseSensitivity;
 
-    m_Camera->SetYawPitch(m_Camera->GetYaw() + m_SmoothedMouseDeltaX,
-                          m_Camera->GetPitch() + m_SmoothedMouseDeltaY);
+    // Hard-cap the per-frame look delta so that long frame stalls (e.g. large
+    // Nepal tile uploads) can never produce a multi-degree camera lurch even
+    // before smoothing kicks in. 8 degrees is imperceptible at normal frame
+    // rates but prevents violent jumps from 200-500 ms stall frames.
+    constexpr float kMaxLookDeltaDegrees = 8.0f;
+    rawDeltaX = std::clamp(rawDeltaX, -kMaxLookDeltaDegrees, kMaxLookDeltaDegrees);
+    rawDeltaY = std::clamp(rawDeltaY, -kMaxLookDeltaDegrees, kMaxLookDeltaDegrees);
+
+    // Exponential smoothing so even the capped delta eases in rather than
+    // snapping. Cap the effective delta time at 1/30 s so a stall frame does
+    // not inflate the smoothing alpha and cause a step change.
+    constexpr float kMaxSmoothingDelta    = 1.0f / 30.0f;
+    constexpr float kMouseSmoothingResponse = 20.0f;
+    const float smoothingDelta = std::min(frameDelta, kMaxSmoothingDelta);
+    const float smoothingAlpha = std::clamp(1.0f - std::exp(-kMouseSmoothingResponse * smoothingDelta), 0.0f, 1.0f);
+    m_SmoothedLookX += (rawDeltaX - m_SmoothedLookX) * smoothingAlpha;
+    m_SmoothedLookY += (rawDeltaY - m_SmoothedLookY) * smoothingAlpha;
+
+    command.lookDeltaDegrees = {m_SmoothedLookX, m_SmoothedLookY};
+    return command;
 }
 } // namespace GeoFPS

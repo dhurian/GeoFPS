@@ -13,6 +13,29 @@ sun.ambient_strength=0.22000000
 sun.sky_brightness=1.00000000
 sun.manual_azimuth_degrees=220.00000000
 sun.manual_elevation_degrees=32.00000000
+sky.enabled=1
+sky.use_sun_color=1
+sky.zenith_r=0.10000000
+sky.zenith_g=0.20000000
+sky.zenith_b=0.50000000
+sky.horizon_r=0.50000000
+sky.horizon_g=0.69999999
+sky.horizon_b=0.89999998
+sky.horizon_sharpness=4.00000000
+sky.show_sun_disk=1
+sky.sun_disk_size=0.00800000
+sky.sun_disk_intensity=3.00000000
+sky.clouds_enabled=0
+sky.cloud_coverage=0.44999999
+sky.cloud_density=0.85000002
+sky.cloud_scale=1.00000000
+sky.cloud_speed_x=12.00000000
+sky.cloud_speed_y=5.00000000
+sky.cloud_altitude=1500.00000000
+sky.cloud_auto_color=1
+sky.cloud_color_r=1.00000000
+sky.cloud_color_g=1.00000000
+sky.cloud_color_b=1.00000000
 
 [terrain]
 name=Terrain 1
@@ -25,6 +48,19 @@ height_scale=1.00000000
 smoothing_passes=0
 import_sample_step=1
 chunk_resolution=96
+color_by_height=0
+auto_height_color_range=0
+height_color_min=0.00000000
+height_color_max=1000.00000000
+low_height_color_r=0.18000001
+low_height_color_g=0.31999999
+low_height_color_b=0.16000000
+mid_height_color_r=0.50000000
+mid_height_color_g=0.43000001
+mid_height_color_b=0.28000000
+high_height_color_r=0.92000002
+high_height_color_g=0.89999998
+high_height_color_b=0.81999999
 coordinate_mode=geographic
 crs=EPSG:4326
 crs_false_easting=0.00000000
@@ -37,7 +73,7 @@ active_overlay_index=0
   name=Overlay 1
   image_path=/Users/dhurianvitoldas/Documents/Development/GeoFPS/assets/datasets/nepal_everest_demo/imagery/2025-12-24-00_00_2025-12-24-23_59_Sentinel-2_L2A_True_color_Large.jpg
   enabled=1
-  opacity=0.65000000
+  opacity=0.64999998
   top_left_latitude=28.11986111
   top_left_longitude=86.63013889
   top_right_latitude=28.11986111
@@ -48,3 +84,178 @@ active_overlay_index=0
   bottom_right_longitude=87.02986111
   [/overlay]
 [/terrain]
+
+[asset]
+name=Asset 1
+path=
+position_mode=local
+latitude=0.00000000
+longitude=0.00000000
+height=0.00000000
+position_x=0.00000000
+position_y=0.00000000
+position_z=0.00000000
+rotation_z=0.00000000
+scale_x=1.00000000
+scale_y=1.00000000
+scale_z=1.00000000
+tint_r=1.00000000
+tint_g=1.00000000
+tint_b=1.00000000
+show_label=0
+anim_clip=
+anim_speed=1.00000000
+anim_loop=1
+anim_playing=0
+node_anim_speed=1.00000000
+node_anim_loop=0
+node_anim_playing=0
+[/asset]
+
+[asset]
+name=Asset 2
+path=/Users/dhurianvitoldas/Documents/Development/GeoFPS/BlenderFolder/WTGV1.glb
+position_mode=geographic
+latitude=28.11986111
+longitude=86.63013889
+height=6002.00000000
+position_x=0.00000000
+position_y=0.00000000
+position_z=0.00000000
+rotation_z=0.00000000
+scale_x=1.00000000
+scale_y=1.00000000
+scale_z=1.00000000
+tint_r=1.00000000
+tint_g=1.00000000
+tint_b=1.00000000
+show_label=0
+anim_clip=
+anim_speed=1.00000000
+anim_loop=1
+anim_playing=0
+node_anim_speed=1.00000000
+node_anim_loop=1
+node_anim_playing=0
+[/asset]
+
+[terrain_profile]
+name=Profile 1
+visible=1
+show_in_world=1
+color_r=1.00000000
+color_g=0.20000000
+color_b=0.10000000
+color_a=1.00000000
+thickness=3.00000000
+world_thickness_m=31.20000076
+world_ground_offset_m=115.90000153
+sample_spacing_m=10.00000000
+use_local_coordinates=0
+terrain=Terrain 1
+  [vertex]
+  latitude=28.10873015
+  longitude=86.63705716
+  auxiliary=0
+  local_x=0.00000000
+  local_y=0.00000000
+  local_z=0.00000000
+  [/vertex]
+  [vertex]
+  latitude=28.03947090
+  longitude=86.67011111
+  auxiliary=0
+  local_x=0.00000000
+  local_y=0.00000000
+  local_z=0.00000000
+  [/vertex]
+  [vertex]
+  latitude=27.93310847
+  longitude=86.70623985
+  auxiliary=0
+  local_x=0.00000000
+  local_y=0.00000000
+  local_z=0.00000000
+  [/vertex]
+  [vertex]
+  latitude=27.96526455
+  longitude=86.82000694
+  auxiliary=0
+  local_x=0.00000000
+  local_y=0.00000000
+  local_z=0.00000000
+  [/vertex]
+  [vertex]
+  latitude=28.02710317
+  longitude=86.90840704
+  auxiliary=0
+  local_x=0.00000000
+  local_y=0.00000000
+  local_z=0.00000000
+  [/vertex]
+  [vertex]
+  latitude=28.01125077
+  longitude=86.91530401
+  auxiliary=1
+  local_x=0.00000000
+  local_y=0.00000000
+  local_z=0.00000000
+  [/vertex]
+  [vertex]
+  latitude=27.98824513
+  longitude=86.92531317
+  auxiliary=1
+  local_x=0.00000000
+  local_y=0.00000000
+  local_z=0.00000000
+  [/vertex]
+  [vertex]
+  latitude=27.95806891
+  longitude=86.93844207
+  auxiliary=1
+  local_x=0.00000000
+  local_y=0.00000000
+  local_z=0.00000000
+  [/vertex]
+  [vertex]
+  latitude=27.92998411
+  longitude=86.95066104
+  auxiliary=1
+  local_x=0.00000000
+  local_y=0.00000000
+  local_z=0.00000000
+  [/vertex]
+  [vertex]
+  latitude=27.90342593
+  longitude=86.96221582
+  auxiliary=0
+  local_x=0.00000000
+  local_y=0.00000000
+  local_z=0.00000000
+  [/vertex]
+  [vertex]
+  latitude=28.02215608
+  longitude=86.98373931
+  auxiliary=0
+  local_x=0.00000000
+  local_y=0.00000000
+  local_z=0.00000000
+  [/vertex]
+  [vertex]
+  latitude=28.06836522
+  longitude=87.00065065
+  auxiliary=0
+  local_x=0.00000000
+  local_y=0.00000000
+  local_z=0.00000000
+  [/vertex]
+  [vertex]
+  latitude=27.96905170
+  longitude=87.01448717
+  auxiliary=0
+  local_x=0.00000000
+  local_y=0.00000000
+  local_z=0.00000000
+  [/vertex]
+[/terrain_profile]
+

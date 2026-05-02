@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Assets/AnimationData.h"
 #include "Assets/GltfImporter.h"
 #include "Assets/ObjImporter.h"
 #include "Core/BackgroundJobQueue.h"
@@ -9,11 +10,13 @@
 #include "Math/GeoConverter.h"
 #include "Renderer/Camera.h"
 #include "Renderer/Mesh.h"
+#include "Renderer/RenderOrigin.h"
 #include "Renderer/Shader.h"
 #include "Renderer/Texture.h"
 #include "Terrain/TerrainImporter.h"
 #include "Terrain/TerrainMeshBuilder.h"
 #include "Terrain/TerrainProfile.h"
+#include <array>
 #include <future>
 #include <memory>
 #include <string>
@@ -106,6 +109,12 @@ struct ImportedAsset
     glm::vec3 tint {1.0f, 1.0f, 1.0f};
     bool showLabel {true};
     bool loaded {false};
+    AnimationState     animState     {};
+    NodeAnimationState nodeAnimState {};
+    // Axis-aligned bounding box in object-local space (computed at load time, not persisted).
+    glm::vec3 aabbMin {0.0f};
+    glm::vec3 aabbMax {0.0f};
+    bool      aabbValid {false};
 };
 
 struct AssetClipboardEntry
@@ -188,6 +197,95 @@ enum class WorkspaceSection
     Diagnostics
 };
 
+// ── Diagnostics ──────────────────────────────────────────────────────────────
+struct DiagnosticsState
+{
+    static constexpr int kFrameRingSize = 128;
+    std::array<float, kFrameRingSize> frameTimesMs {};
+    int   frameRingHead    {0};
+    float frameTimeAccum   {0.0f};
+    int   frameCount       {0};
+    float avgFpsDisplay    {0.0f};
+    float avgFrameTimeMs   {0.0f};
+    float minFrameTimeMs   {999.0f};
+    float maxFrameTimeMs   {0.0f};
+    bool  showOverlay      {false};
+    bool  lowLatencyMode   {false};
+    bool  platformViewportsEnabled {false};
+
+    float inputCpuMs       {0.0f};
+    float updateCpuMs      {0.0f};
+    float uiBuildCpuMs     {0.0f};
+    float cameraApplyCpuMs {0.0f};
+    float terrainCpuMs     {0.0f};
+    float assetCpuMs       {0.0f};
+    float skyCpuMs         {0.0f};
+    float worldOverlayCpuMs {0.0f};
+    float imguiCpuMs       {0.0f};
+    float swapCpuMs        {0.0f};
+    float frameCpuMs       {0.0f};
+    float gpuFrameMs       {0.0f};
+    bool  gpuTimingAvailable {false};
+
+    size_t terrainDrawCalls {0};
+    size_t assetDrawCalls   {0};
+    size_t skyDrawCalls     {0};
+    size_t totalDrawCalls   {0};
+    size_t terrainTrianglesDrawn {0};
+    size_t assetTrianglesDrawn   {0};
+    size_t skyTrianglesDrawn     {0};
+    size_t totalTrianglesDrawn   {0};
+    size_t visibleTerrainTiles   {0};
+    size_t visibleTerrainChunks  {0};
+    size_t meshUploadsThisFrame  {0};
+    size_t tileChunkUploadsThisFrame {0};
+    float  meshUploadCpuMs       {0.0f};
+
+    glm::vec2 queuedLookDeltaDegrees {0.0f};
+    glm::vec2 appliedLookDeltaDegrees {0.0f};
+    float  renderOriginDistanceMeters {0.0f};
+    float  renderOriginFloatStepMeters {0.0f};
+    float  maxDatasetWorldTranslationMeters {0.0f};
+    float  maxRenderTranslationMeters {0.0f};
+};
+
+// ── Gravity / terrain collision ──────────────────────────────────────────────
+struct GravitySettings
+{
+    bool  enabled                {false};
+    float playerHeightMeters     {1.8f};
+    float gravityAcceleration    {9.8f};
+    float jumpHeightMeters       {3.0f};
+};
+
+// ── Elevation-scaled camera speed ────────────────────────────────────────────
+struct ElevationSpeedSettings
+{
+    bool  enabled           {false};
+    float referenceHeight   {100.0f};   // height above terrain where speed = base speed
+    float logScale          {1.0f};
+    float minMultiplier     {0.1f};
+    float maxMultiplier     {20.0f};
+};
+
+// ── In-world asset labels ─────────────────────────────────────────────────────
+struct AssetLabelSettings
+{
+    bool  visible                {true};
+    float maxDistanceMeters      {5000.0f};
+    float verticalOffsetMeters   {5.0f};
+};
+
+// ── LOD tile streaming ────────────────────────────────────────────────────────
+struct TileLODSettings
+{
+    bool  enabled            {false};
+    float nearRadiusMeters   {2000.0f};
+    float midRadiusMeters    {8000.0f};
+    float unloadRadiusMeters {16000.0f};
+    int   maxConcurrentLoads {2};
+};
+
 class Application
 {
   public:
@@ -232,6 +330,9 @@ class Application
         int terrainIndex {-1};
         int tileIndex {-1};
         std::future<TerrainTileBuildResult> future;
+        TerrainTileBuildResult result;
+        size_t nextChunkUploadIndex {0};
+        bool uploadStarted {false};
     };
 
     struct AssetLoadResult
@@ -262,7 +363,7 @@ class Application
   private:
     void ProcessInput(float deltaTime);
     void Update(float deltaTime);
-    void Render();
+    void Render(float deltaTime);
     void InitializeProject();
     TerrainDataset* GetActiveTerrainDataset();
     const TerrainDataset* GetActiveTerrainDataset() const;
@@ -287,6 +388,7 @@ class Application
     void SetupImGui();
     void ShutdownImGui();
     void BeginImGuiFrame();
+    void ProcessOrientationGizmoInput();
     void RenderMiniMap();
     void RenderMiniMapWindow();
     void RenderCameraHud();
@@ -313,6 +415,10 @@ class Application
     void CopySelectedImportedAssets();
     void PasteCopiedImportedAssets();
     void RenderSunControls();
+    void RenderOrientationGizmo();
+    void UpdateAnimationState(ImportedAsset& asset);
+    void UpdateNodeAnimationState(ImportedAsset& asset);
+    void SyncProfileMapToGraphZoom(const TerrainProfile& profile);
     float SampleTerrainHeightAt(double latitude, double longitude) const;
     bool SaveWorldToFile(const std::string& path);
     bool LoadWorldFromFile(const std::string& path);
@@ -339,6 +445,35 @@ class Application
     bool ExportTerrainProfileFile(const std::string& path);
     bool ImportTerrainProfileFile(const std::string& path);
     [[nodiscard]] size_t CountSceneTriangles() const;
+    // Shared terrain height helper (local scene-space X/Z → local Y).
+    [[nodiscard]] float GetTerrainLocalHeightAt(float x, float z) const;
+    // Feature: raycast picking
+    void PickAssetAtScreenPos(float pixelX, float pixelY);
+    // Feature: diagnostics
+    void RenderDiagnosticsPanel();
+    void RenderDiagnosticsOverlay();   // always-visible bottom-right HUD
+    // Feature: asset placement grid/line
+    void RenderAssetPlacementPanel();
+    // Feature: asset label overlay
+    void RenderAssetLabels();
+    // Feature: profile export
+    bool ExportActiveProfileAsCsv(const std::string& path);
+    bool ExportActiveProfileAsKml(const std::string& path);
+    // Gizmo snap — begin smooth transition to a target yaw/pitch
+    void SnapCameraView(float yaw, float pitch);
+    void QueueCameraTeleport(const glm::vec3& position);
+    void ApplyPendingCameraCommands(float deltaTime);
+    void PollGpuFrameTiming();
+    void BeginGpuFrameTiming();
+    void EndGpuFrameTiming();
+    [[nodiscard]] glm::dvec3 GetRenderOrigin() const;
+    [[nodiscard]] glm::vec3 ToRenderRelative(const glm::dvec3& worldPosition) const;
+    [[nodiscard]] glm::vec3 ToRenderRelative(const glm::vec3& worldPosition) const;
+    [[nodiscard]] glm::mat4 GetRenderViewMatrix() const;
+    [[nodiscard]] glm::mat4 GetRenderViewProjectionMatrix() const;
+    [[nodiscard]] glm::dvec3 GetDatasetWorldTranslation(const TerrainDataset& dataset) const;
+    // Navigate camera to the active imported asset
+    void GoToActiveAsset();
 
     Window m_Window;
     Camera m_Camera;
@@ -404,10 +539,28 @@ class Application
     double m_ProfileMapMaxLongitude {0.0};
     float m_ProfileMapLastWidth {720.0f};
     glm::vec2 m_ProfileMapLastPanMouse {0.0f};
+    double    m_ProfileGraphZoomMinDist {0.0};   // metres along path — left edge of graph view
+    double    m_ProfileGraphZoomMaxDist {-1.0};  // right edge; negative = show full profile
+    bool      m_ShowOrientationGizmo   {true};   // XYZ orientation gizmo in 3D viewport
+    // Gizmo snap animation
+    CameraSnapState m_CameraSnapState {};
+    bool      m_GizmoHovered           {false};  // true when cursor is inside gizmo circle
     int m_SelectedCityPresetIndex {0};
     SunSettings m_SunSettings {};
     SkySettings m_SkySettings {};
     float       m_ElapsedTime {0.0f};  // accumulated frame time — drives cloud animation
+    // ── New feature state ────────────────────────────────────────────────────
+    DiagnosticsState      m_Diagnostics {};
+    CameraCommandFrame    m_PendingCameraCommand {};
+    GravitySettings       m_GravitySettings {};
+    float                 m_VerticalVelocity {0.0f};   // gravity integration
+    bool                  m_OnGround {false};
+    bool                  m_JumpPressedLastFrame {false};
+    bool                  m_JumpRequestedThisFrame {false};
+    ElevationSpeedSettings m_ElevationSpeedSettings {};
+    float                  m_BaseMoveSpeed {12.0f};     // user-set base speed (+/- keys)
+    AssetLabelSettings    m_AssetLabelSettings {};
+    TileLODSettings       m_TileLODSettings {};
     std::string m_WorldName {"World 1"};
     std::string m_WorldFilePath {"assets/worlds/world_template.geofpsworld"};
     std::string m_BlenderAssetsFilePath {"assets/worlds/blender_assets_template.txt"};
@@ -418,5 +571,10 @@ class Application
     unsigned int m_ProfileLineVao {0};
     unsigned int m_ProfileLineVbo {0};
     std::string m_StatusMessage;
+    std::array<unsigned int, 2> m_GpuTimerQueries {};
+    std::array<bool, 2> m_GpuTimerPending {};
+    int m_GpuTimerWriteIndex {0};
+    bool m_GpuTimerInitialized {false};
+    bool m_GpuTimerActive {false};
 };
 } // namespace GeoFPS

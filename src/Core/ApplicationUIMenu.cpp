@@ -196,6 +196,9 @@ void Application::RenderMainMenuBar()
     {
         ImGui::MenuItem("Workspace", nullptr, &m_ShowWorkspaceWindow);
         ImGui::Separator();
+        ImGui::MenuItem("Orientation Gizmo",    nullptr, &m_ShowOrientationGizmo);
+        ImGui::MenuItem("Stats Overlay",         nullptr, &m_Diagnostics.showOverlay);
+        ImGui::Separator();
         ImGui::MenuItem("Terrain Minimap", nullptr, &m_ShowMiniMapWindow);
         ImGui::MenuItem("Terrain Datasets", nullptr, &m_ShowTerrainDatasetWindow);
         ImGui::MenuItem("Sun Illumination", nullptr, &m_ShowSunWindow);
@@ -227,6 +230,14 @@ void Application::RenderMainMenuBar()
             {
                 StartImportedAssetLoadJob(m_ActiveImportedAssetIndex);
             }
+        }
+
+        ImGui::Separator();
+
+        if (ImGui::MenuItem("Go to Active Asset", nullptr, false,
+                            GetActiveImportedAsset() != nullptr && GetActiveImportedAsset()->loaded))
+        {
+            GoToActiveAsset();
         }
         ImGui::EndMenu();
     }

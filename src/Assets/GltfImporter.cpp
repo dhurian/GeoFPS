@@ -2,6 +2,9 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
+#include <glm/gtc/type_ptr.hpp>
+#include <algorithm>
+#include <unordered_set>
 
 #define TINYGLTF_NO_STB_IMAGE_WRITE
 #define TINYGLTF_IMPLEMENTATION
@@ -300,6 +303,77 @@ bool LoadPrimitiveMaterial(const tinygltf::Model& model,
     return true;
 }
 
+// Read JOINTS_0 — supports UNSIGNED_BYTE and UNSIGNED_SHORT component types.
+bool ReadJointsAccessor(const tinygltf::Model& model,
+                        const tinygltf::Accessor& accessor,
+                        std::vector<glm::uvec4>& output)
+{
+    if (accessor.type != TINYGLTF_TYPE_VEC4)
+        return false;
+
+    const unsigned char* data = ReadAccessorData<unsigned char>(model, accessor);
+    if (data == nullptr)
+        return false;
+
+    output.resize(accessor.count);
+    const size_t componentSize = tinygltf::GetComponentSizeInBytes(accessor.componentType);
+    const size_t stride = GetAccessorStride(model, accessor, componentSize * 4u);
+
+    for (size_t i = 0; i < accessor.count; ++i)
+    {
+        const unsigned char* elem = data + i * stride;
+        switch (accessor.componentType)
+        {
+        case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
+            output[i] = glm::uvec4(elem[0], elem[1], elem[2], elem[3]);
+            break;
+        case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+        {
+            const uint16_t* s = reinterpret_cast<const uint16_t*>(elem);
+            output[i] = glm::uvec4(s[0], s[1], s[2], s[3]);
+        }
+        break;
+        case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+        {
+            const uint32_t* u = reinterpret_cast<const uint32_t*>(elem);
+            output[i] = glm::uvec4(u[0], u[1], u[2], u[3]);
+        }
+        break;
+        default:
+            return false;
+        }
+    }
+    return true;
+}
+
+// Read WEIGHTS_0 — float VEC4.  Normalises weights so they sum to 1.
+bool ReadWeightsAccessor(const tinygltf::Model& model,
+                         const tinygltf::Accessor& accessor,
+                         std::vector<glm::vec4>& output)
+{
+    if (accessor.type != TINYGLTF_TYPE_VEC4 || accessor.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT)
+        return false;
+
+    const unsigned char* data = ReadAccessorData<unsigned char>(model, accessor);
+    if (data == nullptr)
+        return false;
+
+    output.resize(accessor.count);
+    const size_t stride = GetAccessorStride(model, accessor, sizeof(float) * 4u);
+    for (size_t i = 0; i < accessor.count; ++i)
+    {
+        const float* f = reinterpret_cast<const float*>(data + i * stride);
+        glm::vec4 w(f[0], f[1], f[2], f[3]);
+        const float sum = w.x + w.y + w.z + w.w;
+        if (sum > 1e-6f)
+            w /= sum;
+        else
+            w = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
+        output[i] = w;
+    }
+    return true;
+}
+
 bool LoadMeshPrimitive(const tinygltf::Model& model,
                        const tinygltf::Primitive& primitive,
                        ImportedPrimitiveData& primitiveData,
@@ -347,6 +421,28 @@ bool LoadMeshPrimitive(const tinygltf::Model& model,
         ReadVec2Accessor(model, model.accessors[static_cast<size_t>(texCoordIt->second)], texCoords);
     }
 
+    // --- Read joint/weight attributes (GPU skinning) ---
+    std::vector<glm::uvec4> jointIndices;
+    std::vector<glm::vec4>  jointWeights;
+
+    const auto jointsIt = primitive.attributes.find("JOINTS_0");
+    if (jointsIt != primitive.attributes.end() && jointsIt->second >= 0 &&
+        jointsIt->second < static_cast<int>(model.accessors.size()))
+    {
+        ReadJointsAccessor(model, model.accessors[static_cast<size_t>(jointsIt->second)], jointIndices);
+    }
+
+    const auto weightsIt = primitive.attributes.find("WEIGHTS_0");
+    if (weightsIt != primitive.attributes.end() && weightsIt->second >= 0 &&
+        weightsIt->second < static_cast<int>(model.accessors.size()))
+    {
+        ReadWeightsAccessor(model, model.accessors[static_cast<size_t>(weightsIt->second)], jointWeights);
+    }
+
+    const bool hasSkinData = !jointIndices.empty() && !jointWeights.empty() &&
+                             jointIndices.size() == positions.size() &&
+                             jointWeights.size() == positions.size();
+
     primitiveData.meshData.vertices.resize(positions.size());
     for (size_t vertexIndex = 0; vertexIndex < positions.size(); ++vertexIndex)
     {
@@ -360,6 +456,22 @@ bool LoadMeshPrimitive(const tinygltf::Model& model,
         {
             vertex.uv = texCoords[vertexIndex];
         }
+    }
+
+    // Populate SkinMeshData in parallel when joint/weight data is available.
+    if (hasSkinData)
+    {
+        primitiveData.skinMeshData.vertices.resize(positions.size());
+        for (size_t vertexIndex = 0; vertexIndex < positions.size(); ++vertexIndex)
+        {
+            SkinVertex& sv = primitiveData.skinMeshData.vertices[vertexIndex];
+            sv.position     = positions[vertexIndex];
+            sv.normal       = vertexIndex < normals.size() ? normals[vertexIndex] : glm::vec3(0.0f, 1.0f, 0.0f);
+            sv.uv           = vertexIndex < texCoords.size() ? texCoords[vertexIndex] : glm::vec2(0.0f);
+            sv.jointIndices = jointIndices[vertexIndex];
+            sv.jointWeights = jointWeights[vertexIndex];
+        }
+        primitiveData.isSkinned = true;
     }
 
     if (primitive.indices >= 0)
@@ -391,9 +503,22 @@ bool LoadMeshPrimitive(const tinygltf::Model& model,
         return false;
     }
 
+    // Share index buffer with skinMeshData.
+    if (hasSkinData)
+    {
+        primitiveData.skinMeshData.indices = primitiveData.meshData.indices;
+    }
+
     if (normals.empty())
     {
         GenerateNormals(primitiveData.meshData);
+        // Also fix normals in skinMeshData if it was populated.
+        if (hasSkinData)
+        {
+            for (size_t i = 0; i < primitiveData.skinMeshData.vertices.size(); ++i)
+                primitiveData.skinMeshData.vertices[i].normal =
+                    primitiveData.meshData.vertices[i].normal;
+        }
     }
 
     return LoadPrimitiveMaterial(model, primitive, primitiveData);
@@ -414,7 +539,8 @@ bool LoadNodeRecursive(const tinygltf::Model& model,
                        int nodeIndex,
                        const glm::mat4& parentTransform,
                        ImportedAssetData& assetData,
-                       std::string& errorMessage)
+                       std::string& errorMessage,
+                       const std::unordered_set<int>& animatedNodeSet)
 {
     if (nodeIndex < 0 || nodeIndex >= static_cast<int>(model.nodes.size()))
     {
@@ -424,6 +550,10 @@ bool LoadNodeRecursive(const tinygltf::Model& model,
 
     const tinygltf::Node& node = model.nodes[static_cast<size_t>(nodeIndex)];
     const glm::mat4 worldTransform = parentTransform * GetNodeTransform(node);
+
+    // A node is "node-animated" when animation channels target it directly
+    // (and it is not a skin joint — those are already excluded from animatedNodeSet).
+    const bool nodeIsAnimated = animatedNodeSet.count(nodeIndex) > 0;
 
     if (node.mesh >= 0 && node.mesh < static_cast<int>(model.meshes.size()))
     {
@@ -436,7 +566,20 @@ bool LoadNodeRecursive(const tinygltf::Model& model,
                 return false;
             }
 
-            ApplyTransform(primitiveData.meshData, worldTransform);
+            // Baking rules:
+            //  • Skinned mesh   → no bake (GPU skinning shader handles all transforms).
+            //  • Node-animated  → no bake (animated node world transform applied per-frame via uModel).
+            //  • Otherwise      → bake worldTransform into vertex positions now.
+            if (!primitiveData.isSkinned && !nodeIsAnimated)
+            {
+                ApplyTransform(primitiveData.meshData, worldTransform);
+            }
+            if (nodeIsAnimated)
+            {
+                // Record which glTF node owns this primitive so the render loop can
+                // look up the per-frame world transform.
+                primitiveData.nodeIndex = nodeIndex;
+            }
             if (!mesh.name.empty() && primitiveData.materialName.empty())
             {
                 primitiveData.materialName = mesh.name;
@@ -447,7 +590,7 @@ bool LoadNodeRecursive(const tinygltf::Model& model,
 
     for (int childIndex : node.children)
     {
-        if (!LoadNodeRecursive(model, childIndex, worldTransform, assetData, errorMessage))
+        if (!LoadNodeRecursive(model, childIndex, worldTransform, assetData, errorMessage, animatedNodeSet))
         {
             return false;
         }
@@ -492,6 +635,70 @@ bool GltfImporter::Load(const std::string& path, ImportedAssetData& assetData, s
         return false;
     }
 
+    // -----------------------------------------------------------------------
+    //  Pre-scan: build the set of node indices that have animation channels
+    //  targeting them directly (node-transform animation, not skin joints).
+    //  Joint nodes are excluded so they remain handled by the skin path.
+    // -----------------------------------------------------------------------
+    std::unordered_set<int> jointNodeSet;
+    for (const tinygltf::Skin& skin : model.skins)
+        for (int jni : skin.joints)
+            jointNodeSet.insert(jni);
+
+    std::unordered_set<int> animatedNodeSet;
+    for (const tinygltf::Animation& anim : model.animations)
+        for (const tinygltf::AnimationChannel& chan : anim.channels)
+            if (!jointNodeSet.count(chan.target_node))
+                animatedNodeSet.insert(chan.target_node);
+
+    // -----------------------------------------------------------------------
+    //  Build the node hierarchy (indexed by glTF node index) for runtime use.
+    //  We store TRS components separately so animation channels can override
+    //  individual components without a costly matrix decomposition.
+    // -----------------------------------------------------------------------
+    assetData.nodes.resize(model.nodes.size());
+    for (size_t ni = 0; ni < model.nodes.size(); ++ni)
+    {
+        const tinygltf::Node& n = model.nodes[ni];
+        NodeData& nd = assetData.nodes[ni];
+        nd.name        = n.name;
+        nd.parentIndex = -1; // filled below
+
+        if (n.matrix.size() == 16)
+        {
+            // Node specified a raw matrix — cannot override individual TRS.
+            nd.hasMatrix = true;
+            for (int col = 0; col < 4; ++col)
+                for (int row = 0; row < 4; ++row)
+                    nd.matrix[col][row] = static_cast<float>(n.matrix[static_cast<size_t>(col * 4 + row)]);
+        }
+        else
+        {
+            nd.hasMatrix = false;
+            if (n.translation.size() == 3)
+                nd.translation = glm::vec3(static_cast<float>(n.translation[0]),
+                                           static_cast<float>(n.translation[1]),
+                                           static_cast<float>(n.translation[2]));
+            if (n.rotation.size() == 4)
+                nd.rotation = glm::quat(static_cast<float>(n.rotation[3]),
+                                        static_cast<float>(n.rotation[0]),
+                                        static_cast<float>(n.rotation[1]),
+                                        static_cast<float>(n.rotation[2]));
+            if (n.scale.size() == 3)
+                nd.scale = glm::vec3(static_cast<float>(n.scale[0]),
+                                     static_cast<float>(n.scale[1]),
+                                     static_cast<float>(n.scale[2]));
+        }
+    }
+    // Fill parent indices by scanning children lists.
+    for (size_t ni = 0; ni < model.nodes.size(); ++ni)
+        for (int childIdx : model.nodes[ni].children)
+            if (childIdx >= 0 && childIdx < static_cast<int>(model.nodes.size()))
+                assetData.nodes[static_cast<size_t>(childIdx)].parentIndex = static_cast<int>(ni);
+
+    // -----------------------------------------------------------------------
+    //  Traverse scene nodes and collect mesh primitives.
+    // -----------------------------------------------------------------------
     if (!model.scenes.empty())
     {
         int sceneIndex = model.defaultScene >= 0 ? model.defaultScene : 0;
@@ -503,7 +710,7 @@ bool GltfImporter::Load(const std::string& path, ImportedAssetData& assetData, s
         const tinygltf::Scene& scene = model.scenes[static_cast<size_t>(sceneIndex)];
         for (int nodeIndex : scene.nodes)
         {
-            if (!LoadNodeRecursive(model, nodeIndex, glm::mat4(1.0f), assetData, errorMessage))
+            if (!LoadNodeRecursive(model, nodeIndex, glm::mat4(1.0f), assetData, errorMessage, animatedNodeSet))
             {
                 return false;
             }
@@ -513,7 +720,7 @@ bool GltfImporter::Load(const std::string& path, ImportedAssetData& assetData, s
     {
         for (int nodeIndex = 0; nodeIndex < static_cast<int>(model.nodes.size()); ++nodeIndex)
         {
-            if (!LoadNodeRecursive(model, nodeIndex, glm::mat4(1.0f), assetData, errorMessage))
+            if (!LoadNodeRecursive(model, nodeIndex, glm::mat4(1.0f), assetData, errorMessage, animatedNodeSet))
             {
                 return false;
             }
@@ -525,6 +732,294 @@ bool GltfImporter::Load(const std::string& path, ImportedAssetData& assetData, s
         errorMessage = "glTF asset contained no mesh primitives.";
         return false;
     }
+
+    // -----------------------------------------------------------------------
+    //  Parse skin (first skin only)
+    // -----------------------------------------------------------------------
+    if (!model.skins.empty())
+    {
+        const tinygltf::Skin& skin = model.skins[0];
+        assetData.hasSkin = true;
+
+        // Build a node-index → joint-index lookup table.
+        std::vector<int> nodeToJoint(model.nodes.size(), -1);
+        for (int ji = 0; ji < static_cast<int>(skin.joints.size()); ++ji)
+        {
+            const int nodeIdx = skin.joints[static_cast<size_t>(ji)];
+            if (nodeIdx >= 0 && nodeIdx < static_cast<int>(model.nodes.size()))
+                nodeToJoint[static_cast<size_t>(nodeIdx)] = ji;
+        }
+
+        // Inverse-bind matrices accessor (optional).
+        std::vector<glm::mat4> invBindMatrices;
+        if (skin.inverseBindMatrices >= 0 &&
+            skin.inverseBindMatrices < static_cast<int>(model.accessors.size()))
+        {
+            const tinygltf::Accessor& acc = model.accessors[static_cast<size_t>(skin.inverseBindMatrices)];
+            if (acc.type == TINYGLTF_TYPE_MAT4 && acc.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT)
+            {
+                const unsigned char* raw = ReadAccessorData<unsigned char>(model, acc);
+                if (raw != nullptr)
+                {
+                    const size_t stride = GetAccessorStride(model, acc, sizeof(float) * 16u);
+                    invBindMatrices.resize(acc.count);
+                    for (size_t k = 0; k < acc.count; ++k)
+                    {
+                        const float* f = reinterpret_cast<const float*>(raw + k * stride);
+                        glm::mat4 m;
+                        // glTF column-major storage matches GLM column-major.
+                        std::memcpy(glm::value_ptr(m), f, sizeof(float) * 16u);
+                        invBindMatrices[k] = m;
+                    }
+                }
+            }
+        }
+
+        assetData.skeleton.joints.resize(skin.joints.size());
+        for (int ji = 0; ji < static_cast<int>(skin.joints.size()); ++ji)
+        {
+            const int nodeIdx = skin.joints[static_cast<size_t>(ji)];
+            JointData& joint = assetData.skeleton.joints[static_cast<size_t>(ji)];
+
+            if (nodeIdx >= 0 && nodeIdx < static_cast<int>(model.nodes.size()))
+                joint.name = model.nodes[static_cast<size_t>(nodeIdx)].name;
+
+            if (ji < static_cast<int>(invBindMatrices.size()))
+                joint.inverseBindMatrix = invBindMatrices[static_cast<size_t>(ji)];
+
+            // Find parent: iterate every joint and check whether ji appears in children.
+            joint.parentIndex = -1;
+            for (int pj = 0; pj < static_cast<int>(skin.joints.size()); ++pj)
+            {
+                if (pj == ji)
+                    continue;
+                const int pNode = skin.joints[static_cast<size_t>(pj)];
+                if (pNode < 0 || pNode >= static_cast<int>(model.nodes.size()))
+                    continue;
+                const auto& children = model.nodes[static_cast<size_t>(pNode)].children;
+                if (std::find(children.begin(), children.end(), nodeIdx) != children.end())
+                {
+                    joint.parentIndex = pj;
+                    break;
+                }
+            }
+        }
+
+        // Identify root joint (skin.skeleton node, or whichever joint has no parent).
+        assetData.skeleton.rootJointIndex = -1;
+        if (skin.skeleton >= 0 && skin.skeleton < static_cast<int>(model.nodes.size()))
+            assetData.skeleton.rootJointIndex = nodeToJoint[static_cast<size_t>(skin.skeleton)];
+        if (assetData.skeleton.rootJointIndex < 0)
+        {
+            for (int ji = 0; ji < static_cast<int>(assetData.skeleton.joints.size()); ++ji)
+            {
+                if (assetData.skeleton.joints[static_cast<size_t>(ji)].parentIndex < 0)
+                {
+                    assetData.skeleton.rootJointIndex = ji;
+                    break;
+                }
+            }
+        }
+
+        // -----------------------------------------------------------------------
+        //  Parse animations
+        // -----------------------------------------------------------------------
+        for (const tinygltf::Animation& anim : model.animations)
+        {
+            AnimationClip clip;
+            clip.name = anim.name.empty() ? "Animation" : anim.name;
+
+            for (const tinygltf::AnimationChannel& chan : anim.channels)
+            {
+                // Map target node → joint index.
+                const int targetNode = chan.target_node;
+                if (targetNode < 0 || targetNode >= static_cast<int>(nodeToJoint.size()))
+                    continue;
+                const int jointIdx = nodeToJoint[static_cast<size_t>(targetNode)];
+                if (jointIdx < 0)
+                    continue;
+
+                if (chan.sampler < 0 || chan.sampler >= static_cast<int>(anim.samplers.size()))
+                    continue;
+                const tinygltf::AnimationSampler& sampler = anim.samplers[static_cast<size_t>(chan.sampler)];
+
+                // Input accessor — time values.
+                if (sampler.input < 0 || sampler.input >= static_cast<int>(model.accessors.size()))
+                    continue;
+                const tinygltf::Accessor& timeAcc = model.accessors[static_cast<size_t>(sampler.input)];
+                if (timeAcc.type != TINYGLTF_TYPE_SCALAR || timeAcc.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT)
+                    continue;
+                const unsigned char* timeRaw = ReadAccessorData<unsigned char>(model, timeAcc);
+                if (timeRaw == nullptr)
+                    continue;
+
+                // Output accessor — TRS values.
+                if (sampler.output < 0 || sampler.output >= static_cast<int>(model.accessors.size()))
+                    continue;
+                const tinygltf::Accessor& valAcc = model.accessors[static_cast<size_t>(sampler.output)];
+                const unsigned char* valRaw = ReadAccessorData<unsigned char>(model, valAcc);
+                if (valRaw == nullptr)
+                    continue;
+
+                const std::string& path = chan.target_path;
+                if (path != "translation" && path != "rotation" && path != "scale")
+                    continue;
+
+                AnimationChannel animChan;
+                animChan.jointIndex    = jointIdx;
+                animChan.path          = path;
+                animChan.interpolation = sampler.interpolation;
+
+                // Read times.
+                {
+                    const size_t timeStride = GetAccessorStride(model, timeAcc, sizeof(float));
+                    animChan.times.resize(timeAcc.count);
+                    for (size_t k = 0; k < timeAcc.count; ++k)
+                    {
+                        const float* f = reinterpret_cast<const float*>(timeRaw + k * timeStride);
+                        animChan.times[k] = f[0];
+                    }
+                }
+
+                // Read values.
+                if (path == "translation" || path == "scale")
+                {
+                    if (valAcc.type != TINYGLTF_TYPE_VEC3 || valAcc.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT)
+                        continue;
+                    const size_t valStride = GetAccessorStride(model, valAcc, sizeof(float) * 3u);
+                    animChan.valuesVec3.resize(valAcc.count);
+                    for (size_t k = 0; k < valAcc.count; ++k)
+                    {
+                        const float* f = reinterpret_cast<const float*>(valRaw + k * valStride);
+                        animChan.valuesVec3[k] = glm::vec3(f[0], f[1], f[2]);
+                    }
+                }
+                else // rotation
+                {
+                    if (valAcc.type != TINYGLTF_TYPE_VEC4 || valAcc.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT)
+                        continue;
+                    const size_t valStride = GetAccessorStride(model, valAcc, sizeof(float) * 4u);
+                    animChan.valuesQuat.resize(valAcc.count);
+                    for (size_t k = 0; k < valAcc.count; ++k)
+                    {
+                        const float* f = reinterpret_cast<const float*>(valRaw + k * valStride);
+                        // glTF stores quaternion as (x, y, z, w); GLM quat ctor is (w, x, y, z).
+                        animChan.valuesQuat[k] = glm::normalize(glm::quat(f[3], f[0], f[1], f[2]));
+                    }
+                }
+
+                if (!animChan.times.empty())
+                    clip.duration = std::max(clip.duration, animChan.times.back());
+
+                clip.channels.push_back(std::move(animChan));
+            }
+
+            if (!clip.channels.empty())
+                assetData.animations.push_back(std::move(clip));
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    //  Parse node-transform animations (channels targeting non-joint nodes).
+    //  These work without any skin — the GPU uses per-primitive uModel instead.
+    // -----------------------------------------------------------------------
+    for (const tinygltf::Animation& anim : model.animations)
+    {
+        NodeAnimationClip clip;
+        clip.name = anim.name.empty() ? "NodeAnimation" : anim.name;
+
+        for (const tinygltf::AnimationChannel& chan : anim.channels)
+        {
+            const int targetNode = chan.target_node;
+            if (targetNode < 0 || targetNode >= static_cast<int>(model.nodes.size()))
+                continue;
+            // Skip joint nodes — those are handled by the skin animation path.
+            if (jointNodeSet.count(targetNode))
+                continue;
+
+            const std::string& path = chan.target_path;
+            if (path != "translation" && path != "rotation" && path != "scale")
+                continue;
+
+            // Skip nodes that specified a raw matrix (TRS components unknown).
+            if (assetData.nodes[static_cast<size_t>(targetNode)].hasMatrix)
+                continue;
+
+            if (chan.sampler < 0 || chan.sampler >= static_cast<int>(anim.samplers.size()))
+                continue;
+            const tinygltf::AnimationSampler& sampler = anim.samplers[static_cast<size_t>(chan.sampler)];
+
+            if (sampler.input < 0 || sampler.input >= static_cast<int>(model.accessors.size()))
+                continue;
+            const tinygltf::Accessor& timeAcc = model.accessors[static_cast<size_t>(sampler.input)];
+            if (timeAcc.type != TINYGLTF_TYPE_SCALAR || timeAcc.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT)
+                continue;
+            const unsigned char* timeRaw = ReadAccessorData<unsigned char>(model, timeAcc);
+            if (timeRaw == nullptr)
+                continue;
+
+            if (sampler.output < 0 || sampler.output >= static_cast<int>(model.accessors.size()))
+                continue;
+            const tinygltf::Accessor& valAcc = model.accessors[static_cast<size_t>(sampler.output)];
+            const unsigned char* valRaw = ReadAccessorData<unsigned char>(model, valAcc);
+            if (valRaw == nullptr)
+                continue;
+
+            NodeAnimationChannel animChan;
+            animChan.nodeIndex     = targetNode;
+            animChan.path          = path;
+            animChan.interpolation = sampler.interpolation;
+
+            // Read time values.
+            {
+                const size_t stride = GetAccessorStride(model, timeAcc, sizeof(float));
+                animChan.times.resize(timeAcc.count);
+                for (size_t k = 0; k < timeAcc.count; ++k)
+                {
+                    const float* f = reinterpret_cast<const float*>(timeRaw + k * stride);
+                    animChan.times[k] = f[0];
+                }
+            }
+
+            // Read output values.
+            if (path == "translation" || path == "scale")
+            {
+                if (valAcc.type != TINYGLTF_TYPE_VEC3 || valAcc.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT)
+                    continue;
+                const size_t stride = GetAccessorStride(model, valAcc, sizeof(float) * 3u);
+                animChan.valuesVec3.resize(valAcc.count);
+                for (size_t k = 0; k < valAcc.count; ++k)
+                {
+                    const float* f = reinterpret_cast<const float*>(valRaw + k * stride);
+                    animChan.valuesVec3[k] = glm::vec3(f[0], f[1], f[2]);
+                }
+            }
+            else // rotation
+            {
+                if (valAcc.type != TINYGLTF_TYPE_VEC4 || valAcc.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT)
+                    continue;
+                const size_t stride = GetAccessorStride(model, valAcc, sizeof(float) * 4u);
+                animChan.valuesQuat.resize(valAcc.count);
+                for (size_t k = 0; k < valAcc.count; ++k)
+                {
+                    const float* f = reinterpret_cast<const float*>(valRaw + k * stride);
+                    // glTF quaternion (x,y,z,w) → GLM quat ctor (w,x,y,z).
+                    animChan.valuesQuat[k] = glm::normalize(glm::quat(f[3], f[0], f[1], f[2]));
+                }
+            }
+
+            if (!animChan.times.empty())
+                clip.duration = std::max(clip.duration, animChan.times.back());
+
+            clip.channels.push_back(std::move(animChan));
+        }
+
+        if (!clip.channels.empty())
+            assetData.nodeAnimations.push_back(std::move(clip));
+    }
+
+    if (!assetData.nodeAnimations.empty())
+        assetData.hasNodeAnimation = true;
 
     return true;
 }

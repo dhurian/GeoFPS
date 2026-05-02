@@ -1,20 +1,18 @@
 #pragma once
 
-#include <glm/glm.hpp>
+#include "Core/Window.h"
+#include "Game/CameraCommand.h"
 
-struct GLFWwindow;
+#include <glm/glm.hpp>
 
 namespace GeoFPS
 {
-class Camera;
-
 class FPSController
 {
   public:
-    void AttachWindow(GLFWwindow* window);
-    void AttachCamera(Camera* camera);
+    void AttachWindow(Window* window);
     void SetEnabled(bool enabled);
-    void Update(float deltaTime);
+    [[nodiscard]] CameraCommandFrame BuildFrameCommand(float deltaTime);
     void SetMoveSpeed(float moveSpeed);
     void SetSprintMultiplier(float sprintMultiplier);
     void ResetMouseState();
@@ -25,18 +23,14 @@ class FPSController
     [[nodiscard]] bool IsEnabled() const { return m_Enabled; }
 
   private:
-    GLFWwindow* m_Window {nullptr};
-    Camera* m_Camera {nullptr};
+    Window* m_Window {nullptr};
     bool m_Enabled {true};
     bool m_FirstMouse {true};
-    double m_LastMouseX {0.0};
-    double m_LastMouseY {0.0};
-    float m_SmoothedMouseDeltaX {0.0f};
-    float m_SmoothedMouseDeltaY {0.0f};
     float m_MoveSpeed {12.0f};
     float m_SprintMultiplier {2.0f};
     float m_CurrentSpeed {12.0f};
     float m_MouseSensitivity {0.08f};
-    float m_MouseSmoothingResponse {36.0f};
+    float m_SmoothedLookX {0.0f};
+    float m_SmoothedLookY {0.0f};
 };
 } // namespace GeoFPS

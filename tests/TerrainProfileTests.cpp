@@ -1,6 +1,9 @@
 #include "Core/ApplicationInternal.h"
 #include "Core/WorldFileParser.h"
+#include "Game/CameraCommand.h"
 #include "Math/GeoConverter.h"
+#include "Renderer/Camera.h"
+#include "Renderer/RenderOrigin.h"
 #include "Terrain/TerrainImporter.h"
 #include "Terrain/TerrainMeshBuilder.h"
 #include "Terrain/TerrainProfile.h"
@@ -865,6 +868,86 @@ position_mode=geographic
     Require(errorResult.ErrorMessage().find("latitude") != std::string::npos, "asset parser error should mention latitude");
 }
 
+void TestCameraCommandAppliesMouseLookBeforeRender()
+{
+    GeoFPS::Camera camera;
+    camera.SetYawPitch(0.0f, 0.0f);
+    GeoFPS::CameraCommandFrame command;
+    command.lookDeltaDegrees = {2.5f, -1.25f};
+    GeoFPS::CameraSnapState snapState;
+
+    const GeoFPS::CameraCommandResult result =
+        GeoFPS::ApplyCameraCommandFrame(camera, command, snapState, 1.0f / 60.0f);
+
+    Require(result.applied, "camera command should report it applied");
+    Require(Near(camera.GetYaw(), 2.5), "mouse look yaw should apply in the command frame");
+    Require(Near(camera.GetPitch(), -1.25), "mouse look pitch should apply in the command frame");
+    Require(Near(result.appliedLookDeltaDegrees.x, 2.5), "result should report applied yaw delta");
+    Require(Near(result.appliedLookDeltaDegrees.y, -1.25), "result should report applied pitch delta");
+}
+
+void TestCameraCommandGizmoDragCancelsSnap()
+{
+    GeoFPS::Camera camera;
+    camera.SetYawPitch(10.0f, 5.0f);
+    GeoFPS::CameraSnapState snapState;
+    snapState.active = true;
+    snapState.targetYaw = 90.0f;
+    snapState.targetPitch = 0.0f;
+
+    GeoFPS::CameraCommandFrame command;
+    command.cancelSnap = true;
+    command.lookDeltaDegrees = {-4.0f, 3.0f};
+
+    const GeoFPS::CameraCommandResult result =
+        GeoFPS::ApplyCameraCommandFrame(camera, command, snapState, 1.0f / 60.0f);
+    (void)result;
+
+    Require(!snapState.active, "gizmo drag should cancel an active snap");
+    Require(Near(camera.GetYaw(), 6.0), "gizmo drag yaw should apply after canceling snap");
+    Require(Near(camera.GetPitch(), 8.0), "gizmo drag pitch should apply after canceling snap");
+}
+
+void TestCameraCommandTeleportSnapSuppressesMouseDelta()
+{
+    GeoFPS::Camera camera;
+    camera.SetPosition({1.0f, 2.0f, 3.0f});
+    camera.SetYawPitch(0.0f, 0.0f);
+    GeoFPS::CameraSnapState snapState;
+
+    GeoFPS::CameraCommandFrame command;
+    command.hasTeleport = true;
+    command.teleportPosition = {10.0f, 20.0f, 30.0f};
+    command.hasSnapTarget = true;
+    command.snapTargetYaw = 90.0f;
+    command.snapTargetPitch = 15.0f;
+    command.lookDeltaDegrees = {45.0f, 0.0f};
+
+    const GeoFPS::CameraCommandResult result =
+        GeoFPS::ApplyCameraCommandFrame(camera, command, snapState, 1.0f / 60.0f);
+
+    const glm::vec3 position = camera.GetPosition();
+    Require(Near(position.x, 10.0) && Near(position.y, 20.0) && Near(position.z, 30.0),
+            "teleport should apply in the command frame");
+    Require(result.snapStarted, "snap should start in the command frame");
+    Require(snapState.active, "snap should remain active until it reaches the target");
+    Require(!Near(camera.GetYaw(), 45.0), "mouse look should not fight a snap command in the same frame");
+}
+
+void TestCameraRelativeRenderOriginKeepsSmallDeltas()
+{
+    const glm::dvec3 origin(-1540000.0, 489.2, -1046000.0);
+    const glm::dvec3 worldPosition = origin + glm::dvec3(0.03125, -0.125, 0.0625);
+
+    const glm::vec3 relative = GeoFPS::MakeCameraRelative(worldPosition, origin);
+
+    Require(Near(relative.x, 0.03125), "camera-relative render origin should preserve tiny X offsets");
+    Require(Near(relative.y, -0.125), "camera-relative render origin should preserve tiny Y offsets");
+    Require(Near(relative.z, 0.0625), "camera-relative render origin should preserve tiny Z offsets");
+    Require(GeoFPS::EstimateFloatSpacing(glm::length(origin)) >= 0.1,
+            "Lisbon-scale world coordinates should have coarse raw float spacing");
+}
+
 } // namespace
 
 int main()
@@ -894,6 +977,10 @@ int main()
     TestWorldFileParsing();
     TestExternalBlenderAssetTextParsing();
     TestWorldFileSchemaDiagnostics();
+    TestCameraCommandAppliesMouseLookBeforeRender();
+    TestCameraCommandGizmoDragCancelsSnap();
+    TestCameraCommandTeleportSnapSuppressesMouseDelta();
+    TestCameraRelativeRenderOriginKeepsSmallDeltas();
     std::cout << "TerrainProfileTests passed\n";
     return 0;
 }
