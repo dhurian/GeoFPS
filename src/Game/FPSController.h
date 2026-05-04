@@ -30,7 +30,5 @@ class FPSController
     float m_SprintMultiplier {2.0f};
     float m_CurrentSpeed {12.0f};
     float m_MouseSensitivity {0.08f};
-    float m_SmoothedLookX {0.0f};
-    float m_SmoothedLookY {0.0f};
 };
 } // namespace GeoFPS

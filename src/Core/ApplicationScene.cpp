@@ -1013,8 +1013,82 @@ void Application::ProcessBackgroundJobs()
         iterator = m_TerrainTileBuildJobs.erase(iterator);
     }
 
+    // Two-phase loop: Phase 1 resolves the future and uploads the main mesh;
+    // Phase 2 drains render chunks one per frame (same kMaxTileChunkUploadsPerFrame
+    // budget shared with the tile path above) to prevent a single large terrain
+    // dataset from stalling the frame for tens of milliseconds.
     for (auto iterator = m_TerrainBuildJobs.begin(); iterator != m_TerrainBuildJobs.end();)
     {
+        // ── Phase 2: drain one chunk per frame ────────────────────────────────
+        if (iterator->uploadStarted)
+        {
+            if (iterator->nextChunkIndex < iterator->pendingChunks.size())
+            {
+                if (tileChunkUploadsThisFrame >= kMaxTileChunkUploadsPerFrame)
+                {
+                    break;
+                }
+                if (iterator->terrainIndex >= 0 &&
+                    iterator->terrainIndex < static_cast<int>(m_TerrainDatasets.size()))
+                {
+                    TerrainDataset& dataset =
+                        m_TerrainDatasets[static_cast<size_t>(iterator->terrainIndex)];
+                    TerrainMeshChunkData& chunkData =
+                        iterator->pendingChunks[iterator->nextChunkIndex];
+                    TerrainMeshChunk chunk;
+                    chunk.minX = chunkData.minX;
+                    chunk.maxX = chunkData.maxX;
+                    chunk.minY = chunkData.minY;
+                    chunk.maxY = chunkData.maxY;
+                    chunk.minZ = chunkData.minZ;
+                    chunk.maxZ = chunkData.maxZ;
+                    chunk.meshData = std::move(chunkData.meshData);
+                    const double uploadStartMs = NowMs();
+                    chunk.mesh = std::make_unique<Mesh>(chunk.meshData);
+                    m_Diagnostics.meshUploadCpuMs += static_cast<float>(NowMs() - uploadStartMs);
+                    ++m_Diagnostics.meshUploadsThisFrame;
+                    ++m_Diagnostics.tileChunkUploadsThisFrame;
+                    dataset.chunks.push_back(std::move(chunk));
+                }
+                ++iterator->nextChunkIndex;
+                ++tileChunkUploadsThisFrame;
+                ++iterator;
+                continue;
+            }
+
+            // All chunks uploaded — mark loaded and run post-upload callbacks.
+            if (iterator->terrainIndex >= 0 &&
+                iterator->terrainIndex < static_cast<int>(m_TerrainDatasets.size()))
+            {
+                TerrainDataset& dataset =
+                    m_TerrainDatasets[static_cast<size_t>(iterator->terrainIndex)];
+                dataset.loaded = true;
+                for (OverlayEntry& overlay : dataset.overlays)
+                {
+                    if (IsOverlayPlacementUnset(overlay.image))
+                    {
+                        ResetOverlayToTerrainBounds(overlay.image, dataset.points);
+                    }
+                    if (overlay.image.enabled)
+                    {
+                        LoadOverlayImage(overlay);
+                    }
+                }
+                if (iterator->terrainIndex == m_ActiveTerrainIndex)
+                {
+                    LoadActiveTerrainIntoScene();
+                }
+                else
+                {
+                    RebuildAllTerrainProfileSamples();
+                }
+                m_StatusMessage = iterator->statusMessage;
+            }
+            iterator = m_TerrainBuildJobs.erase(iterator);
+            continue;
+        }
+
+        // ── Phase 1: resolve future, upload main mesh, store pending chunks ───
         if (iterator->future.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
         {
             ++iterator;
@@ -1039,57 +1113,26 @@ void Application::ProcessBackgroundJobs()
                 std::cout << "[GeoFPS] Terrain '" << dataset.name << "' loaded: "
                           << result.points.size() << " pts, "
                           << result.meshData.indices.size() / 3u << " tris\n";
-                dataset.points = std::move(result.points);
-                dataset.geoReference = result.geoReference;
-                dataset.settings = result.settings;
-                dataset.heightGrid = std::move(result.heightGrid);
+                dataset.points         = std::move(result.points);
+                dataset.geoReference   = result.geoReference;
+                dataset.settings       = result.settings;
+                dataset.heightGrid     = std::move(result.heightGrid);
                 dataset.terrainMeshData = std::move(result.meshData);
-                dataset.bounds = result.bounds;
-                double uploadStartMs = NowMs();
+                dataset.bounds         = result.bounds;
+                // Upload the unified mesh immediately (single object, non-splittable).
+                const double uploadStartMs = NowMs();
                 dataset.mesh = std::make_unique<Mesh>(dataset.terrainMeshData);
                 m_Diagnostics.meshUploadCpuMs += static_cast<float>(NowMs() - uploadStartMs);
                 ++m_Diagnostics.meshUploadsThisFrame;
+                // Stash chunks for one-per-frame draining in Phase 2.
                 dataset.chunks.clear();
                 dataset.chunks.reserve(result.chunks.size());
-                for (TerrainMeshChunkData& chunkData : result.chunks)
-                {
-                    TerrainMeshChunk chunk;
-                    chunk.minX = chunkData.minX;
-                    chunk.maxX = chunkData.maxX;
-                    chunk.minY = chunkData.minY;
-                    chunk.maxY = chunkData.maxY;
-                    chunk.minZ = chunkData.minZ;
-                    chunk.maxZ = chunkData.maxZ;
-                    chunk.meshData = std::move(chunkData.meshData);
-                    uploadStartMs = NowMs();
-                    chunk.mesh = std::make_unique<Mesh>(chunk.meshData);
-                    m_Diagnostics.meshUploadCpuMs += static_cast<float>(NowMs() - uploadStartMs);
-                    ++m_Diagnostics.meshUploadsThisFrame;
-                    dataset.chunks.push_back(std::move(chunk));
-                }
-                dataset.loaded = true;
-
-                for (OverlayEntry& overlay : dataset.overlays)
-                {
-                    if (IsOverlayPlacementUnset(overlay.image))
-                    {
-                        ResetOverlayToTerrainBounds(overlay.image, dataset.points);
-                    }
-                    if (overlay.image.enabled)
-                    {
-                        LoadOverlayImage(overlay);
-                    }
-                }
-
-                if (iterator->terrainIndex == m_ActiveTerrainIndex)
-                {
-                    LoadActiveTerrainIntoScene();
-                }
-                else
-                {
-                    RebuildAllTerrainProfileSamples();
-                }
-                m_StatusMessage = result.statusMessage;
+                iterator->pendingChunks = std::move(result.chunks);
+                iterator->statusMessage = result.statusMessage;
+                iterator->uploadStarted = true;
+                // Fall through to the next loop iteration to start draining.
+                ++iterator;
+                continue;
             }
             else
             {
@@ -1104,8 +1147,9 @@ void Application::ProcessBackgroundJobs()
         }
         else
         {
-            m_StatusMessage = result.statusMessage.empty() ? "Background terrain job finished for a removed dataset." :
-                                                             result.statusMessage;
+            m_StatusMessage = result.statusMessage.empty()
+                ? "Background terrain job finished for a removed dataset."
+                : result.statusMessage;
         }
 
         iterator = m_TerrainBuildJobs.erase(iterator);
@@ -1909,6 +1953,15 @@ void Application::RebuildTerrainIsolineSampleGridIfNeeded()
         {
             m_TerrainIsolineSampleGrid = BuildTerrainIsolineSampleGrid(activeTerrain->heightGrid, m_IsolineSettings);
             m_TerrainIsolineSampleGridDirty = false;
+            return;
+        }
+
+        // For tiled terrain, SampleTerrainHeightAt() scans all tiles linearly —
+        // an O(resX × resZ × numTiles) operation.  While tiles are still streaming
+        // in, every tile completion marks the grid dirty again anyway, so there is
+        // no value in rebuilding mid-stream.  Defer until the last tile settles.
+        if (!m_TerrainTileBuildJobs.empty())
+        {
             return;
         }
 

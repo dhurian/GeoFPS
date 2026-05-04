@@ -33,8 +33,6 @@ void FPSController::SetSprintMultiplier(float sprintMultiplier)
 void FPSController::ResetMouseState()
 {
     m_FirstMouse = true;
-    m_SmoothedLookX = 0.0f;
-    m_SmoothedLookY = 0.0f;
     if (m_Window != nullptr)
     {
         m_Window->ResetCursorDelta();
@@ -85,28 +83,18 @@ CameraCommandFrame FPSController::BuildFrameCommand(float deltaTime)
 
     const glm::dvec2 cursorDelta = m_Window->ConsumeCursorDelta();
 
-    float rawDeltaX = static_cast<float>(cursorDelta.x) * m_MouseSensitivity;
-    float rawDeltaY = static_cast<float>(-cursorDelta.y) * m_MouseSensitivity;
-
-    // Hard-cap the per-frame look delta so that long frame stalls (e.g. large
-    // Nepal tile uploads) can never produce a multi-degree camera lurch even
-    // before smoothing kicks in. 8 degrees is imperceptible at normal frame
-    // rates but prevents violent jumps from 200-500 ms stall frames.
+    // Hard cap: prevents a single extreme-stall frame from spinning the camera
+    // more than 8 degrees in any direction, while leaving normal movement fully
+    // responsive at all frame rates.
     constexpr float kMaxLookDeltaDegrees = 8.0f;
-    rawDeltaX = std::clamp(rawDeltaX, -kMaxLookDeltaDegrees, kMaxLookDeltaDegrees);
-    rawDeltaY = std::clamp(rawDeltaY, -kMaxLookDeltaDegrees, kMaxLookDeltaDegrees);
 
-    // Exponential smoothing so even the capped delta eases in rather than
-    // snapping. Cap the effective delta time at 1/30 s so a stall frame does
-    // not inflate the smoothing alpha and cause a step change.
-    constexpr float kMaxSmoothingDelta    = 1.0f / 30.0f;
-    constexpr float kMouseSmoothingResponse = 20.0f;
-    const float smoothingDelta = std::min(frameDelta, kMaxSmoothingDelta);
-    const float smoothingAlpha = std::clamp(1.0f - std::exp(-kMouseSmoothingResponse * smoothingDelta), 0.0f, 1.0f);
-    m_SmoothedLookX += (rawDeltaX - m_SmoothedLookX) * smoothingAlpha;
-    m_SmoothedLookY += (rawDeltaY - m_SmoothedLookY) * smoothingAlpha;
+    float deltaX = static_cast<float>(cursorDelta.x) * m_MouseSensitivity;
+    float deltaY = static_cast<float>(-cursorDelta.y) * m_MouseSensitivity;
 
-    command.lookDeltaDegrees = {m_SmoothedLookX, m_SmoothedLookY};
+    deltaX = std::clamp(deltaX, -kMaxLookDeltaDegrees, kMaxLookDeltaDegrees);
+    deltaY = std::clamp(deltaY, -kMaxLookDeltaDegrees, kMaxLookDeltaDegrees);
+
+    command.lookDeltaDegrees = {deltaX, deltaY};
     return command;
 }
 } // namespace GeoFPS

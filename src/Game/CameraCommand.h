@@ -28,7 +28,12 @@ struct CameraCommandFrame
     float snapTargetYaw {0.0f};
     float snapTargetPitch {0.0f};
 
+    // Full reset — used by ApplyCameraCommandFrame after consuming the command.
     void Clear();
+    // Partial reset — zeroes only the per-frame FPS input fields (move + look)
+    // so that UI-queued commands (teleport, snap, cancelSnap) survive until
+    // ApplyCameraCommandFrame consumes them on the next Apply call.
+    void ClearMoveLook();
 };
 
 // Returns the look delta that was actually applied this frame (degrees).

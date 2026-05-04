@@ -322,7 +322,10 @@ void Application::Run()
         const double frameStartMs = NowMs();
         const float deltaTime = m_Window.PollEventsAndGetDeltaTime();
         const double afterPollMs = NowMs();
-        m_PendingCameraCommand.Clear();
+        // Only clear the FPS input fields (move + look); UI-queued commands
+        // (teleport, snap) must survive until ApplyPendingCameraCommands()
+        // consumes them — ApplyCameraCommandFrame calls Clear() when it's done.
+        m_PendingCameraCommand.ClearMoveLook();
         m_JumpRequestedThisFrame = false;
         m_Diagnostics.queuedLookDeltaDegrees = {0.0f, 0.0f};
         BeginImGuiFrame();
@@ -739,7 +742,6 @@ void Application::Update(float deltaTime)
         }
     }
 
-    ProcessBackgroundJobs();
     m_Camera.SetAspectRatio(static_cast<float>(m_Window.GetWidth()) / static_cast<float>(m_Window.GetHeight()));
 
     // Advance skeletal animation playback for every skinned asset.
@@ -1048,6 +1050,12 @@ void Application::Render(float deltaTime)
     m_Diagnostics.maxDatasetWorldTranslationMeters = 0.0f;
     m_Diagnostics.maxRenderTranslationMeters = 0.0f;
 
+    // Apply the pending camera command (FPS input + snap interpolation) as the
+    // very first step of Render() so the view matrix is up-to-date before any
+    // work — UI build, 3-D draw, everything — happens this frame.  Doing it
+    // here means no UI stall (e.g. isoline rebuild) can delay camera application.
+    ApplyPendingCameraCommands(deltaTime);
+
     const double uiBuildStartMs = NowMs();
     RenderMainMenuBar();
     RenderMiniMapWindow();
@@ -1058,8 +1066,6 @@ void Application::Render(float deltaTime)
     RenderTerrainProfilesWindow();
     RenderEditor();
     m_Diagnostics.uiBuildCpuMs = static_cast<float>(NowMs() - uiBuildStartMs);
-
-    ApplyPendingCameraCommands(deltaTime);
     PollGpuFrameTiming();
     const glm::dvec3 renderOrigin = GetRenderOrigin();
     const glm::mat4 renderView = GetRenderViewMatrix();
@@ -1461,6 +1467,14 @@ void Application::Render(float deltaTime)
         glfwMakeContextCurrent(backupContext);
     }
     m_Diagnostics.imguiCpuMs = static_cast<float>(NowMs() - imguiStartMs);
+
+    // Upload completed tile/asset meshes to the GPU here, AFTER the 3-D scene
+    // has already been rendered and submitted. This prevents tile-upload stalls
+    // from blocking camera application and rendering. Any remaining stall time
+    // is absorbed by the vsync wait in SwapBuffers rather than freezing the frame.
+    // New tiles appear one frame later (~16 ms at 60 fps) — imperceptible.
+    ProcessBackgroundJobs();
+
     const double swapStartMs = NowMs();
     m_Window.SwapBuffers();
     m_Diagnostics.swapCpuMs = static_cast<float>(NowMs() - swapStartMs);

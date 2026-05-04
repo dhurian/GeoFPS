@@ -44,6 +44,13 @@ void CameraCommandFrame::Clear()
     *this = CameraCommandFrame {};
 }
 
+void CameraCommandFrame::ClearMoveLook()
+{
+    localMoveAxes      = glm::vec3{0.0f};
+    moveDistanceMeters = 0.0f;
+    lookDeltaDegrees   = glm::vec2{0.0f};
+}
+
 glm::vec2 ApplyCameraCommandFrame(Camera& camera,
                                   CameraCommandFrame& command,
                                   CameraSnapState& snapState,

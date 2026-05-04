@@ -1,0 +1,12 @@
+Horizontal Coordinates: WGS84 [EPSG: 4326]
+Vertical Coordinates: WGS84 Ellipsoid/EGM2008 Geoid [EPSG: 3855]
+Units: meter
+Data Selection Coordinates (Select an area on map)
+  Xmin = -9.208319976830284	  Ymin = 38.6883947788036	  Xmax = -9.094354750026623	  Ymax = 38.762669515044934
+
+
+Horizontal Coordinates: WGS84 [EPSG: 4326]
+Vertical Coordinates: WGS84 Ellipsoid/EGM2008 Geoid [EPSG: 3855]
+Units: meter
+Data Selection Coordinates (Select an area on map)
+  Xmin =-9.513997190377514 	  Ymin = 38.66541956667908	  Xmax = -9.094354750026623	  Ymax = 38.762669515044934

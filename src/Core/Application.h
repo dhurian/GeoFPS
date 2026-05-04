@@ -310,6 +310,12 @@ class Application
     {
         int terrainIndex {-1};
         std::future<TerrainBuildResult> future;
+        // Chunk-draining state (mirrors TerrainTileBuildJob).
+        // Populated when the future resolves; chunks are uploaded one per frame.
+        std::vector<TerrainMeshChunkData> pendingChunks;
+        size_t nextChunkIndex {0};
+        bool uploadStarted {false};
+        std::string statusMessage;
     };
 
     struct TerrainTileBuildResult
