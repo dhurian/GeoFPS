@@ -1,0 +1,129 @@
+# GeoFPS world file
+world_name=World 1
+active_terrain_index=0
+active_asset_index=0
+sun.use_geographic=1
+sun.year=2026
+sun.month=4
+sun.day=12
+sun.local_time_hours=16.00000000
+sun.utc_offset_hours=2.00000000
+sun.illuminance=1.00000000
+sun.ambient_strength=0.22000000
+sun.sky_brightness=1.00000000
+sun.manual_azimuth_degrees=220.00000000
+sun.manual_elevation_degrees=32.00000000
+sky.enabled=1
+sky.use_sun_color=1
+sky.zenith_r=0.10000000
+sky.zenith_g=0.20000000
+sky.zenith_b=0.50000000
+sky.horizon_r=0.50000000
+sky.horizon_g=0.69999999
+sky.horizon_b=0.89999998
+sky.horizon_sharpness=4.00000000
+sky.show_sun_disk=1
+sky.sun_disk_size=0.00800000
+sky.sun_disk_intensity=3.00000000
+sky.clouds_enabled=0
+sky.cloud_coverage=0.44999999
+sky.cloud_density=0.85000002
+sky.cloud_scale=1.00000000
+sky.cloud_speed_x=12.00000000
+sky.cloud_speed_y=5.00000000
+sky.cloud_altitude=1500.00000000
+sky.cloud_auto_color=1
+sky.cloud_color_r=1.00000000
+sky.cloud_color_g=1.00000000
+sky.cloud_color_b=1.00000000
+
+[terrain]
+name=Terrain 1
+tile_manifest=/Users/dhurianvitoldas/Documents/Development/GeoFPS/assets/datasets/nepal_everest_demo/terrain_tiles/tile_manifest.json
+path=assets/data/sample_terrain.csv
+visible=1
+grid_x=256
+grid_z=256
+height_scale=1.00000000
+smoothing_passes=1
+import_sample_step=1
+chunk_resolution=64
+color_by_height=1
+auto_height_color_range=1
+height_color_min=0.00000000
+height_color_max=1000.00000000
+low_height_color_r=0.18000001
+low_height_color_g=0.31999999
+low_height_color_b=0.16000000
+mid_height_color_r=0.50000000
+mid_height_color_g=0.43000001
+mid_height_color_b=0.28000000
+high_height_color_r=0.92000002
+high_height_color_g=0.89999998
+high_height_color_b=0.81999999
+coordinate_mode=geographic
+crs=EPSG:4326
+crs_false_easting=0.00000000
+crs_false_northing=0.00000000
+origin_latitude=48.12340000
+origin_longitude=11.56780000
+origin_height=520.40000000
+active_overlay_index=0
+  [overlay]
+  name=Overlay 1
+  image_path=
+  enabled=0
+  opacity=0.85000002
+  top_left_latitude=48.12370000
+  top_left_longitude=11.56780000
+  top_right_latitude=48.12370000
+  top_right_longitude=11.56824000
+  bottom_left_latitude=48.12340000
+  bottom_left_longitude=11.56780000
+  bottom_right_latitude=48.12340000
+  bottom_right_longitude=11.56824000
+  [/overlay]
+[/terrain]
+
+[asset]
+name=Asset 1
+path=
+position_mode=local
+latitude=0.00000000
+longitude=0.00000000
+height=0.00000000
+position_x=0.00000000
+position_y=0.00000000
+position_z=0.00000000
+rotation_z=0.00000000
+scale_x=1.00000000
+scale_y=1.00000000
+scale_z=1.00000000
+tint_r=1.00000000
+tint_g=1.00000000
+tint_b=1.00000000
+show_label=1
+anim_clip=
+anim_speed=1.00000000
+anim_loop=1
+anim_playing=0
+node_anim_speed=1.00000000
+node_anim_loop=1
+node_anim_playing=0
+[/asset]
+
+[terrain_profile]
+name=Profile 1
+visible=1
+show_in_world=0
+color_r=1.00000000
+color_g=0.20000000
+color_b=0.10000000
+color_a=1.00000000
+thickness=3.00000000
+world_thickness_m=8.00000000
+world_ground_offset_m=5.00000000
+sample_spacing_m=10.00000000
+use_local_coordinates=0
+[/terrain_profile]
+

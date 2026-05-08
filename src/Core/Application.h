@@ -17,6 +17,7 @@
 #include "Terrain/TerrainMeshBuilder.h"
 #include "Terrain/TerrainProfile.h"
 #include <array>
+#include <fstream>
 #include <future>
 #include <memory>
 #include <string>
@@ -390,6 +391,14 @@ class Application
     void ResetOverlayToTerrainBounds(GeoImageDefinition& imageDefinition, const std::vector<TerrainPoint>& points) const;
     void ResetOverlayToTerrainBounds(GeoImageDefinition& imageDefinition) const;
     void LoadActiveTerrainIntoScene();
+    // Move m_GeoReference's lat/lon origin to the camera's current geographic
+    // location and translate everything stored in float world-space (camera,
+    // local-placed assets) so that nothing visibly changes — only the
+    // numerical scale of the coordinates does.  Restores sub-millimetre float
+    // precision around the camera, which is otherwise lost at ~6 M m from
+    // origin (Nepal-from-Greenwich).  Idempotent: a no-op if the camera is
+    // already within kRebaseThresholdMeters of origin.
+    void RebaseLocalOriginToCamera();
     void RenderMainMenuBar();
     void SetupImGui();
     void ShutdownImGui();
@@ -446,6 +455,7 @@ class Application
     void MarkTerrainIsolinesDirty();
     void MarkTerrainIsolineSampleGridDirty();
     void RebuildTerrainIsolineSampleGridIfNeeded();
+    void UpdateTerrainIsolineSampleGridForTile(const TerrainTile& tile);
     void RebuildTerrainIsolines();
     void RebuildTerrainIsolinesIfNeeded();
     bool ExportTerrainProfileFile(const std::string& path);
@@ -574,6 +584,46 @@ class Application
     std::string m_TerrainProfileFilePath {"assets/worlds/terrain_profiles.geofpsprofile"};
     std::vector<AssetClipboardEntry> m_AssetClipboard;
     glm::vec3 m_AssetPasteOffset {2.0f, 0.0f, 2.0f};
+
+    // ── Adaptive upload time-budget ──────────────────────────────────────────
+    // Wall-clock time (ms) the current frame began.  Set at the top of Run()'s
+    // while-loop and consumed by ProcessBackgroundJobs() to compute exactly how
+    // much of the 16.67ms vsync window is still available for chunk uploads —
+    // far more accurate than lagged EMAs since it measures THIS frame's slack.
+    double m_FrameStartMs {0.0};
+
+    // Absolute monotonic target for the next frame's start, in NowMs() units.
+    // Run()'s pacer increments this by 16.67ms each iteration and busy-waits
+    // until reached.  Using an absolute schedule (not "frameStart + 16.67")
+    // means a single oversleep doesn't push the entire timeline forward —
+    // subsequent frames stay locked to the original 60Hz beat.
+    double m_NextFrameTargetMs {0.0};
+
+    // ── Per-frame performance logger (toggle with F11) ───────────────────────
+    // When active, every frame appends a CSV row to m_PerfLogPath capturing
+    // every diagnostic the in-app panel shows plus a few extras (camera state,
+    // background-job queue depth, isoline-build pending).  Designed so a short
+    // recording (~30s) on a stuttering scene produces enough data to identify
+    // exactly which frame phase or count is spiking.
+    std::ofstream m_PerfLog;
+    std::string   m_PerfLogPath;
+    bool          m_PerfLogActive  {false};
+    bool          m_PerfLogToggleLastFrame {false};
+    int           m_PerfLogFrameIdx {0};
+    double        m_PerfLogStartMs  {0.0};
+    void TogglePerformanceLog();
+    void WritePerformanceLogRow();
+    // EMA of the previous frame's SwapBuffers wait time (≈ vsync slack).
+    // Kept for diagnostics only; the upload budget now comes from m_FrameStartMs.
+    float m_AvgSwapWaitMs  {5.0f};   // seed with a reasonable 5ms to avoid starving frame 1
+    float m_AvgChunkUploadMs {0.5f}; // EMA of a single Mesh() constructor call
+
+    // ── Async isoline pipeline ───────────────────────────────────────────────
+    // Isoline segment generation is dispatched to a background worker (CPU path
+    // only — Metal cannot be called from a non-main thread).  Previous isolines
+    // stay visible until the result is harvested so there is zero visual gap.
+    std::future<std::vector<TerrainIsolineSegment>> m_IsolineBuildFuture {};
+    bool m_IsolineBuildPending {false};
     unsigned int m_ProfileLineVao {0};
     unsigned int m_ProfileLineVbo {0};
     std::string m_StatusMessage;

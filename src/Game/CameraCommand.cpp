@@ -51,16 +51,17 @@ void CameraCommandFrame::ClearMoveLook()
     lookDeltaDegrees   = glm::vec2{0.0f};
 }
 
-glm::vec2 ApplyCameraCommandFrame(Camera& camera,
-                                  CameraCommandFrame& command,
-                                  CameraSnapState& snapState,
-                                  float deltaTime)
+CameraCommandResult ApplyCameraCommandFrame(Camera& camera,
+                                            CameraCommandFrame& command,
+                                            CameraSnapState& snapState,
+                                            float deltaTime)
 {
-    glm::vec2 appliedLookDelta{0.0f};
+    CameraCommandResult result;
 
     if (command.hasTeleport)
     {
         camera.SetPosition(command.teleportPosition);
+        result.applied = true;
     }
 
     if (command.hasSnapTarget)
@@ -68,10 +69,13 @@ glm::vec2 ApplyCameraCommandFrame(Camera& camera,
         snapState.targetYaw = command.snapTargetYaw;
         snapState.targetPitch = std::clamp(command.snapTargetPitch, -89.0f, 89.0f);
         snapState.active = true;
+        result.snapStarted = true;
+        result.applied = true;
     }
     else if (command.cancelSnap)
     {
         snapState.active = false;
+        result.applied = true;
     }
 
     const bool snapStartedThisFrame = command.hasSnapTarget;
@@ -80,7 +84,8 @@ glm::vec2 ApplyCameraCommandFrame(Camera& camera,
         snapState.active = false;
         camera.SetYawPitch(camera.GetYaw() + command.lookDeltaDegrees.x,
                            camera.GetPitch() + command.lookDeltaDegrees.y);
-        appliedLookDelta = command.lookDeltaDegrees;
+        result.appliedLookDeltaDegrees = command.lookDeltaDegrees;
+        result.applied = true;
     }
 
     if (snapState.active)
@@ -104,9 +109,10 @@ glm::vec2 ApplyCameraCommandFrame(Camera& camera,
     if (command.moveDistanceMeters > 0.0f && glm::dot(command.localMoveAxes, command.localMoveAxes) > 1e-8f)
     {
         camera.Move(CameraLocalMoveToWorld(camera, command.localMoveAxes) * command.moveDistanceMeters);
+        result.applied = true;
     }
 
     command.Clear();
-    return appliedLookDelta;
+    return result;
 }
 } // namespace GeoFPS

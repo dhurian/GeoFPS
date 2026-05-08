@@ -11,10 +11,15 @@
 #include <glm/gtc/matrix_access.hpp>
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cmath>
+#include <cstdlib>
+#include <ctime>
 #include <functional>
+#include <iostream>
 #include <limits>
 #include <stdexcept>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -320,6 +325,9 @@ void Application::Run()
     while (!m_Window.ShouldClose())
     {
         const double frameStartMs = NowMs();
+        // Mirror to a member so ProcessBackgroundJobs() (called deep inside
+        // Render) can compute the *real* remaining frame budget directly.
+        m_FrameStartMs = frameStartMs;
         const float deltaTime = m_Window.PollEventsAndGetDeltaTime();
         const double afterPollMs = NowMs();
         // Only clear the FPS input fields (move + look); UI-queued commands
@@ -339,6 +347,65 @@ void Application::Run()
         m_Diagnostics.updateCpuMs = static_cast<float>(afterUpdateMs - afterInputMs);
         Render(deltaTime);
         m_Diagnostics.frameCpuMs = static_cast<float>(NowMs() - frameStartMs);
+
+        // ── Perf log row (with frame_total_ms now correctly populated) ───────
+        if (m_PerfLogActive)
+        {
+            WritePerformanceLogRow();
+        }
+
+        // ── 60 Hz frame pacer (absolute schedule) ────────────────────────────
+        // The Apple OpenGL → Metal swap chain is triple-buffered with vsync
+        // at the display's adaptive (ProMotion) rate, which produces a bursty
+        // frame-interval pattern.  Even when our render is fast, the
+        // *interval between glfwPollEvents calls* is irregular, so cursor
+        // delta accumulates over irregular windows and mouse-look stutters.
+        //
+        // We sidestep that by pacing the loop ourselves to a fixed 60 Hz beat
+        // (16.67 ms per iteration), driven by an ABSOLUTE schedule:
+        //
+        //   m_NextFrameTargetMs += 16.67;   // accumulating tick
+        //   wait until NowMs() >= m_NextFrameTargetMs
+        //
+        // The absolute schedule is the key — if a single sleep oversleeps by
+        // 4 ms, the *next* target is still on the original beat (not "16.67ms
+        // after this overshooting frame"), so the system corrects itself
+        // within one frame instead of drifting.  A previous version used a
+        // per-frame target (frameStart + 16.67) which let oversleeps push
+        // every subsequent frame later; the perf log showed bimodal intervals
+        // 11-15 / 18-24 ms exactly because of that.
+        //
+        // Wait strategy:
+        //   • If >4 ms remain, sleep_for(remaining − 4 ms).  macOS can over-
+        //     sleep by up to 2-3 ms, so the 4 ms safety window absorbs that.
+        //   • Then busy-wait the last 0–4 ms — burns one core for that window
+        //     but lands the loop within ~50 µs of target reliably.
+        //   • If we're hopelessly behind (>50 ms past target — e.g. paused in
+        //     a debugger), re-anchor instead of frantically catching up.
+        constexpr double kTargetFrameMs = 1000.0 / 60.0; // 16.67 ms (60 Hz)
+        constexpr double kBusyWaitWindowMs = 4.0;        // tolerate sleep overshoot up to this
+        constexpr double kReanchorIfBehindMs = 50.0;
+        if (m_NextFrameTargetMs == 0.0)
+        {
+            m_NextFrameTargetMs = NowMs(); // first iteration — anchor schedule
+        }
+        m_NextFrameTargetMs += kTargetFrameMs;
+        const double nowMs = NowMs();
+        if (nowMs > m_NextFrameTargetMs + kReanchorIfBehindMs)
+        {
+            // Long stall (debugger, OS hiccup) — give up catching up.
+            m_NextFrameTargetMs = nowMs;
+        }
+        else
+        {
+            const double remainingMs = m_NextFrameTargetMs - nowMs;
+            if (remainingMs > kBusyWaitWindowMs)
+            {
+                std::this_thread::sleep_for(std::chrono::microseconds(
+                    static_cast<long>((remainingMs - kBusyWaitWindowMs) * 1000.0)));
+            }
+            while (NowMs() < m_NextFrameTargetMs) { /* busy-wait */ }
+        }
     }
 }
 
@@ -439,30 +506,47 @@ void Application::ProcessInput(float deltaTime)
         m_Window.RefreshCursorCapture();
     }
 
-    const bool shiftPressed = m_Window.IsKeyPressed(GLFW_KEY_LEFT_SHIFT) || m_Window.IsKeyPressed(GLFW_KEY_RIGHT_SHIFT);
-    const bool equalPressed = m_Window.IsKeyPressed(GLFW_KEY_EQUAL);
-    const bool minusPressed = m_Window.IsKeyPressed(GLFW_KEY_MINUS);
-    const bool keypadAddPressed = m_Window.IsKeyPressed(GLFW_KEY_KP_ADD);
-    const bool keypadSubtractPressed = m_Window.IsKeyPressed(GLFW_KEY_KP_SUBTRACT);
-    const bool increaseSpeedPressed = equalPressed || keypadAddPressed || (shiftPressed && minusPressed);
+    // Speed +/-: detect by character, not physical key code, so the correct
+    // key fires on every keyboard layout (e.g. on Scandinavian keyboards '+' is
+    // at the GLFW_KEY_MINUS physical position — char detection handles this
+    // transparently).  Numpad +/- are layout-independent so we keep their
+    // physical key check as a fallback.
+    const bool increaseSpeedPressed =
+        m_Window.WasCharTyped('+') || m_Window.IsKeyPressed(GLFW_KEY_KP_ADD);
     if (increaseSpeedPressed && !increaseSpeedPressedLastFrame)
     {
         m_BaseMoveSpeed = std::clamp(m_BaseMoveSpeed * 1.5f, 0.5f, 3000.0f);
-        m_FPSController.ResetMouseState();
-        m_MouseCaptured = true;
-        m_Window.SetCursorCaptured(true);
-        m_StatusMessage = "Camera speed UP: " + std::to_string(static_cast<int>(m_BaseMoveSpeed)) + " m/s.";
+        m_StatusMessage = "Camera speed: " + std::to_string(static_cast<int>(std::round(m_BaseMoveSpeed))) + " m/s";
     }
     increaseSpeedPressedLastFrame = increaseSpeedPressed;
 
-    const bool decreaseSpeedPressed = (!shiftPressed && minusPressed) || keypadSubtractPressed;
+    const bool decreaseSpeedPressed =
+        m_Window.WasCharTyped('-') || m_Window.IsKeyPressed(GLFW_KEY_KP_SUBTRACT);
     if (decreaseSpeedPressed && !decreaseSpeedPressedLastFrame)
     {
         m_BaseMoveSpeed = std::clamp(m_BaseMoveSpeed / 1.5f, 0.5f, 3000.0f);
-        m_FPSController.ResetMouseState();
-        m_StatusMessage = "Camera speed DOWN: " + std::to_string(static_cast<int>(m_BaseMoveSpeed)) + " m/s.";
+        m_StatusMessage = "Camera speed: " + std::to_string(static_cast<int>(std::round(m_BaseMoveSpeed))) + " m/s";
     }
     decreaseSpeedPressedLastFrame = decreaseSpeedPressed;
+
+    // ── Performance log toggle (R) ───────────────────────────────────────────
+    // Press R to start writing one CSV row per frame to ~/geofps_perf_*.csv;
+    // press R again to stop and close the file.  Designed to be activated
+    // right before a stuttering activity and stopped right after, so the
+    // resulting file is small and focused on the symptom.
+    //
+    // We use a char-typed check (so the toggle is keyboard-layout-independent
+    // — same approach as the +/- speed keys) but only fire when the cursor is
+    // captured (FPS mode), which is when stutter is observable; this keeps the
+    // letter "R" usable for normal text input in dialogs / UI fields.
+    const bool perfLogTogglePressed =
+        m_MouseCaptured &&
+        (m_Window.WasCharTyped('r') || m_Window.WasCharTyped('R'));
+    if (perfLogTogglePressed && !m_PerfLogToggleLastFrame)
+    {
+        TogglePerformanceLog();
+    }
+    m_PerfLogToggleLastFrame = perfLogTogglePressed;
 
     // ── View snap keyboard shortcuts (Numpad, works in FPS mode) ─────────────
     // Numpad 1 = Front (-Z), Numpad 3 = Right (+X), Numpad 7 = Top (down),
@@ -533,7 +617,9 @@ void Application::ProcessInput(float deltaTime)
 void Application::ApplyPendingCameraCommands(float deltaTime)
 {
     const double startMs = NowMs();
-    m_Diagnostics.appliedLookDeltaDegrees = ApplyCameraCommandFrame(m_Camera, m_PendingCameraCommand, m_CameraSnapState, deltaTime);
+    const CameraCommandResult cameraResult =
+        ApplyCameraCommandFrame(m_Camera, m_PendingCameraCommand, m_CameraSnapState, deltaTime);
+    m_Diagnostics.appliedLookDeltaDegrees = cameraResult.appliedLookDeltaDegrees;
 
     if (m_GravitySettings.enabled)
     {
@@ -1146,14 +1232,24 @@ void Application::Render(float deltaTime)
             {
                 for (TerrainTile& tile : dataset.tiles)
                 {
-                    if (!IsTerrainTileVisible(dataset, tile, cameraFrustum, terrainTranslation))
-                    {
-                        continue;
-                    }
+                    // Tiles that aren't ready yet won't be drawn this frame.
+                    // Skip the full frustum test (which does 4 GeoConverter
+                    // constructions) and only run it for the rare *unstarted*
+                    // tile that still needs to be scheduled — every other
+                    // in-flight tile already has tile.loading = true and would
+                    // just fall back through StartTerrainTileLoadJob() anyway.
                     if (!tile.loaded || !tile.meshLoaded)
                     {
-                        StartTerrainTileLoadJob(static_cast<int>(&dataset - m_TerrainDatasets.data()),
-                                                static_cast<int>(&tile - dataset.tiles.data()));
+                        if (!tile.loading &&
+                            IsTerrainTileVisible(dataset, tile, cameraFrustum, terrainTranslation))
+                        {
+                            StartTerrainTileLoadJob(static_cast<int>(&dataset - m_TerrainDatasets.data()),
+                                                    static_cast<int>(&tile - dataset.tiles.data()));
+                        }
+                        continue;
+                    }
+                    if (!IsTerrainTileVisible(dataset, tile, cameraFrustum, terrainTranslation))
+                    {
                         continue;
                     }
                     ++m_Diagnostics.visibleTerrainTiles;
@@ -1478,6 +1574,188 @@ void Application::Render(float deltaTime)
     const double swapStartMs = NowMs();
     m_Window.SwapBuffers();
     m_Diagnostics.swapCpuMs = static_cast<float>(NowMs() - swapStartMs);
+
+    // Feed the adaptive upload budget EMA (α = 0.2 → ~5-frame smoothing).
+    // The swap wait is our proxy for "how much slack the GPU/display gave us."
+    constexpr float kSwapAlpha = 0.2f;
+    m_AvgSwapWaitMs = m_AvgSwapWaitMs * (1.0f - kSwapAlpha) +
+                      m_Diagnostics.swapCpuMs * kSwapAlpha;
+
+    // NOTE: WritePerformanceLogRow() is now called from Run() AFTER
+    // frameCpuMs has been measured, so the frame_total_ms column matches
+    // the rest of the row (previously the log was emitted here, which
+    // captured the PREVIOUS frame's frameCpuMs and produced rows where
+    // swap_ms appeared larger than frame_total_ms).
+}
+
+void Application::TogglePerformanceLog()
+{
+    if (m_PerfLogActive)
+    {
+        // ── Stop ─────────────────────────────────────────────────────────────
+        if (m_PerfLog.is_open())
+        {
+            m_PerfLog.flush();
+            m_PerfLog.close();
+        }
+        m_PerfLogActive = false;
+        std::cout << "[GeoFPS] Performance log STOPPED.  "
+                  << m_PerfLogFrameIdx << " rows written to: "
+                  << m_PerfLogPath << '\n';
+        m_StatusMessage = std::string("Perf log stopped (") +
+                          std::to_string(m_PerfLogFrameIdx) + " rows): " +
+                          m_PerfLogPath;
+        return;
+    }
+
+    // ── Start ────────────────────────────────────────────────────────────────
+    // Pick a unique filename in the user's home directory (or CWD if HOME is
+    // not set).  Ends in .csv so the file is trivially openable in any
+    // spreadsheet, and the suffix is a wall-clock timestamp so successive
+    // runs don't overwrite each other.
+    const char* home = std::getenv("HOME");
+    const std::string dir = (home != nullptr) ? std::string(home) : std::string(".");
+    char stamp[32] = {0};
+    std::time_t now = std::time(nullptr);
+    std::strftime(stamp, sizeof(stamp), "%Y%m%d_%H%M%S", std::localtime(&now));
+    m_PerfLogPath = dir + "/geofps_perf_" + stamp + ".csv";
+    m_PerfLog.open(m_PerfLogPath, std::ios::out | std::ios::trunc);
+    if (!m_PerfLog.is_open())
+    {
+        std::cerr << "[GeoFPS] Failed to open perf log at " << m_PerfLogPath << '\n';
+        m_StatusMessage = "Perf log: failed to open " + m_PerfLogPath;
+        return;
+    }
+    // Header: every column we'll write per row.  Order matches WritePerformanceLogRow.
+    m_PerfLog <<
+        "frame,"
+        "elapsed_ms,"
+        "frame_total_ms,"
+        "input_ms,"
+        "update_ms,"
+        "ui_build_ms,"
+        "camera_apply_ms,"
+        "terrain_ms,"
+        "asset_ms,"
+        "sky_ms,"
+        "world_overlay_ms,"
+        "imgui_draw_ms,"
+        "mesh_upload_ms,"
+        "swap_ms,"
+        "gpu_frame_ms,"
+        "visible_terrain_tiles,"
+        "visible_terrain_chunks,"
+        "terrain_draw_calls,"
+        "asset_draw_calls,"
+        "sky_draw_calls,"
+        "total_draw_calls,"
+        "terrain_triangles,"
+        "asset_triangles,"
+        "total_triangles,"
+        "mesh_uploads_this_frame,"
+        "tile_chunk_uploads_this_frame,"
+        "tile_jobs_pending,"
+        "isoline_build_pending,"
+        "avg_swap_wait_ms,"
+        "render_origin_distance_m,"
+        "render_origin_float_step_m,"
+        "queued_look_x,"
+        "queued_look_y,"
+        "applied_look_x,"
+        "applied_look_y,"
+        "camera_yaw,"
+        "camera_pitch,"
+        "camera_pos_x,"
+        "camera_pos_y,"
+        "camera_pos_z,"
+        // ── Mouse-input diagnostics ─────────────────────────────────────────
+        // The raw kernel-level delta returned by CGGetLastMouseDelta on macOS
+        // (or the glfwGetCursorPos diff elsewhere).  Lets us tell whether
+        // mouse-look jitter is in the OS event delivery vs. our own pipeline.
+        "raw_mouse_dx_px,"
+        "raw_mouse_dy_px,"
+        // Where the loop's pacer wanted this frame to land vs where it
+        // actually started — directly visible "schedule slip".
+        "pace_target_ms,"
+        "pace_actual_start_ms,"
+        "pace_slip_ms"
+        "\n";
+    m_PerfLogFrameIdx = 0;
+    m_PerfLogStartMs  = NowMs();
+    m_PerfLogActive   = true;
+    std::cout << "[GeoFPS] Performance log STARTED -> " << m_PerfLogPath << '\n';
+    m_StatusMessage = "Perf log started: " + m_PerfLogPath;
+}
+
+void Application::WritePerformanceLogRow()
+{
+    if (!m_PerfLog.is_open())
+    {
+        return;
+    }
+    const double elapsedMs = NowMs() - m_PerfLogStartMs;
+    const glm::vec3 cameraPos = m_Camera.GetPosition();
+    // Each row mirrors the diagnostics panel + a few internals (tile-job
+    // queue depth, isoline build pending, EMA swap wait, camera state) so we
+    // can correlate spikes with workload.
+    m_PerfLog
+        << m_PerfLogFrameIdx                                << ','
+        << elapsedMs                                        << ','
+        << m_Diagnostics.frameCpuMs                         << ','
+        << m_Diagnostics.inputCpuMs                         << ','
+        << m_Diagnostics.updateCpuMs                        << ','
+        << m_Diagnostics.uiBuildCpuMs                       << ','
+        << m_Diagnostics.cameraApplyCpuMs                   << ','
+        << m_Diagnostics.terrainCpuMs                       << ','
+        << m_Diagnostics.assetCpuMs                         << ','
+        << m_Diagnostics.skyCpuMs                           << ','
+        << m_Diagnostics.worldOverlayCpuMs                  << ','
+        << m_Diagnostics.imguiCpuMs                         << ','
+        << m_Diagnostics.meshUploadCpuMs                    << ','
+        << m_Diagnostics.swapCpuMs                          << ','
+        << m_Diagnostics.gpuFrameMs                         << ','
+        << m_Diagnostics.visibleTerrainTiles                << ','
+        << m_Diagnostics.visibleTerrainChunks               << ','
+        << m_Diagnostics.terrainDrawCalls                   << ','
+        << m_Diagnostics.assetDrawCalls                     << ','
+        << m_Diagnostics.skyDrawCalls                       << ','
+        << m_Diagnostics.totalDrawCalls                     << ','
+        << m_Diagnostics.terrainTrianglesDrawn              << ','
+        << m_Diagnostics.assetTrianglesDrawn                << ','
+        << m_Diagnostics.totalTrianglesDrawn                << ','
+        << m_Diagnostics.meshUploadsThisFrame               << ','
+        << m_Diagnostics.tileChunkUploadsThisFrame          << ','
+        << m_TerrainTileBuildJobs.size()                    << ','
+        << (m_IsolineBuildPending ? 1 : 0)                  << ','
+        << m_AvgSwapWaitMs                                  << ','
+        << m_Diagnostics.renderOriginDistanceMeters         << ','
+        << m_Diagnostics.renderOriginFloatStepMeters        << ','
+        << m_Diagnostics.queuedLookDeltaDegrees.x           << ','
+        << m_Diagnostics.queuedLookDeltaDegrees.y           << ','
+        << m_Diagnostics.appliedLookDeltaDegrees.x          << ','
+        << m_Diagnostics.appliedLookDeltaDegrees.y          << ','
+        << m_Camera.GetYaw()                                << ','
+        << m_Camera.GetPitch()                              << ','
+        << cameraPos.x                                      << ','
+        << cameraPos.y                                      << ','
+        << cameraPos.z                                      << ','
+        << m_Window.GetLastRawMouseDelta().x                << ','
+        << m_Window.GetLastRawMouseDelta().y                << ','
+        // pace_target_ms = where the pacer was aiming for this frame (the
+        // m_NextFrameTargetMs *before* this iteration's increment).
+        // pace_actual_start_ms = when this frame actually started.
+        // slip = actual - target (positive => late, negative => early).
+        << (m_NextFrameTargetMs - (1000.0 / 60.0))          << ','
+        << m_FrameStartMs                                   << ','
+        << (m_FrameStartMs - (m_NextFrameTargetMs - (1000.0 / 60.0)))
+        << '\n';
+    ++m_PerfLogFrameIdx;
+    // Flush every ~120 rows (~1s @ 120fps) so the file isn't lost if the
+    // app crashes mid-recording.
+    if ((m_PerfLogFrameIdx & 127) == 0)
+    {
+        m_PerfLog.flush();
+    }
 }
 
 void Application::InitializeProject()

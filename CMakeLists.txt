@@ -127,8 +127,12 @@ if(APPLE)
     LANGUAGE CXX
     COMPILE_FLAGS "-x objective-c++"
   )
-  target_sources(GeoFPS PRIVATE src/Terrain/TerrainIsolineMetal.mm src/Core/NativeFileDialog.mm)
-  target_link_libraries(GeoFPS PRIVATE "-framework Cocoa" "-framework IOKit" "-framework CoreVideo" "-framework Metal" "-framework Foundation")
+  set_source_files_properties(src/Core/RawMouseMacOS.mm PROPERTIES
+    LANGUAGE CXX
+    COMPILE_FLAGS "-x objective-c++"
+  )
+  target_sources(GeoFPS PRIVATE src/Terrain/TerrainIsolineMetal.mm src/Core/NativeFileDialog.mm src/Core/RawMouseMacOS.mm)
+  target_link_libraries(GeoFPS PRIVATE "-framework Cocoa" "-framework IOKit" "-framework CoreVideo" "-framework Metal" "-framework Foundation" "-framework ApplicationServices")
 endif()
 
 if(MSVC)

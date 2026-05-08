@@ -235,6 +235,12 @@
 },
 {
   "directory": "/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug",
+  "command": "/usr/bin/c++ -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/stb-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/tinygltf-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glfw-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glm-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glad-src/include -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src/backends -iframework /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks -x c++ -g -std=c++20 -arch arm64 -Wall -Wextra -Wpedantic -x objective-c++ -o CMakeFiles/GeoFPS.dir/src/Core/RawMouseMacOS.mm.o -c /Users/dhurianvitoldas/Documents/Development/GeoFPS/src/Core/RawMouseMacOS.mm",
+  "file": "/Users/dhurianvitoldas/Documents/Development/GeoFPS/src/Core/RawMouseMacOS.mm",
+  "output": "/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/CMakeFiles/GeoFPS.dir/src/Core/RawMouseMacOS.mm.o"
+},
+{
+  "directory": "/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug",
   "command": "/usr/bin/c++ -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/imgui-src/backends -I/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/_deps/glm-src -g -std=c++20 -arch arm64 -o CMakeFiles/GeoFPSTests.dir/tests/TerrainProfileTests.cpp.o -c /Users/dhurianvitoldas/Documents/Development/GeoFPS/tests/TerrainProfileTests.cpp",
   "file": "/Users/dhurianvitoldas/Documents/Development/GeoFPS/tests/TerrainProfileTests.cpp",
   "output": "/Users/dhurianvitoldas/Documents/Development/GeoFPS/build/macos-debug/CMakeFiles/GeoFPSTests.dir/tests/TerrainProfileTests.cpp.o"

@@ -65,9 +65,27 @@ glm::mat4 Camera::GetViewMatrix() const
 
 glm::mat4 Camera::GetViewMatrixRotationOnly() const
 {
-    // Strip the translation component so the skybox stays centred on the camera
-    // regardless of position — take only the upper-left 3×3 rotation block.
-    return glm::mat4(glm::mat3(GetViewMatrix()));
+    // Build the rotation-only view matrix from the forward direction *at the
+    // origin*, never using m_Position.
+    //
+    // The naive implementation `glm::mat4(glm::mat3(GetViewMatrix()))` calls
+    // glm::lookAt(m_Position, m_Position + GetForward(), up).  That looks
+    // innocent, but lookAt's first internal step is `target - eye`, computed
+    // in glm::vec3 (single-precision float).  At large camera distances from
+    // world origin (e.g. ~6 M m in Nepal) the addition `m_Position + forward`
+    // rounds to the float resolution at that magnitude — about 0.5 m — and
+    // when the subtraction recovers the forward vector it has lost up to
+    // 0.5 m / |forward_component|, i.e. up to ~50% of the actual change for
+    // a small yaw/pitch step.  The visible effect is that the view matrix
+    // *snaps* between discrete rotation states as the user mouses smoothly:
+    // the "choppy mouse only in Nepal" / "smooth in Lisbon" mystery.
+    //
+    // By constructing lookAt with eye = (0,0,0) we keep all the inputs in
+    // the unit-magnitude regime, where float precision is ~7 decimal digits
+    // and rotation interpolates as smoothly as our yaw/pitch values do.
+    return glm::lookAt(glm::vec3(0.0f),
+                       GetForward(),
+                       glm::vec3(0.0f, 1.0f, 0.0f));
 }
 
 glm::mat4 Camera::GetProjectionMatrix() const

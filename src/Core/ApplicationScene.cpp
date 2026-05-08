@@ -883,11 +883,57 @@ void Application::ProcessBackgroundJobs()
     m_Diagnostics.tileChunkUploadsThisFrame = 0;
     m_Diagnostics.meshUploadCpuMs = 0.0f;
 
-    // Limit terrain tile GPU uploads to one chunk per frame. A single tile can
-    // contain many render chunks, and uploading all of them together is enough
-    // to make mouse look feel jerky.
-    int tileChunkUploadsThisFrame = 0;
-    constexpr int kMaxTileChunkUploadsPerFrame = 1;
+    // Adaptive time-budget for GPU chunk uploads.
+    //
+    // The budget is the MIN of two independent estimates:
+    //
+    //   1. slackBudget — last frame's actual SwapBuffers wait time (EMA),
+    //      minus a safety margin.  This is the directly measured slack the
+    //      GPU/vsync gave us.  On a 120Hz display where we're rendering at
+    //      ~9ms per frame, swap wait is near zero and slackBudget is 0 —
+    //      meaning "you have no headroom, upload only the mandatory chunk."
+    //      On a 60Hz display where rendering is ~5ms, swap wait is ~10ms
+    //      and we get a generous slackBudget.  This adapts to display rate
+    //      WITHOUT us having to know what the rate is.
+    //
+    //   2. timeBudget — the 60Hz frame target minus elapsed-this-frame.  A
+    //      hard ceiling so a single bad frame doesn't blow past 16.67ms,
+    //      regardless of what the EMA says.
+    //
+    // Taking the MIN of the two means: we only upload as much as BOTH the
+    // measured slack AND the worst-case frame budget allow.  A previous
+    // version used only timeBudget, which on 120Hz incorrectly authorised
+    // 7-10ms of uploads on every frame and caused vsync misses.  A version
+    // before that used only slackBudget (lagged by one frame).
+    //
+    // We always do at least one chunk so streaming progresses even when both
+    // budgets are zero.
+    constexpr double kTargetFrameMs      = 1000.0 / 60.0; // hard ceiling
+    constexpr double kBudgetSafetyMargin = 1.5;
+    const double elapsedThisFrameMs = NowMs() - m_FrameStartMs;
+    const double timeBudget  = std::max(0.0,
+        kTargetFrameMs - elapsedThisFrameMs - kBudgetSafetyMargin);
+    const double slackBudget = std::max(0.0,
+        static_cast<double>(m_AvgSwapWaitMs) - kBudgetSafetyMargin);
+    const double uploadBudgetMs    = std::min(timeBudget, slackBudget);
+    const double uploadWindowStart = NowMs();
+    int chunksUploaded = 0;
+
+    // Returns true when the budget still has headroom (first chunk always allowed).
+    auto canUploadChunk = [&]() -> bool {
+        if (chunksUploaded == 0) return true;
+        return (NowMs() - uploadWindowStart) < uploadBudgetMs;
+    };
+
+    // Call after every successful Mesh() upload to update the EMA and counters.
+    auto onChunkUploaded = [&](double chunkMs) {
+        constexpr float kAlpha = 0.1f; // ~10-frame window
+        m_AvgChunkUploadMs = m_AvgChunkUploadMs * (1.0f - kAlpha) +
+                             static_cast<float>(chunkMs) * kAlpha;
+        ++chunksUploaded;
+        ++m_Diagnostics.meshUploadsThisFrame;
+        ++m_Diagnostics.tileChunkUploadsThisFrame;
+    };
 
     for (auto iterator = m_TerrainTileBuildJobs.begin(); iterator != m_TerrainTileBuildJobs.end();)
     {
@@ -919,7 +965,7 @@ void Application::ProcessBackgroundJobs()
 
             if (iterator->nextChunkUploadIndex < result.chunks.size())
             {
-                if (tileChunkUploadsThisFrame >= kMaxTileChunkUploadsPerFrame)
+                if (!canUploadChunk())
                 {
                     break;
                 }
@@ -935,12 +981,11 @@ void Application::ProcessBackgroundJobs()
                 chunk.meshData = std::move(chunkData.meshData);
                 const double uploadStartMs = NowMs();
                 chunk.mesh = std::make_unique<Mesh>(chunk.meshData);
-                m_Diagnostics.meshUploadCpuMs += static_cast<float>(NowMs() - uploadStartMs);
-                ++m_Diagnostics.meshUploadsThisFrame;
-                ++m_Diagnostics.tileChunkUploadsThisFrame;
+                const double chunkMs = NowMs() - uploadStartMs;
+                m_Diagnostics.meshUploadCpuMs += static_cast<float>(chunkMs);
+                onChunkUploaded(chunkMs);
                 tile.chunks.push_back(std::move(chunk));
                 ++iterator->nextChunkUploadIndex;
-                ++tileChunkUploadsThisFrame;
             }
 
             if (iterator->nextChunkUploadIndex < result.chunks.size())
@@ -960,7 +1005,9 @@ void Application::ProcessBackgroundJobs()
             }
             if (result.terrainIndex == m_ActiveTerrainIndex)
             {
-                MarkTerrainIsolineSampleGridDirty();
+                // Patch only this tile's grid cells instead of rebuilding the
+                // entire sample grid — the heightmap stays correct in real time.
+                UpdateTerrainIsolineSampleGridForTile(tile);
             }
 
             iterator = m_TerrainTileBuildJobs.erase(iterator);
@@ -1014,17 +1061,16 @@ void Application::ProcessBackgroundJobs()
     }
 
     // Two-phase loop: Phase 1 resolves the future and uploads the main mesh;
-    // Phase 2 drains render chunks one per frame (same kMaxTileChunkUploadsPerFrame
-    // budget shared with the tile path above) to prevent a single large terrain
-    // dataset from stalling the frame for tens of milliseconds.
+    // Phase 2 drains render chunks (shared adaptive time-budget with the tile
+    // path above) to prevent a large terrain dataset from stalling the frame.
     for (auto iterator = m_TerrainBuildJobs.begin(); iterator != m_TerrainBuildJobs.end();)
     {
-        // ── Phase 2: drain one chunk per frame ────────────────────────────────
+        // ── Phase 2: drain chunks within budget ───────────────────────────────
         if (iterator->uploadStarted)
         {
             if (iterator->nextChunkIndex < iterator->pendingChunks.size())
             {
-                if (tileChunkUploadsThisFrame >= kMaxTileChunkUploadsPerFrame)
+                if (!canUploadChunk())
                 {
                     break;
                 }
@@ -1045,13 +1091,12 @@ void Application::ProcessBackgroundJobs()
                     chunk.meshData = std::move(chunkData.meshData);
                     const double uploadStartMs = NowMs();
                     chunk.mesh = std::make_unique<Mesh>(chunk.meshData);
-                    m_Diagnostics.meshUploadCpuMs += static_cast<float>(NowMs() - uploadStartMs);
-                    ++m_Diagnostics.meshUploadsThisFrame;
-                    ++m_Diagnostics.tileChunkUploadsThisFrame;
+                    const double chunkMs = NowMs() - uploadStartMs;
+                    m_Diagnostics.meshUploadCpuMs += static_cast<float>(chunkMs);
+                    onChunkUploaded(chunkMs);
                     dataset.chunks.push_back(std::move(chunk));
                 }
                 ++iterator->nextChunkIndex;
-                ++tileChunkUploadsThisFrame;
                 ++iterator;
                 continue;
             }
@@ -1765,6 +1810,67 @@ void Application::LoadActiveTerrainIntoScene()
     m_ProfileMapViewInitialized = false;
     MarkTerrainIsolineSampleGridDirty();
     RebuildAllTerrainProfileSamples();
+    // NOTE: we deliberately do NOT translate the camera into the new frame
+    // here.  An earlier version did, on the theory that preserving the
+    // camera's *world* position would make a dataset switch invisible.  In
+    // practice users want the opposite: when they load Nepal, they want the
+    // camera near the Nepal data — not preserved at an old global position
+    // that happens to be 9 M m from the new origin.  Preserving caused a
+    // "black screen after Nepal load" because the camera ended up far
+    // beyond the 50 km far plane.  The RebaseLocalOriginToCamera() helper
+    // remains available for explicit/manual rebases when the camera *has*
+    // genuinely walked far from origin during play.
+}
+
+void Application::RebaseLocalOriginToCamera()
+{
+    // Threshold for "close enough to origin" — beyond this we rebase.  At
+    // 5 km the float resolution at the camera is ~0.6 µm (well into precision
+    // overkill territory), so triggering here keeps us comfortably away from
+    // the precision wall without rebasing on every tiny excursion.
+    constexpr float kRebaseThresholdMeters = 5000.0f;
+    const glm::vec3 oldCamPos = m_Camera.GetPosition();
+    const float distanceFromOrigin =
+        std::sqrt(oldCamPos.x * oldCamPos.x + oldCamPos.z * oldCamPos.z);
+    if (distanceFromOrigin < kRebaseThresholdMeters)
+    {
+        return; // already in the high-precision regime
+    }
+
+    // Compute the camera's current geographic position in the OLD frame,
+    // then make THAT the new local origin.  After the rebase the camera
+    // sits at (0, oldCamPos.y, 0) with full float precision.
+    const GeoConverter oldConv(m_GeoReference);
+    const glm::dvec3 cameraGeo = oldConv.ToGeographic(glm::dvec3(oldCamPos));
+
+    GeoReference newRef;
+    newRef.originLatitude  = cameraGeo.x; // ToGeographic returns (lat, lon, height)
+    newRef.originLongitude = cameraGeo.y;
+    newRef.originHeight    = m_GeoReference.originHeight; // keep height datum stable
+
+    // Where the new origin sits in the OLD frame.  By construction this is
+    // (oldCamPos.x, 0, oldCamPos.z) — but we recompute via the converter so
+    // we're not assuming the latitude-distortion math.
+    const glm::dvec3 newOriginInOldFrame = oldConv.ToLocal(
+        newRef.originLatitude, newRef.originLongitude, newRef.originHeight);
+    const glm::vec3 translation = -glm::vec3(newOriginInOldFrame);
+
+    m_Camera.SetPosition(oldCamPos + translation);
+    for (ImportedAsset& asset : m_ImportedAssets)
+    {
+        if (!asset.useGeographicPlacement)
+        {
+            asset.position += translation;
+        }
+    }
+
+    m_GeoReference = newRef;
+
+    std::cout << "[GeoFPS] Local origin auto-rebased to (" << newRef.originLatitude
+              << "°, " << newRef.originLongitude << "°).  Camera now at ("
+              << m_Camera.GetPosition().x << ", "
+              << m_Camera.GetPosition().y << ", "
+              << m_Camera.GetPosition().z << ")\n";
 }
 
 void Application::RebuildTerrainProfileSamples(TerrainProfile& profile)
@@ -1939,6 +2045,64 @@ void Application::MarkTerrainIsolineSampleGridDirty()
     MarkTerrainIsolinesDirty();
 }
 
+void Application::UpdateTerrainIsolineSampleGridForTile(const TerrainTile& tile)
+{
+    // If the sample grid hasn't been built yet, fall back to a full rebuild.
+    if (!m_TerrainIsolineSampleGrid.IsValid())
+    {
+        MarkTerrainIsolineSampleGridDirty();
+        return;
+    }
+
+    // Tile must have usable height data.
+    if (!tile.loaded || !tile.heightGrid.IsValid() || !tile.bounds.valid)
+        return;
+
+    TerrainIsolineSampleGrid& grid = m_TerrainIsolineSampleGrid;
+    const int resX = grid.resolutionX;
+    const int resZ = grid.resolutionZ;
+
+    // Patch only the grid cells whose lat/lon falls inside this tile's bounds.
+    // For a 64×64 grid over 260 equal tiles, this touches ~16 cells per tile —
+    // orders of magnitude cheaper than the full O(resX × resZ × numTiles) rebuild.
+    bool updated = false;
+    for (int z = 0; z < resZ; ++z)
+    {
+        const double v        = static_cast<double>(z) / static_cast<double>(resZ - 1);
+        const double latitude = grid.minLatitude + (grid.maxLatitude - grid.minLatitude) * v;
+        if (latitude < tile.bounds.minLatitude || latitude > tile.bounds.maxLatitude)
+            continue;
+
+        for (int x = 0; x < resX; ++x)
+        {
+            const double u         = static_cast<double>(x) / static_cast<double>(resX - 1);
+            const double longitude = grid.minLongitude + (grid.maxLongitude - grid.minLongitude) * u;
+            if (longitude < tile.bounds.minLongitude || longitude > tile.bounds.maxLongitude)
+                continue;
+
+            // Sample directly from this tile — no multi-tile scan.
+            grid.heights[static_cast<size_t>(z * resX + x)] =
+                static_cast<float>(tile.heightGrid.SampleHeight(latitude, longitude));
+            updated = true;
+        }
+    }
+
+    if (!updated)
+        return;
+
+    // Recompute global height extents from the patched grid (cheap: just floats).
+    grid.minHeight = std::numeric_limits<double>::max();
+    grid.maxHeight = std::numeric_limits<double>::lowest();
+    for (const float h : grid.heights)
+    {
+        grid.minHeight = std::min(grid.minHeight, static_cast<double>(h));
+        grid.maxHeight = std::max(grid.maxHeight, static_cast<double>(h));
+    }
+
+    // Only the isoline segments need regeneration — the sample grid is already correct.
+    MarkTerrainIsolinesDirty();
+}
+
 void Application::RebuildTerrainIsolineSampleGridIfNeeded()
 {
     if (!m_TerrainIsolineSampleGridDirty)
@@ -1956,15 +2120,11 @@ void Application::RebuildTerrainIsolineSampleGridIfNeeded()
             return;
         }
 
-        // For tiled terrain, SampleTerrainHeightAt() scans all tiles linearly —
-        // an O(resX × resZ × numTiles) operation.  While tiles are still streaming
-        // in, every tile completion marks the grid dirty again anyway, so there is
-        // no value in rebuilding mid-stream.  Defer until the last tile settles.
-        if (!m_TerrainTileBuildJobs.empty())
-        {
-            return;
-        }
-
+        // Full rebuild: samples every grid point via SampleTerrainHeightAt().
+        // For tiled terrain this is O(resX × resZ × numTiles) — only done once
+        // (initial build or after settings change).  Subsequent tile completions
+        // use UpdateTerrainIsolineSampleGridForTile() which patches only the
+        // affected grid cells directly from the tile's own heightGrid (O(cells_in_tile)).
         TerrainIsolineSampleGrid sampleGrid;
         sampleGrid.resolutionX = std::clamp(m_IsolineSettings.resolutionX, 2, 512);
         sampleGrid.resolutionZ = std::clamp(m_IsolineSettings.resolutionZ, 2, 512);
@@ -2010,28 +2170,76 @@ void Application::RebuildTerrainIsolineSampleGridIfNeeded()
 
 void Application::RebuildTerrainIsolines()
 {
+    // Build (or update) the sample grid synchronously — this is cheap for
+    // incremental tile patches and only expensive once (initial tiled build).
     RebuildTerrainIsolineSampleGridIfNeeded();
+
     if (!m_TerrainIsolineSampleGrid.IsValid())
     {
         m_TerrainIsolines.clear();
         m_TerrainIsolinesUsedGpu = false;
-        m_TerrainIsolinesDirty = false;
+        m_TerrainIsolinesDirty   = false;
         return;
     }
 
-    m_TerrainIsolines = GenerateTerrainIsolinesAccelerated(m_TerrainIsolineSampleGrid,
-                                                           m_IsolineSettings,
-                                                           m_UseGpuIsolineGeneration,
-                                                           &m_TerrainIsolinesUsedGpu);
-    m_TerrainIsolinesDirty = false;
+    // If a build is already in flight, let it finish — don't queue another.
+    // The dirty flag was already cleared when the job was submitted; it will
+    // be set again by MarkTerrainIsolinesDirty() if the data changes.
+    if (m_IsolineBuildPending)
+        return;
+
+    // Submit segment generation to a background worker.  We always use the
+    // CPU marching-squares path (useGpu = false) because Metal compute cannot
+    // be safely dispatched from a worker thread on macOS.  The previous set of
+    // isoline segments remains visible until the result is harvested — no gap.
+    auto gridCopy     = m_TerrainIsolineSampleGrid; // value copy (floats + metadata)
+    auto settingsCopy = m_IsolineSettings;
+
+    if (m_BackgroundJobs)
+    {
+        m_IsolineBuildFuture = m_BackgroundJobs->Enqueue(
+            [grid = std::move(gridCopy), settings = std::move(settingsCopy)]() mutable {
+                bool usedGpu = false;
+                return GenerateTerrainIsolinesAccelerated(grid, settings, /*useGpu=*/false, &usedGpu);
+            });
+        m_IsolineBuildPending  = true;
+        m_TerrainIsolinesDirty = false;
+    }
+    else
+    {
+        // No job queue (e.g. early init) — fall back to synchronous CPU build.
+        m_TerrainIsolines = GenerateTerrainIsolinesAccelerated(
+            m_TerrainIsolineSampleGrid, m_IsolineSettings, /*useGpu=*/false, &m_TerrainIsolinesUsedGpu);
+        m_TerrainIsolinesDirty   = false;
+        m_TerrainIsolinesUsedGpu = false;
+    }
 }
 
 void Application::RebuildTerrainIsolinesIfNeeded()
 {
-    if (!m_TerrainIsolinesDirty)
+    // ── Harvest a completed async build ─────────────────────────────────────
+    // Check this unconditionally so the result is picked up even on frames
+    // where m_TerrainIsolinesDirty happens to be false.
+    if (m_IsolineBuildPending &&
+        m_IsolineBuildFuture.valid() &&
+        m_IsolineBuildFuture.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
     {
-        return;
+        try
+        {
+            m_TerrainIsolines = m_IsolineBuildFuture.get();
+        }
+        catch (const std::exception& ex)
+        {
+            std::cerr << "[GeoFPS] Async isoline build failed: " << ex.what() << '\n';
+            m_TerrainIsolines.clear();
+        }
+        m_IsolineBuildPending    = false;
+        m_TerrainIsolinesUsedGpu = false; // CPU path was always used
     }
+
+    // ── Submit a new build if data changed ───────────────────────────────────
+    if (!m_TerrainIsolinesDirty)
+        return;
 
     RebuildTerrainIsolines();
 }
