@@ -2349,12 +2349,27 @@ size_t Application::CountSceneTriangles() const
 
 float Application::SampleTerrainHeightAt(double latitude, double longitude) const
 {
-    if (!m_TerrainHeightGrid.IsValid())
+    // m_TerrainHeightGrid is the *monolithic* height grid for the active
+    // dataset.  It's only populated when the active dataset isn't tiled —
+    // tile-streamed datasets (Nepal) keep their height data inside each
+    // TerrainTile and leave m_TerrainHeightGrid invalid.  If we returned
+    // m_GeoReference.originHeight in that case, callers would silently get
+    // a flat plane (e.g. SnapSelectedImportedAssetsToTerrain would snap
+    // every asset to the manifest's origin elevation instead of the actual
+    // terrain).  Delegate to the dataset-aware overload, which properly
+    // walks the active dataset's tile bounds and per-tile heightGrids.
+    if (m_TerrainHeightGrid.IsValid())
     {
-        return static_cast<float>(m_GeoReference.originHeight);
+        return static_cast<float>(m_TerrainHeightGrid.SampleHeight(latitude, longitude));
     }
 
-    return static_cast<float>(m_TerrainHeightGrid.SampleHeight(latitude, longitude));
+    const TerrainDataset* activeTerrain = GetActiveTerrainDataset();
+    if (activeTerrain != nullptr && activeTerrain->loaded)
+    {
+        return SampleTerrainHeightAt(*activeTerrain, latitude, longitude);
+    }
+
+    return static_cast<float>(m_GeoReference.originHeight);
 }
 
 float Application::SampleTerrainHeightAt(const TerrainDataset& dataset, double latitude, double longitude) const

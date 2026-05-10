@@ -506,23 +506,37 @@ void Application::ProcessInput(float deltaTime)
         m_Window.RefreshCursorCapture();
     }
 
-    // Speed +/-: detect by character, not physical key code, so the correct
-    // key fires on every keyboard layout (e.g. on Scandinavian keyboards '+' is
-    // at the GLFW_KEY_MINUS physical position — char detection handles this
-    // transparently).  Numpad +/- are layout-independent so we keep their
-    // physical key check as a fallback.
-    // Speed keys are layout-aware via the typed-character path, layout-
-    // independent via the numpad keys.  We deliberately do NOT use the
-    // positional GLFW_KEY_MINUS / GLFW_KEY_EQUAL because those refer to the
-    // *US-QWERTY positions* of those keys — on a Danish keyboard the '+'
-    // character is at GLFW_KEY_MINUS, so accepting that key as "decrease"
-    // means every Danish '+' press fires both increase (via WasCharTyped)
-    // AND decrease (via IsKeyPressed) in the same frame, cancelling out and
-    // making the speed keys appear dead.  Reference: Danish ISO top row is
+    // Speed +/-: detect by typed character, not physical key code, so the
+    // correct key fires on every keyboard layout (e.g. on Scandinavian
+    // keyboards '+' is at the GLFW_KEY_MINUS physical position — char
+    // detection handles this transparently).  Numpad +/- are layout-
+    // independent so we keep their physical key check as a fallback.
+    //
+    // We deliberately do NOT use the positional GLFW_KEY_MINUS /
+    // GLFW_KEY_EQUAL because those refer to the *US-QWERTY positions*
+    // of those keys — on a Danish keyboard the '+' character is at
+    // GLFW_KEY_MINUS, so accepting that key as "decrease" means every
+    // Danish '+' press fires both increase (via WasCharTyped) AND
+    // decrease (via IsKeyPressed) in the same frame, cancelling out and
+    // making the speed keys appear dead.  (Danish ISO top row is
     // "§ 1 2 3 4 5 6 7 8 9 0 + ´", with '-' on the bottom row at
-    // GLFW_KEY_SLASH — so neither MINUS nor EQUAL is safe across layouts.
+    // GLFW_KEY_SLASH — so neither MINUS nor EQUAL is safe across layouts.)
+    //
+    // What we DO accept, in addition to '+' and '-':
+    //   * '=' (the unshifted form of '+' on a US keyboard) — many users
+    //     tap '=' while holding WASD rather than reach for Shift to type
+    //     a real '+' character.  Treating '=' as increase keeps the
+    //     shortcut accessible on a US layout without requiring the user
+    //     to hold a modifier mid-fly.
+    //   * '_' (the shifted form of '-' on a US keyboard) — symmetric
+    //     fallback for users who happen to be holding Shift when they
+    //     tap the decrease key.
+    // These extras don't conflict on any layout we know of: '_' isn't a
+    // single-keypress character anywhere mainstream, and '=' isn't bound
+    // to anything else here.
     const bool increaseSpeedPressed =
         m_Window.WasCharTyped('+') ||
+        m_Window.WasCharTyped('=') ||
         m_Window.IsKeyPressed(GLFW_KEY_KP_ADD);
     if (increaseSpeedPressed && !increaseSpeedPressedLastFrame)
     {
@@ -533,6 +547,7 @@ void Application::ProcessInput(float deltaTime)
 
     const bool decreaseSpeedPressed =
         m_Window.WasCharTyped('-') ||
+        m_Window.WasCharTyped('_') ||
         m_Window.IsKeyPressed(GLFW_KEY_KP_SUBTRACT);
     if (decreaseSpeedPressed && !decreaseSpeedPressedLastFrame)
     {

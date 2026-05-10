@@ -255,11 +255,18 @@ void Application::RenderMiniMap()
         }
     }
 
+    // Camera-heading arrow on the atlas.  forward.z corresponds to the
+    // world Z axis, which is now NEGATIVE when looking north (after the
+    // GeoConverter Z-flip).  Screen-Y also increases downward, so a
+    // negative forward.z lands on negative screen-Y = "up on screen" =
+    // north — exactly what we want on a north-up atlas.  An older version
+    // negated direction.y to compensate for forward.z=+1=north under the
+    // old convention; that compensation now points the arrow backwards
+    // and is removed.
     const glm::vec3 forward = m_Camera.GetForward();
     const glm::vec2 forward2D(forward.x, forward.z);
     const float forwardLength = glm::length(forward2D);
     glm::vec2 direction = forwardLength > 0.0001f ? (forward2D / forwardLength) : glm::vec2(0.0f, -1.0f);
-    direction.y *= -1.0f;
 
     drawList->AddCircle(cameraPoint, visibleRangeRadiusPixels, IM_COL32(80, 180, 255, 120), 64, 1.5f);
     const ImVec2 directionPoint(cameraPoint.x + (direction.x * 16.0f), cameraPoint.y + (direction.y * 16.0f));
