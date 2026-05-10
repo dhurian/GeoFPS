@@ -652,8 +652,15 @@ void Application::ProcessInput(float deltaTime)
     m_PerfLogToggleLastFrame = perfLogTogglePressed;
 
     // ── View snap keyboard shortcuts (Numpad, works in FPS mode) ─────────────
-    // Numpad 1 = Front (-Z), Numpad 3 = Right (+X), Numpad 7 = Top (down),
-    // Numpad 9 = Bottom (up), Numpad 4/6 = orbit left/right 45°, Numpad 8/2 = orbit up/down
+    // Numpad orthographic-view snaps.  Yaw values reflect the geographic
+    // convention now that the GeoConverter maps north → −Z (so −Z is "into
+    // the page" on a north-up map):
+    //   Front  = look NORTH   (forward = −Z)
+    //   Right  = look WEST    (forward = −X, viewer stands on the east side)
+    //   Top    = bird's eye, NORTH at top of screen (matches H-key recenter
+    //            and the 2D minimap / profile-maker map)
+    //   Bottom = ground-up;  yaw kept consistent with Top so cardinal
+    //            directions don't suddenly flip when toggling between them.
     {
         static bool kp1Last=false, kp3Last=false, kp7Last=false, kp9Last=false;
         static bool kp4Last=false, kp6Last=false, kp8Last=false, kp2Last=false;
@@ -665,10 +672,10 @@ void Application::ProcessInput(float deltaTime)
         const bool kp6 = m_Window.IsKeyPressed(GLFW_KEY_KP_6);
         const bool kp8 = m_Window.IsKeyPressed(GLFW_KEY_KP_8);
         const bool kp2 = m_Window.IsKeyPressed(GLFW_KEY_KP_2);
-        if (kp1 && !kp1Last) SnapCameraView(  0.0f,   0.0f);  // Front  (look -Z)
-        if (kp3 && !kp3Last) SnapCameraView( 90.0f,   0.0f);  // Right  (look -X)
-        if (kp7 && !kp7Last) SnapCameraView(  0.0f, -89.0f);  // Top    (look down)
-        if (kp9 && !kp9Last) SnapCameraView(  0.0f,  89.0f);  // Bottom (look up)
+        if (kp1 && !kp1Last) SnapCameraView( -90.0f,   0.0f);  // Front  (look north, -Z)
+        if (kp3 && !kp3Last) SnapCameraView( 180.0f,   0.0f);  // Right  (look west, -X)
+        if (kp7 && !kp7Last) SnapCameraView( -90.0f, -89.0f);  // Top    (down, north on top)
+        if (kp9 && !kp9Last) SnapCameraView( -90.0f,  89.0f);  // Bottom (up,   south on top)
         if (kp4 && !kp4Last) SnapCameraView(m_CameraSnapState.active ? m_CameraSnapState.targetYaw - 45.0f : m_Camera.GetYaw() - 45.0f, m_Camera.GetPitch());
         if (kp6 && !kp6Last) SnapCameraView(m_CameraSnapState.active ? m_CameraSnapState.targetYaw + 45.0f : m_Camera.GetYaw() + 45.0f, m_Camera.GetPitch());
         if (kp8 && !kp8Last) SnapCameraView(m_Camera.GetYaw(), std::clamp(m_Camera.GetPitch() + 15.0f, -89.0f, 89.0f));

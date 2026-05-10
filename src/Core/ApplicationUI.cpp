@@ -2610,10 +2610,14 @@ void Application::ProcessOrientationGizmoInput()
         float snapYaw;
         float snapPitch;
     };
+    // Snap yaws are chosen so that clicking +Y (the world up axis) gives a
+    // top-down view with NORTH at the top of the screen — matching the
+    // GeoConverter's north → −Z convention used everywhere else.  The +Z
+    // arm naturally aligns with looking north (forward = −Z).
     const std::array<AxisDef, 3> axes = {{
-        {{1, 0, 0}, 180.0f, 0.0f},
-        {{0, 1, 0}, 0.0f, -89.0f},
-        {{0, 0, 1}, -90.0f, 0.0f},
+        {{1, 0, 0}, 180.0f,   0.0f},
+        {{0, 1, 0}, -90.0f, -89.0f},
+        {{0, 0, 1}, -90.0f,   0.0f},
     }};
 
     const glm::mat4 rot = m_Camera.GetViewMatrixRotationOnly();
@@ -2730,10 +2734,13 @@ void Application::RenderOrientationGizmo()
         float       snapYaw;
         float       snapPitch;
     };
+    // Keep snap yaws synchronised with the input-handler axes table in
+    // ProcessOrientationGizmoInput().  See comment there for why +Y is
+    // yaw=−90 (top-down with north on top, after the GeoConverter Z-flip).
     const std::array<AxisDef, 3> axes = {{
-        { { 1, 0, 0}, IM_COL32(220,  70,  70, 255), IM_COL32(220,  70,  70, 100), "X",  180.0f,   0.0f },
-        { { 0, 1, 0}, IM_COL32( 70, 205, 100, 255), IM_COL32( 70, 205, 100, 100), "Y",    0.0f, -89.0f },
-        { { 0, 0, 1}, IM_COL32( 75, 140, 225, 255), IM_COL32( 75, 140, 225, 100), "Z",  -90.0f,   0.0f },
+        { { 1, 0, 0}, IM_COL32(220,  70,  70, 255), IM_COL32(220,  70,  70, 100), "X", 180.0f,   0.0f },
+        { { 0, 1, 0}, IM_COL32( 70, 205, 100, 255), IM_COL32( 70, 205, 100, 100), "Y", -90.0f, -89.0f },
+        { { 0, 0, 1}, IM_COL32( 75, 140, 225, 255), IM_COL32( 75, 140, 225, 100), "Z", -90.0f,   0.0f },
     }};
 
     // ── Project axes through view rotation ───────────────────────────────────
