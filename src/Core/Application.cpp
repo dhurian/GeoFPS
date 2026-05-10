@@ -511,8 +511,19 @@ void Application::ProcessInput(float deltaTime)
     // at the GLFW_KEY_MINUS physical position — char detection handles this
     // transparently).  Numpad +/- are layout-independent so we keep their
     // physical key check as a fallback.
+    // Speed keys are layout-aware via the typed-character path, layout-
+    // independent via the numpad keys.  We deliberately do NOT use the
+    // positional GLFW_KEY_MINUS / GLFW_KEY_EQUAL because those refer to the
+    // *US-QWERTY positions* of those keys — on a Danish keyboard the '+'
+    // character is at GLFW_KEY_MINUS, so accepting that key as "decrease"
+    // means every Danish '+' press fires both increase (via WasCharTyped)
+    // AND decrease (via IsKeyPressed) in the same frame, cancelling out and
+    // making the speed keys appear dead.  Reference: Danish ISO top row is
+    // "§ 1 2 3 4 5 6 7 8 9 0 + ´", with '-' on the bottom row at
+    // GLFW_KEY_SLASH — so neither MINUS nor EQUAL is safe across layouts.
     const bool increaseSpeedPressed =
-        m_Window.WasCharTyped('+') || m_Window.IsKeyPressed(GLFW_KEY_KP_ADD);
+        m_Window.WasCharTyped('+') ||
+        m_Window.IsKeyPressed(GLFW_KEY_KP_ADD);
     if (increaseSpeedPressed && !increaseSpeedPressedLastFrame)
     {
         m_BaseMoveSpeed = std::clamp(m_BaseMoveSpeed * 1.5f, 0.5f, 3000.0f);
@@ -521,13 +532,105 @@ void Application::ProcessInput(float deltaTime)
     increaseSpeedPressedLastFrame = increaseSpeedPressed;
 
     const bool decreaseSpeedPressed =
-        m_Window.WasCharTyped('-') || m_Window.IsKeyPressed(GLFW_KEY_KP_SUBTRACT);
+        m_Window.WasCharTyped('-') ||
+        m_Window.IsKeyPressed(GLFW_KEY_KP_SUBTRACT);
     if (decreaseSpeedPressed && !decreaseSpeedPressedLastFrame)
     {
         m_BaseMoveSpeed = std::clamp(m_BaseMoveSpeed / 1.5f, 0.5f, 3000.0f);
         m_StatusMessage = "Camera speed: " + std::to_string(static_cast<int>(std::round(m_BaseMoveSpeed))) + " m/s";
     }
     decreaseSpeedPressedLastFrame = decreaseSpeedPressed;
+
+    // ── Recenter camera (H) ──────────────────────────────────────────────────
+    // Recovery hotkey for "camera teleported to megameter-land" / "I can't
+    // find the terrain".  Snaps the camera to a vantage point well above the
+    // active dataset's max height, looking down at the dataset centre — so
+    // the terrain fills the view regardless of how far the camera had drifted.
+    //
+    // Why this matters: at >1 M m from origin, float precision degrades to
+    // ~0.5 m, and WASD at default 12 m/s × 16.67 ms = 0.2 m/frame rounds
+    // away to nothing.  Movement looks broken until you get back near origin.
+    //
+    // Bound to typed 'h'/'H', only when cursor is captured (FPS mode), so it
+    // doesn't fire while typing into a UI text field.  No physical Home-key
+    // binding because Mac keyboards typically don't have one.
+    static bool homePressedLastFrame = false;
+    const bool homePressed =
+        m_MouseCaptured && (m_Window.WasCharTyped('h') || m_Window.WasCharTyped('H'));
+    if (homePressed && !homePressedLastFrame)
+    {
+        // Map-relative recenter — works for ANY active dataset regardless of
+        // whether m_GeoReference matches that dataset's own geoReference.
+        //
+        // Strategy:
+        //   1. Compute the dataset's centre in *its own* coordinate space
+        //      (geographic for lat/lon datasets, raw X/Z for LocalMeters).
+        //   2. Convert that centre into m_GeoReference's local frame —
+        //      this is the camera world-space position we render in.
+        //   3. Lift Y up to (max terrain height in active frame) + cushion.
+        //   4. Look straight down so the dataset fills the viewport.
+        //
+        // After LoadActiveTerrainIntoScene m_GeoReference == active dataset's
+        // geoReference, so the centre lands near (0, ?, 0) — but when the
+        // user has switched datasets without reloading, the active frame may
+        // differ from the dataset's frame; the conversion above handles
+        // both cases identically.
+        const TerrainDataset* activeDataset = GetActiveTerrainDataset();
+        glm::vec3 vantage(0.0f, 200.0f, 0.0f);
+        if (activeDataset != nullptr && activeDataset->bounds.valid)
+        {
+            const double centreLat    = 0.5 * (activeDataset->bounds.minLatitude  + activeDataset->bounds.maxLatitude);
+            const double centreLon    = 0.5 * (activeDataset->bounds.minLongitude + activeDataset->bounds.maxLongitude);
+            const double centreHeight = activeDataset->bounds.maxHeight;
+
+            glm::dvec3 localCentre(0.0);
+            if (activeDataset->settings.coordinateMode == TerrainCoordinateMode::LocalMeters)
+            {
+                // LocalMeters: bounds.{min,max}{Latitude,Longitude} are raw X/Z metres.
+                // The convention used elsewhere (TerrainCoordinateToLocal) is
+                // local = (latitude, height, longitude), i.e. lat→X, lon→Z.
+                localCentre = glm::dvec3(centreLat, centreHeight, centreLon);
+            }
+            else
+            {
+                // Convert dataset-frame geographic centre into the active
+                // m_GeoReference frame.  This is the key fix: we don't
+                // assume the dataset is at (0,0,0) in the active frame.
+                localCentre = GeoConverter(m_GeoReference).ToLocal(centreLat, centreLon, centreHeight);
+            }
+
+            // Cushion above max height: max(2 km, 10% of dataset height).
+            const double boundsHeight = activeDataset->bounds.maxHeight -
+                                        activeDataset->bounds.minHeight;
+            const double cushion = std::max(2000.0, boundsHeight * 0.1);
+
+            vantage.x = static_cast<float>(localCentre.x);
+            vantage.y = static_cast<float>(localCentre.y + cushion);
+            vantage.z = static_cast<float>(localCentre.z);
+            // Floor the vantage Y so we never end up below 200 m, even on
+            // tiny datasets / sea-level test cases.
+            vantage.y = std::max(vantage.y, 200.0f);
+        }
+
+        const glm::vec3 beforePos = m_Camera.GetPosition();
+        m_Camera.SetPosition(vantage);
+        // Look straight down at the dataset centre (yaw is irrelevant when
+        // pitch = -89°, but we set yaw=-90 for a stable convention).
+        m_Camera.SetYawPitch(-90.0f, -89.0f);
+        // Clear any pending teleport — otherwise a teleport queued earlier
+        // this frame (or last frame, undelivered) would clobber our recenter
+        // when ApplyPendingCameraCommands runs at the top of Render().
+        m_PendingCameraCommand.hasTeleport = false;
+        m_PendingCameraCommand.teleportPosition = {0.0f, 0.0f, 0.0f};
+        m_FPSController.ResetMouseState();
+        m_StatusMessage = "Camera recentered above active dataset.";
+        std::cout << "[GeoFPS] H pressed.  Camera was ("
+                  << beforePos.x << ", " << beforePos.y << ", " << beforePos.z
+                  << "), recentered to ("
+                  << vantage.x  << ", " << vantage.y  << ", " << vantage.z
+                  << ").\n";
+    }
+    homePressedLastFrame = homePressed;
 
     // ── Performance log toggle (R) ───────────────────────────────────────────
     // Press R to start writing one CSV row per frame to ~/geofps_perf_*.csv;

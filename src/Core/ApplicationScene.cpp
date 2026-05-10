@@ -2110,61 +2110,118 @@ void Application::RebuildTerrainIsolineSampleGridIfNeeded()
         return;
     }
 
-    const TerrainDataset* activeTerrain = GetActiveTerrainDataset();
-    if (activeTerrain != nullptr && activeTerrain->loaded && activeTerrain->bounds.valid)
+    // Gather every visible, loaded, bounds-valid dataset.  We build a single
+    // sample grid spanning the *union* of their bounds and sample each cell
+    // from whichever dataset contains it.  This matches the visible domain of
+    // both the world atlas and the terrain-profile map (both render the union
+    // of all visible terrains) so isolines are no longer cut off at the
+    // active terrain's boundary when a second terrain is loaded next to it.
+    std::vector<const TerrainDataset*> contributingDatasets;
+    contributingDatasets.reserve(m_TerrainDatasets.size());
+    for (const TerrainDataset& dataset : m_TerrainDatasets)
     {
-        if (!activeTerrain->hasTileManifest && activeTerrain->heightGrid.IsValid())
+        if (!dataset.visible || !dataset.loaded || !dataset.bounds.valid)
         {
-            m_TerrainIsolineSampleGrid = BuildTerrainIsolineSampleGrid(activeTerrain->heightGrid, m_IsolineSettings);
-            m_TerrainIsolineSampleGridDirty = false;
-            return;
+            continue;
         }
-
-        // Full rebuild: samples every grid point via SampleTerrainHeightAt().
-        // For tiled terrain this is O(resX × resZ × numTiles) — only done once
-        // (initial build or after settings change).  Subsequent tile completions
-        // use UpdateTerrainIsolineSampleGridForTile() which patches only the
-        // affected grid cells directly from the tile's own heightGrid (O(cells_in_tile)).
-        TerrainIsolineSampleGrid sampleGrid;
-        sampleGrid.resolutionX = std::clamp(m_IsolineSettings.resolutionX, 2, 512);
-        sampleGrid.resolutionZ = std::clamp(m_IsolineSettings.resolutionZ, 2, 512);
-        sampleGrid.minLatitude = activeTerrain->bounds.minLatitude;
-        sampleGrid.maxLatitude = activeTerrain->bounds.maxLatitude;
-        sampleGrid.minLongitude = activeTerrain->bounds.minLongitude;
-        sampleGrid.maxLongitude = activeTerrain->bounds.maxLongitude;
-        sampleGrid.heights.assign(static_cast<size_t>(sampleGrid.resolutionX * sampleGrid.resolutionZ), 0.0f);
-        sampleGrid.minHeight = std::numeric_limits<double>::max();
-        sampleGrid.maxHeight = std::numeric_limits<double>::lowest();
-
-        for (int z = 0; z < sampleGrid.resolutionZ; ++z)
-        {
-            const double v = static_cast<double>(z) / static_cast<double>(sampleGrid.resolutionZ - 1);
-            const double latitude =
-                sampleGrid.minLatitude + ((sampleGrid.maxLatitude - sampleGrid.minLatitude) * v);
-            for (int x = 0; x < sampleGrid.resolutionX; ++x)
-            {
-                const double u = static_cast<double>(x) / static_cast<double>(sampleGrid.resolutionX - 1);
-                const double longitude =
-                    sampleGrid.minLongitude + ((sampleGrid.maxLongitude - sampleGrid.minLongitude) * u);
-                const double height = static_cast<double>(SampleTerrainHeightAt(*activeTerrain, latitude, longitude));
-                sampleGrid.heights[static_cast<size_t>(z * sampleGrid.resolutionX + x)] = static_cast<float>(height);
-                sampleGrid.minHeight = std::min(sampleGrid.minHeight, height);
-                sampleGrid.maxHeight = std::max(sampleGrid.maxHeight, height);
-            }
-        }
-
-        if (sampleGrid.minHeight == std::numeric_limits<double>::max())
-        {
-            sampleGrid.minHeight = activeTerrain->bounds.minHeight;
-            sampleGrid.maxHeight = activeTerrain->bounds.maxHeight;
-        }
-
-        m_TerrainIsolineSampleGrid = std::move(sampleGrid);
+        contributingDatasets.push_back(&dataset);
     }
-    else
+
+    // Fast path: exactly one non-tiled dataset with a built height grid.
+    // BuildTerrainIsolineSampleGrid is much cheaper than the union sampler
+    // because it reads the grid directly without per-cell containment tests.
+    if (contributingDatasets.size() == 1 &&
+        !contributingDatasets[0]->hasTileManifest &&
+        contributingDatasets[0]->heightGrid.IsValid())
     {
+        m_TerrainIsolineSampleGrid = BuildTerrainIsolineSampleGrid(contributingDatasets[0]->heightGrid,
+                                                                    m_IsolineSettings);
+        m_TerrainIsolineSampleGridDirty = false;
+        return;
+    }
+
+    if (contributingDatasets.empty())
+    {
+        // No usable datasets — fall back to the global height grid (legacy behaviour).
         m_TerrainIsolineSampleGrid = BuildTerrainIsolineSampleGrid(m_TerrainHeightGrid, m_IsolineSettings);
+        m_TerrainIsolineSampleGridDirty = false;
+        return;
     }
+
+    // Compute union bounds across every contributing dataset.
+    double unionMinLat = std::numeric_limits<double>::max();
+    double unionMaxLat = std::numeric_limits<double>::lowest();
+    double unionMinLon = std::numeric_limits<double>::max();
+    double unionMaxLon = std::numeric_limits<double>::lowest();
+    double unionMinHeight = std::numeric_limits<double>::max();
+    double unionMaxHeight = std::numeric_limits<double>::lowest();
+    for (const TerrainDataset* dataset : contributingDatasets)
+    {
+        unionMinLat    = std::min(unionMinLat,    dataset->bounds.minLatitude);
+        unionMaxLat    = std::max(unionMaxLat,    dataset->bounds.maxLatitude);
+        unionMinLon    = std::min(unionMinLon,    dataset->bounds.minLongitude);
+        unionMaxLon    = std::max(unionMaxLon,    dataset->bounds.maxLongitude);
+        unionMinHeight = std::min(unionMinHeight, dataset->bounds.minHeight);
+        unionMaxHeight = std::max(unionMaxHeight, dataset->bounds.maxHeight);
+    }
+
+    TerrainIsolineSampleGrid sampleGrid;
+    sampleGrid.resolutionX  = std::clamp(m_IsolineSettings.resolutionX, 2, 512);
+    sampleGrid.resolutionZ  = std::clamp(m_IsolineSettings.resolutionZ, 2, 512);
+    sampleGrid.minLatitude  = unionMinLat;
+    sampleGrid.maxLatitude  = unionMaxLat;
+    sampleGrid.minLongitude = unionMinLon;
+    sampleGrid.maxLongitude = unionMaxLon;
+    sampleGrid.heights.assign(static_cast<size_t>(sampleGrid.resolutionX * sampleGrid.resolutionZ), 0.0f);
+    sampleGrid.minHeight = std::numeric_limits<double>::max();
+    sampleGrid.maxHeight = std::numeric_limits<double>::lowest();
+
+    // Per-cell loop: walks the union grid, sampling from whichever dataset
+    // contains the cell's lat/lon.  Cells outside every dataset's footprint
+    // get a sentinel "ground level" value (the union's min height) so they
+    // don't introduce spurious contour lines along the union-bounds boundary.
+    const double sentinelHeight = unionMinHeight;
+    for (int z = 0; z < sampleGrid.resolutionZ; ++z)
+    {
+        const double v = static_cast<double>(z) / static_cast<double>(sampleGrid.resolutionZ - 1);
+        const double latitude = sampleGrid.minLatitude +
+                                ((sampleGrid.maxLatitude - sampleGrid.minLatitude) * v);
+        for (int x = 0; x < sampleGrid.resolutionX; ++x)
+        {
+            const double u = static_cast<double>(x) / static_cast<double>(sampleGrid.resolutionX - 1);
+            const double longitude = sampleGrid.minLongitude +
+                                     ((sampleGrid.maxLongitude - sampleGrid.minLongitude) * u);
+
+            // Find the first dataset whose bounds contain this cell's coords.
+            // For non-overlapping datasets at most one will match; for
+            // overlapping datasets the first wins (deterministic tie-break).
+            const TerrainDataset* containingDataset = nullptr;
+            for (const TerrainDataset* dataset : contributingDatasets)
+            {
+                if (TerrainDatasetContainsCoordinate(*dataset, latitude, longitude))
+                {
+                    containingDataset = dataset;
+                    break;
+                }
+            }
+
+            const double height = (containingDataset != nullptr)
+                                      ? static_cast<double>(SampleTerrainHeightAt(*containingDataset,
+                                                                                   latitude, longitude))
+                                      : sentinelHeight;
+            sampleGrid.heights[static_cast<size_t>(z * sampleGrid.resolutionX + x)] = static_cast<float>(height);
+            sampleGrid.minHeight = std::min(sampleGrid.minHeight, height);
+            sampleGrid.maxHeight = std::max(sampleGrid.maxHeight, height);
+        }
+    }
+
+    if (sampleGrid.minHeight == std::numeric_limits<double>::max())
+    {
+        sampleGrid.minHeight = unionMinHeight;
+        sampleGrid.maxHeight = unionMaxHeight;
+    }
+
+    m_TerrainIsolineSampleGrid = std::move(sampleGrid);
     m_TerrainIsolineSampleGridDirty = false;
 }
 
@@ -2517,6 +2574,22 @@ void Application::QueueCameraTeleport(const glm::vec3& position)
     m_PendingCameraCommand.hasTeleport = true;
     m_PendingCameraCommand.teleportPosition = position;
     m_FPSController.ResetMouseState();
+    // Informational: a teleport of >100 km from origin means the target lies
+    // outside the active local frame's "sweet spot" — float precision will be
+    // coarse there and any terrain rendered in a different frame will not be
+    // visible.  This is often legitimate (e.g. user typed coordinates from
+    // another dataset into the live "Go to coordinates" input on purpose),
+    // so we log it as info rather than warning.
+    const float magnitude = std::sqrt(position.x * position.x +
+                                      position.y * position.y +
+                                      position.z * position.z);
+    if (magnitude > 100000.0f)
+    {
+        std::cout << "[GeoFPS] info: large camera teleport queued -> ("
+                  << position.x << ", " << position.y << ", " << position.z
+                  << ")  |distance from origin| = " << magnitude / 1000.0f
+                  << " km (outside active frame's sweet spot).\n";
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

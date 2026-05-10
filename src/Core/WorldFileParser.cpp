@@ -345,10 +345,10 @@ WorldFileParseResult ParseWorldFile(std::istream& input, ParsedWorldFile& world)
                 AddDiagnostic(result, currentVertexStartLine, "Profile vertex block is missing [/vertex].");
                 insideProfileVertex = false;
             }
-            if (currentProfile->vertices.empty())
-            {
-                AddDiagnostic(result, currentProfileStartLine, "Terrain profile has no vertices.", true);
-            }
+            // Empty profiles are a valid intermediate state — the user may
+            // have named a profile and saved before drawing any vertices.
+            // Rendering code already handles vertices.size() < 2 gracefully,
+            // so we don't surface this as a warning.
             currentProfile = nullptr;
             insideProfileVertex = false;
             continue;

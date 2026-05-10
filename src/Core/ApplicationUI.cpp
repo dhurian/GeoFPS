@@ -285,9 +285,10 @@ void Application::RenderMiniMap()
                 break;
             }
         }
-        const GeoReference& targetReference = targetTerrain != nullptr ? targetTerrain->geoReference : m_GeoReference;
-        GeoConverter targetConverter(targetReference);
-        float targetHeight = static_cast<float>(targetReference.originHeight);
+        // Height fallback: if the click is outside any terrain, use the
+        // current frame's origin height (NOT the target dataset's, which
+        // we won't be in after the teleport).
+        float targetHeight = static_cast<float>(m_GeoReference.originHeight);
         if (targetTerrain != nullptr && TerrainDatasetContainsCoordinate(*targetTerrain, targetLatitude, targetLongitude))
         {
             targetHeight = SampleTerrainHeightAt(*targetTerrain, targetLatitude, targetLongitude);
@@ -296,10 +297,57 @@ void Application::RenderMiniMap()
 
         if (ImGui::IsMouseClicked(ImGuiMouseButton_Left))
         {
-            const glm::dvec3 localTarget =
-                targetTerrain != nullptr && targetTerrain->settings.coordinateMode == TerrainCoordinateMode::LocalMeters ?
-                    glm::dvec3(targetLatitude, targetHeight, targetLongitude) :
-                    targetConverter.ToLocal(targetLatitude, targetLongitude, targetHeight);
+            // ── Activate the clicked dataset first ──────────────────────────
+            //
+            // If the click landed on a terrain that ISN'T the currently
+            // active dataset, switch to it before computing the teleport
+            // target.  Otherwise the active frame's origin (e.g. central
+            // Europe for the sample terrain) is used to project the click
+            // point (e.g. Nepal lat/lon), and the resulting "local" position
+            // is the *separation* between the two origins — millions of
+            // metres from origin in the active frame, beyond float
+            // precision and beyond the far clip plane.  Activating the
+            // target dataset rebases m_GeoReference onto its origin so the
+            // teleport target ends up at small, well-conditioned coords.
+            if (targetTerrain != nullptr)
+            {
+                int targetIndex = -1;
+                for (size_t i = 0; i < m_TerrainDatasets.size(); ++i)
+                {
+                    if (&m_TerrainDatasets[i] == targetTerrain)
+                    {
+                        targetIndex = static_cast<int>(i);
+                        break;
+                    }
+                }
+                if (targetIndex >= 0 && targetIndex != m_ActiveTerrainIndex)
+                {
+                    ActivateTerrainDataset(targetIndex);
+                    // m_GeoReference is now == targetTerrain->geoReference.
+                }
+            }
+
+            // ── Compute the teleport target in the (now-correct) frame ──────
+            // After the activation above, m_GeoReference matches the dataset
+            // we want to teleport into, so converting the clicked geographic
+            // point to local coordinates gives small numbers (the click
+            // location relative to the dataset's origin).
+            glm::dvec3 localTarget;
+            if (targetTerrain != nullptr &&
+                targetTerrain->settings.coordinateMode == TerrainCoordinateMode::LocalMeters)
+            {
+                // LocalMeters: the atlas X/Z values ARE metres in the active
+                // frame (GetDatasetWorldTranslation returns 0 for LocalMeters
+                // datasets — they render at the active origin).
+                localTarget = glm::dvec3(targetLatitude, targetHeight, targetLongitude);
+            }
+            else
+            {
+                const GeoConverter currentFrameConverter(m_GeoReference);
+                localTarget = currentFrameConverter.ToLocal(targetLatitude,
+                                                            targetLongitude,
+                                                            targetHeight);
+            }
             QueueCameraTeleport(glm::vec3(static_cast<float>(localTarget.x),
                                            static_cast<float>(localTarget.y),
                                            static_cast<float>(localTarget.z)));
@@ -904,98 +952,110 @@ void Application::RenderWorldTerrainProfiles()
             continue;
         }
 
+        // Collect every loaded, bounds-valid dataset this profile is
+        // included in.  Each sample below is then draped over whichever of
+        // these datasets contains its lat/lon.  Previously we ran this
+        // entire body once per dataset, which produced visibly duplicate
+        // ribbons in the world when a profile included two terrains
+        // (each iteration drew the *full* path against its own dataset's
+        // height grid, with slightly different sampled heights).  Drawing
+        // once per profile and picking the containing dataset per-sample
+        // gives a single, contiguous line that drapes correctly across
+        // every included terrain it crosses.
+        std::vector<const TerrainDataset*> coveringDatasets;
+        coveringDatasets.reserve(m_TerrainDatasets.size());
         for (const TerrainDataset& dataset : m_TerrainDatasets)
         {
             if (!TerrainDatasetHasCoverage(dataset) || !TerrainProfileIncludesTerrain(profile, dataset))
             {
                 continue;
             }
-
             if (!dataset.bounds.valid)
             {
                 continue;
             }
+            coveringDatasets.push_back(&dataset);
+        }
+        if (coveringDatasets.empty())
+        {
+            continue;
+        }
 
-            const TerrainBounds bounds = ToTerrainBounds(dataset.bounds);
-            GeoConverter converter(dataset.geoReference);
-            bool touchesTerrain = false;
-            for (const TerrainProfileVertex& vertex : profile.vertices)
+        // Build the sample list once for the profile.  RebuildTerrainProfileSamples
+        // already populated profile.samples against the primary terrain at
+        // profile.sampleSpacingMeters spacing — sufficient for a single ribbon.
+        const std::vector<TerrainProfileSample>& samples = profile.samples;
+        if (samples.size() < 2)
+        {
+            continue;
+        }
+
+        lineVertices.clear();
+        lineVertices.reserve(samples.size());
+        std::vector<bool> validLineVertices;
+        validLineVertices.reserve(samples.size());
+
+        for (const TerrainProfileSample& sample : samples)
+        {
+            // Pick the dataset whose bounds contain this sample's lat/lon —
+            // that's the one whose height grid and world translation we
+            // want to use here.  First-match wins on overlaps; if no
+            // dataset contains the sample we fall back to the first
+            // covering dataset so the ribbon still has a position
+            // (sample.valid is already false in that case so the segment
+            // will be skipped below anyway).
+            const TerrainDataset* owner = nullptr;
+            for (const TerrainDataset* candidate : coveringDatasets)
             {
-                const TerrainProfileVertex geoVertex =
-                    ProfileVertexAsGeographic(profile, vertex, converter, dataset.settings.coordinateMode);
-                if (geoVertex.latitude >= bounds.minLatitude && geoVertex.latitude <= bounds.maxLatitude &&
-                    geoVertex.longitude >= bounds.minLongitude && geoVertex.longitude <= bounds.maxLongitude)
+                if (TerrainDatasetContainsCoordinate(*candidate, sample.latitude, sample.longitude))
                 {
-                    touchesTerrain = true;
+                    owner = candidate;
                     break;
                 }
             }
-            if (!touchesTerrain)
+            if (owner == nullptr)
             {
-                continue;
+                owner = coveringDatasets.front();
             }
 
-            std::vector<TerrainProfileSample> samples = profile.samples;
-            if (!dataset.hasTileManifest && dataset.heightGrid.IsValid())
-            {
-                const double worldSampleSpacingMeters = std::clamp(static_cast<double>(profile.sampleSpacingMeters), 0.5, 3.0);
-                samples = SampleTerrainProfile(profile.vertices,
-                                               dataset.heightGrid,
-                                               converter,
-                                               worldSampleSpacingMeters,
-                                               profile.useLocalCoordinates,
-                                               dataset.settings.coordinateMode);
-            }
-            if (samples.size() < 2)
-            {
-                continue;
-            }
-
-            lineVertices.clear();
-            lineVertices.reserve(samples.size());
-            std::vector<bool> validLineVertices;
-            validLineVertices.reserve(samples.size());
-            const glm::dvec3 terrainTranslation = GetDatasetWorldTranslation(dataset);
-            for (const TerrainProfileSample& sample : samples)
-            {
-                const glm::dvec3 local =
-                    TerrainCoordinateToLocal(dataset, sample.latitude, sample.longitude, dataset.geoReference.originHeight);
-                const float localHeight = sample.valid ?
-                                              SampleRenderedTerrainLocalHeightAt(dataset, sample.latitude, sample.longitude) +
-                                                  profile.worldGroundOffsetMeters :
-                                              0.0f;
-                const glm::dvec3 worldPosition(local.x + terrainTranslation.x,
-                                                static_cast<double>(localHeight) + terrainTranslation.y,
-                                                local.z + terrainTranslation.z);
-                lineVertices.emplace_back(ToRenderRelative(worldPosition));
-                validLineVertices.push_back(sample.valid);
-            }
-
-            ribbonVertices.clear();
-            ribbonVertices.reserve((lineVertices.size() - 1) * 6u);
-            const float worldThicknessMeters =
-                std::clamp(profile.worldThicknessMeters, kMinimumVisibleProfileWorldThicknessMeters, 250.0f);
-            const glm::vec3 cameraPosition(0.0f);
-            for (size_t index = 0; index + 1 < lineVertices.size(); ++index)
-            {
-                if (!validLineVertices[index] || !validLineVertices[index + 1])
-                {
-                    continue;
-                }
-                AppendProfileRibbonSegment(ribbonVertices, lineVertices[index], lineVertices[index + 1], cameraPosition, worldThicknessMeters);
-            }
-            if (ribbonVertices.empty())
-            {
-                continue;
-            }
-
-            m_LineShader->SetVec4("uColor", profile.color);
-            glBufferData(GL_ARRAY_BUFFER,
-                         static_cast<GLsizeiptr>(ribbonVertices.size() * sizeof(glm::vec3)),
-                         ribbonVertices.data(),
-                         GL_DYNAMIC_DRAW);
-            glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(ribbonVertices.size()));
+            const glm::dvec3 local =
+                TerrainCoordinateToLocal(*owner, sample.latitude, sample.longitude, owner->geoReference.originHeight);
+            const float localHeight = sample.valid ?
+                                          SampleRenderedTerrainLocalHeightAt(*owner, sample.latitude, sample.longitude) +
+                                              profile.worldGroundOffsetMeters :
+                                          0.0f;
+            const glm::dvec3 terrainTranslation = GetDatasetWorldTranslation(*owner);
+            const glm::dvec3 worldPosition(local.x + terrainTranslation.x,
+                                            static_cast<double>(localHeight) + terrainTranslation.y,
+                                            local.z + terrainTranslation.z);
+            lineVertices.emplace_back(ToRenderRelative(worldPosition));
+            validLineVertices.push_back(sample.valid);
         }
+
+        ribbonVertices.clear();
+        ribbonVertices.reserve((lineVertices.size() - 1) * 6u);
+        const float worldThicknessMeters =
+            std::clamp(profile.worldThicknessMeters, kMinimumVisibleProfileWorldThicknessMeters, 250.0f);
+        const glm::vec3 cameraPosition(0.0f);
+        for (size_t index = 0; index + 1 < lineVertices.size(); ++index)
+        {
+            if (!validLineVertices[index] || !validLineVertices[index + 1])
+            {
+                continue;
+            }
+            AppendProfileRibbonSegment(ribbonVertices, lineVertices[index], lineVertices[index + 1], cameraPosition, worldThicknessMeters);
+        }
+        if (ribbonVertices.empty())
+        {
+            continue;
+        }
+
+        m_LineShader->SetVec4("uColor", profile.color);
+        glBufferData(GL_ARRAY_BUFFER,
+                     static_cast<GLsizeiptr>(ribbonVertices.size() * sizeof(glm::vec3)),
+                     ribbonVertices.data(),
+                     GL_DYNAMIC_DRAW);
+        glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(ribbonVertices.size()));
     }
 
     glDepthFunc(GL_LESS);

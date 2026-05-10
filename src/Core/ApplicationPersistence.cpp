@@ -136,11 +136,28 @@ void ResolveAnimClipName(ImportedAsset& asset, const std::string& clipName)
 
 bool Application::SaveWorldToFile(const std::string& path)
 {
-    const std::string targetPathString = Trim(path);
+    std::string targetPathString = Trim(path);
     if (targetPathString.empty())
     {
         m_StatusMessage = "World file path is empty.";
         return false;
+    }
+
+    // macOS NSSavePanel appends ".geofpsworld" to whatever the user typed,
+    // even if the typed text already ended in that extension — because
+    // .geofpsworld is not a registered system UTI.  Repeated saves can
+    // therefore stack ".geofpsworld" multiple times.  Collapse any chain
+    // of trailing ".geofpsworld" suffixes down to exactly one.
+    {
+        const std::string kExt = ".geofpsworld";
+        // First strip every trailing ".geofpsworld", then re-append exactly one.
+        while (targetPathString.size() >= kExt.size() &&
+               targetPathString.compare(targetPathString.size() - kExt.size(),
+                                        kExt.size(), kExt) == 0)
+        {
+            targetPathString.erase(targetPathString.size() - kExt.size());
+        }
+        targetPathString += kExt;
     }
 
     std::error_code errorCode;
@@ -263,13 +280,30 @@ bool Application::SaveWorldToFile(const std::string& path)
 
     for (const ImportedAsset& asset : m_ImportedAssets)
     {
+        // Skip placeholder rows that the user added to the UI but never
+        // pointed at a file.  Writing path= blank made the parser hard-error
+        // on the next load ("is missing required field 'path'."), which set
+        // parseResult.success = false and caused the entire world load to
+        // bail silently.
+        if (Trim(asset.path).empty())
+        {
+            continue;
+        }
         file << "[asset]\n";
         file << "name=" << asset.name << '\n';
         file << "path=" << asset.path << '\n';
         file << "position_mode=" << (asset.useGeographicPlacement ? "geographic" : "local") << '\n';
-        file << "latitude=" << asset.latitude << '\n';
-        file << "longitude=" << asset.longitude << '\n';
-        file << "height=" << asset.height << '\n';
+        // Only emit fields that are actually used by the active placement
+        // mode.  Writing geographic fields alongside position_mode=local
+        // makes the parser warn ("has geographic fields but position_mode
+        // is local; latitude/longitude/height will be ignored.") on every
+        // load — which it should, because the values would be stale.
+        if (asset.useGeographicPlacement)
+        {
+            file << "latitude=" << asset.latitude << '\n';
+            file << "longitude=" << asset.longitude << '\n';
+            file << "height=" << asset.height << '\n';
+        }
         file << "position_x=" << asset.position.x << '\n';
         file << "position_y=" << asset.position.y << '\n';
         file << "position_z=" << asset.position.z << '\n';
@@ -373,21 +407,25 @@ bool Application::LoadWorldFromFile(const std::string& path)
     const WorldFileParseResult parseResult = ParseWorldFile(file, parsedWorld);
     for (const WorldFileParseDiagnostic& diagnostic : parseResult.diagnostics)
     {
-        if (diagnostic.warning)
+        // Emit warnings AND non-warning errors to the console.  Previously
+        // only warnings were logged, so a hard parse error would set
+        // parseResult.success = false and the load would return below
+        // without printing anything — leaving the user staring at a
+        // failed-but-silent load.
+        std::cout << (diagnostic.warning ? "[GeoFPS] World parse warning"
+                                          : "[GeoFPS] World parse ERROR  ");
+        if (diagnostic.lineNumber > 0)
         {
-            std::cout << "[GeoFPS] World parse warning";
-            if (diagnostic.lineNumber > 0)
-            {
-                std::cout << " line " << diagnostic.lineNumber;
-            }
-            std::cout << ": " << diagnostic.message << '\n';
+            std::cout << " line " << diagnostic.lineNumber;
         }
+        std::cout << ": " << diagnostic.message << '\n';
     }
     if (!parseResult.success)
     {
         const std::string parseError = parseResult.ErrorMessage();
         m_StatusMessage = parseError.empty() ? "Failed to parse world file: " + sourcePathString
                                              : parseError + " " + sourcePathString;
+        std::cout << "[GeoFPS] World load aborted: " << m_StatusMessage << '\n';
         return false;
     }
 

@@ -585,6 +585,18 @@ class Application
     std::vector<AssetClipboardEntry> m_AssetClipboard;
     glm::vec3 m_AssetPasteOffset {2.0f, 0.0f, 2.0f};
 
+    // ── Live "Go to coordinates" navigation input ────────────────────────────
+    // Three editable fields in the Diagnostics → Camera section.  When no
+    // field is focused we re-derive these from the camera's current world
+    // position every frame (so they read out the live geographic location).
+    // When the user clicks into a field we stop overwriting it; pressing
+    // Enter / clicking "Go" calls QueueCameraTeleport with a position
+    // computed via GeoConverter(m_GeoReference).ToLocal().
+    double m_NavInputLatitude   {0.0};
+    double m_NavInputLongitude  {0.0};
+    double m_NavInputHeight     {0.0};
+    bool   m_NavInputFieldActive {false};   // any of the three fields is focused
+
     // ── Adaptive upload time-budget ──────────────────────────────────────────
     // Wall-clock time (ms) the current frame began.  Set at the top of Run()'s
     // while-loop and consumed by ProcessBackgroundJobs() to compute exactly how

@@ -85,33 +85,6 @@ active_overlay_index=0
   [/overlay]
 [/terrain]
 
-[asset]
-name=Asset 1
-path=
-position_mode=local
-latitude=0.00000000
-longitude=0.00000000
-height=0.00000000
-position_x=0.00000000
-position_y=0.00000000
-position_z=0.00000000
-rotation_z=0.00000000
-scale_x=1.00000000
-scale_y=1.00000000
-scale_z=1.00000000
-tint_r=1.00000000
-tint_g=1.00000000
-tint_b=1.00000000
-show_label=1
-anim_clip=
-anim_speed=1.00000000
-anim_loop=1
-anim_playing=0
-node_anim_speed=1.00000000
-node_anim_loop=1
-node_anim_playing=0
-[/asset]
-
 [terrain_profile]
 name=Profile 1
 visible=1

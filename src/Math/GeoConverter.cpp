@@ -33,16 +33,34 @@ GeoConverter::GeoConverter(const GeoReference& reference) : m_Reference(referenc
 
 glm::dvec3 GeoConverter::ToLocal(double latitude, double longitude, double height) const
 {
+    // Geographic → local-metres convention:
+    //   +X = east   (longitude increases east)
+    //   +Y = up     (height increases up)
+    //   −Z = north  (latitude increases north → −Z direction)
+    //
+    // We deliberately map *increasing latitude to decreasing Z* (note the unary
+    // minus below).  Without it, looking straight down from the standard
+    // top-view camera (yaw=−90, pitch=−89, right-handed view matrix) would put
+    // SOUTH at the top of the screen — because cross(right, forward) with
+    // right=+X and forward≈−Y forces view-up to be −Z.  Flipping the sign here
+    // means −Z = north, so screen-up = view-up = −Z = north — matching the
+    // top-down convention used by the 2D minimap and profile-maker map (both
+    // of which already paint north at the top).  Everything downstream
+    // (terrain mesh builder, asset placement, isoline grid, profile lines,
+    // camera/HUD readout) goes through this single conversion, so the whole
+    // world rotates coherently.
     const double x = (longitude - m_Reference.originLongitude) * m_MetersPerDegreeLongitude;
-    const double z = (latitude - m_Reference.originLatitude) * m_MetersPerDegreeLatitude;
+    const double z = -(latitude - m_Reference.originLatitude) * m_MetersPerDegreeLatitude;
     const double y = height - m_Reference.originHeight;
     return {x, y, z};
 }
 
 glm::dvec3 GeoConverter::ToGeographic(const glm::dvec3& localPosition) const
 {
+    // Inverse of ToLocal — note the matching minus on the latitude axis so a
+    // round-trip ToLocal → ToGeographic yields the original lat/lon/height.
     const double longitude = m_Reference.originLongitude + (localPosition.x / m_MetersPerDegreeLongitude);
-    const double latitude = m_Reference.originLatitude + (localPosition.z / m_MetersPerDegreeLatitude);
+    const double latitude = m_Reference.originLatitude - (localPosition.z / m_MetersPerDegreeLatitude);
     const double height = m_Reference.originHeight + localPosition.y;
     return {latitude, longitude, height};
 }

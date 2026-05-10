@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cstdio>
 
 namespace GeoFPS
 {
@@ -233,6 +234,77 @@ void Application::RenderDiagnosticsPanel()
                 m_Diagnostics.queuedLookDeltaDegrees.y,
                 m_Diagnostics.appliedLookDeltaDegrees.x,
                 m_Diagnostics.appliedLookDeltaDegrees.y);
+
+    // ── Go to coordinates ─────────────────────────────────────────────────────
+    // Live lat/lon/height inputs.  When no input is active we re-derive them
+    // from the camera's current world position every frame (so the readout
+    // tracks movement); once the user focuses any field we stop overwriting,
+    // letting them type freely.  Enter or "Go" teleports the camera.
+    {
+        const glm::dvec3 cameraGeographic =
+            GeoConverter(m_GeoReference).ToGeographic(glm::dvec3(pos.x, pos.y, pos.z));
+
+        if (!m_NavInputFieldActive)
+        {
+            m_NavInputLatitude  = cameraGeographic.x;
+            m_NavInputLongitude = cameraGeographic.y;
+            m_NavInputHeight    = cameraGeographic.z;
+        }
+
+        ImGui::Spacing();
+        ImGui::TextDisabled("Go to coordinates (camera world position):");
+
+        bool teleportRequested = false;
+        const float kFieldWidth = 150.0f;
+
+        // ImGui::InputScalar (used by InputDouble) explicitly forbids
+        // ImGuiInputTextFlags_EnterReturnsTrue (asserts at runtime).  Instead we
+        // observe IsItemDeactivatedAfterEdit() — this returns true on the frame
+        // the field loses focus *with changes committed*, which covers Enter,
+        // Tab, and click-away.  Combined with the explicit "Go" button below,
+        // this gives the user three natural ways to commit a teleport.
+        ImGui::PushItemWidth(kFieldWidth);
+        ImGui::InputDouble("Lat##nav", &m_NavInputLatitude, 0.0, 0.0, "%.6f");
+        const bool latActive   = ImGui::IsItemActive();
+        teleportRequested     |= ImGui::IsItemDeactivatedAfterEdit();
+        ImGui::SameLine();
+        ImGui::InputDouble("Lon##nav", &m_NavInputLongitude, 0.0, 0.0, "%.6f");
+        const bool lonActive   = ImGui::IsItemActive();
+        teleportRequested     |= ImGui::IsItemDeactivatedAfterEdit();
+        ImGui::SameLine();
+        ImGui::InputDouble("Height (m)##nav", &m_NavInputHeight, 0.0, 0.0, "%.2f");
+        const bool heightActive = ImGui::IsItemActive();
+        teleportRequested      |= ImGui::IsItemDeactivatedAfterEdit();
+        ImGui::PopItemWidth();
+
+        ImGui::SameLine();
+        if (ImGui::Button("Go##nav"))
+        {
+            teleportRequested = true;
+        }
+
+        // Track whether *any* field still has keyboard focus.  We use IsItemActive
+        // rather than IsItemFocused because focus persists for one frame after the
+        // user clicks elsewhere, which would let live-update overwrite their typed
+        // value mid-edit.
+        m_NavInputFieldActive = latActive || lonActive || heightActive;
+
+        if (teleportRequested)
+        {
+            const glm::dvec3 localTarget =
+                GeoConverter(m_GeoReference).ToLocal(m_NavInputLatitude,
+                                                     m_NavInputLongitude,
+                                                     m_NavInputHeight);
+            QueueCameraTeleport(glm::vec3(localTarget));
+            char status[160];
+            std::snprintf(status, sizeof(status),
+                          "Camera moved to lat %.6f, lon %.6f, height %.2f m",
+                          m_NavInputLatitude, m_NavInputLongitude, m_NavInputHeight);
+            m_StatusMessage = status;
+            // Drop focus so the next frame resumes the live readout.
+            m_NavInputFieldActive = false;
+        }
+    }
 
     ImGui::Separator();
 
