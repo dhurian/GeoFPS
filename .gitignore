@@ -29,7 +29,7 @@ assets/worlds/terrain_profiles.geofpsprofile
 # Python caches from RawData utilities
 __pycache__/
 *.py[cod]
-
+_deps/
 # Assets from blender and CSV files
 /Users/dhurianvitoldas/Documents/Development/GeoFPS/assets/datasets/Lisbon/
 /Users/dhurianvitoldas/Documents/Development/GeoFPS/assets/datasets/nepal_everest_demo/
