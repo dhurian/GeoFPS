@@ -407,6 +407,15 @@ class Application
     void RenderMiniMap();
     void RenderMiniMapWindow();
     void RenderCameraHud();
+    // Right-edge floating window with a slider for m_BaseMoveSpeed.  Shown
+    // when m_ShowSpeedSlider is true.  Lets the user dial speed without
+    // relying on the +/- keyboard shortcut (which is keyboard-layout-
+    // dependent and broke for several users).
+    void RenderSpeedSliderOverlay();
+    // Compact toggle panel listing every persistent on-screen overlay
+    // (camera HUD, gizmo, stats overlay, speed slider).  Opened from the
+    // Panels menu via m_ShowOnScreenOverlaysPanel.
+    void RenderOnScreenOverlaysPanel();
     void RenderEditor();
     void RenderTerrainDatasetWindow();
     void RenderSunWindow();
@@ -558,6 +567,11 @@ class Application
     double    m_ProfileGraphZoomMinDist {0.0};   // metres along path — left edge of graph view
     double    m_ProfileGraphZoomMaxDist {-1.0};  // right edge; negative = show full profile
     bool      m_ShowOrientationGizmo   {true};   // XYZ orientation gizmo in 3D viewport
+    // ── On-screen overlays (toggleable via the Panels menu and via a
+    //    dedicated "On-Screen Overlays" panel) ─────────────────────────────
+    bool      m_ShowCameraHud          {true};   // top-left lat/lon/height readout
+    bool      m_ShowSpeedSlider        {true};   // right-edge speed slider overlay
+    bool      m_ShowOnScreenOverlaysPanel {false}; // the toggle-control panel itself
     // Gizmo snap animation
     CameraSnapState m_CameraSnapState {};
     bool      m_GizmoHovered           {false};  // true when cursor is inside gizmo circle

@@ -195,8 +195,11 @@ void Application::RenderMainMenuBar()
     if (ImGui::BeginMenu("Panels"))
     {
         ImGui::MenuItem("Workspace", nullptr, &m_ShowWorkspaceWindow);
+        ImGui::MenuItem("On-Screen Overlays...", nullptr, &m_ShowOnScreenOverlaysPanel);
         ImGui::Separator();
-        ImGui::MenuItem("Orientation Gizmo",    nullptr, &m_ShowOrientationGizmo);
+        ImGui::MenuItem("Camera HUD",            nullptr, &m_ShowCameraHud);
+        ImGui::MenuItem("Speed Slider",          nullptr, &m_ShowSpeedSlider);
+        ImGui::MenuItem("Orientation Gizmo",     nullptr, &m_ShowOrientationGizmo);
         ImGui::MenuItem("Stats Overlay",         nullptr, &m_Diagnostics.showOverlay);
         ImGui::Separator();
         ImGui::MenuItem("Terrain Minimap", nullptr, &m_ShowMiniMapWindow);

@@ -396,13 +396,27 @@ void Application::RenderMiniMapWindow()
 
 void Application::RenderCameraHud()
 {
-    // Stats overlay is always evaluated so it persists regardless of active tab.
+    // Sibling overlays are evaluated unconditionally — each one self-gates
+    // on its own m_Show* flag — so they persist across every workspace tab
+    // and stay independent of the lat/lon HUD's terrain-loaded check below.
     RenderDiagnosticsOverlay();
+    RenderSpeedSliderOverlay();
+    RenderOnScreenOverlaysPanel();
 
-    if (m_TerrainPoints.empty())
+    if (!m_ShowCameraHud)
     {
         return;
     }
+
+    // Note: we DON'T early-return on m_TerrainPoints.empty() here.  That
+    // collection is only populated for monolithic (non-tiled) datasets;
+    // tile-streamed datasets like Nepal keep their points inside each
+    // TerrainTile and leave m_TerrainPoints empty forever.  An older
+    // version had this guard and it silently hid the HUD whenever the
+    // active dataset was tiled.  m_GeoReference is always initialised
+    // (either to {0,0,0} at startup or to the active dataset's reference
+    // after LoadActiveTerrainIntoScene), so the lat/lon readout is always
+    // meaningful and we can render unconditionally.
 
     GeoConverter converter(m_GeoReference);
     const glm::vec3 cameraPosition = m_Camera.GetPosition();
@@ -428,6 +442,98 @@ void Application::RenderCameraHud()
         ImGui::Text("%s %.6f", localMetersMode ? "Z" : "Lon", cameraGeo.y);
         ImGui::Text("Height %.2f m", cameraGeo.z);
     }
+    ImGui::End();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Speed slider — right-edge floating overlay
+//
+//  Mouse-driven alternative to the +/- keys (which are keyboard-layout
+//  dependent — '+' lives on different physical keys on Danish/German/etc.
+//  layouts and the positional fallback caused phantom decreases when both
+//  keys fired simultaneously).  This overlay is always reachable, never
+//  obstructs the gizmo (which sits in the top-right region), and can be
+//  hidden via the On-Screen Overlays panel.
+// ─────────────────────────────────────────────────────────────────────────────
+void Application::RenderSpeedSliderOverlay()
+{
+    if (!m_ShowSpeedSlider)
+    {
+        return;
+    }
+
+    constexpr float kSliderWidth   = 220.0f;
+    constexpr float kRightPadding  = 16.0f;
+    constexpr float kVerticalAnchorFraction = 0.5f; // pinned vertically centred
+
+    const ImGuiViewport* vp = ImGui::GetMainViewport();
+    ImGui::SetNextWindowPos(
+        ImVec2(vp->Pos.x + vp->Size.x - kRightPadding,
+               vp->Pos.y + vp->Size.y * kVerticalAnchorFraction),
+        ImGuiCond_Always,
+        ImVec2(1.0f, 0.5f)); // pivot: right-centre of window
+    ImGui::SetNextWindowBgAlpha(0.62f);
+
+    constexpr ImGuiWindowFlags flags =
+        ImGuiWindowFlags_NoDecoration       |
+        ImGuiWindowFlags_AlwaysAutoResize   |
+        ImGuiWindowFlags_NoSavedSettings    |
+        ImGuiWindowFlags_NoFocusOnAppearing |
+        ImGuiWindowFlags_NoNav              |
+        ImGuiWindowFlags_NoMove;
+
+    if (ImGui::Begin("##speed_slider_overlay", nullptr, flags))
+    {
+        ImGui::TextColored(ImVec4(0.65f, 0.85f, 0.95f, 1.0f), "Speed");
+        ImGui::PushItemWidth(kSliderWidth);
+        // Logarithmic mapping gives fine control near the low end (walking
+        // speeds, 1–20 m/s) without making the high end (mapping fly-over
+        // speeds, hundreds of m/s) tedious to reach.
+        if (ImGui::SliderFloat("##base_move_speed",
+                               &m_BaseMoveSpeed,
+                               1.0f, 3000.0f,
+                               "%.1f m/s",
+                               ImGuiSliderFlags_Logarithmic))
+        {
+            m_BaseMoveSpeed = std::clamp(m_BaseMoveSpeed, 0.5f, 3000.0f);
+        }
+        ImGui::PopItemWidth();
+        ImGui::TextDisabled("Current: %.1f m/s", m_FPSController.GetCurrentSpeed());
+    }
+    ImGui::End();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  On-Screen Overlays panel — single place to hide/show every persistent HUD
+//  element.  Opened from the Panels menu.  Deliberately compact so it can
+//  stay docked alongside the other tool windows without dominating them.
+// ─────────────────────────────────────────────────────────────────────────────
+void Application::RenderOnScreenOverlaysPanel()
+{
+    if (!m_ShowOnScreenOverlaysPanel)
+    {
+        return;
+    }
+
+    const ImGuiViewport* vp = ImGui::GetMainViewport();
+    ImGui::SetNextWindowPos(ImVec2(vp->Pos.x + 60.0f, vp->Pos.y + 90.0f), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(280.0f, 0.0f), ImGuiCond_FirstUseEver);
+
+    if (!ImGui::Begin("On-Screen Overlays", &m_ShowOnScreenOverlaysPanel,
+                      ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse))
+    {
+        ImGui::End();
+        return;
+    }
+
+    ImGui::TextDisabled("Toggle persistent HUD elements:");
+    ImGui::Separator();
+    ImGui::Checkbox("Camera HUD (top-left)",      &m_ShowCameraHud);
+    ImGui::Checkbox("Speed slider (right edge)",  &m_ShowSpeedSlider);
+    ImGui::Checkbox("Orientation gizmo",          &m_ShowOrientationGizmo);
+    ImGui::Checkbox("Stats overlay (bottom-left)",&m_Diagnostics.showOverlay);
+    ImGui::Spacing();
+    ImGui::TextDisabled("Each toggle is also available in Panels menu.");
     ImGui::End();
 }
 
