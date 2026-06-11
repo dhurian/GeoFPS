@@ -1817,60 +1817,8 @@ void Application::LoadActiveTerrainIntoScene()
     // camera near the Nepal data — not preserved at an old global position
     // that happens to be 9 M m from the new origin.  Preserving caused a
     // "black screen after Nepal load" because the camera ended up far
-    // beyond the 50 km far plane.  The RebaseLocalOriginToCamera() helper
-    // remains available for explicit/manual rebases when the camera *has*
-    // genuinely walked far from origin during play.
-}
-
-void Application::RebaseLocalOriginToCamera()
-{
-    // Threshold for "close enough to origin" — beyond this we rebase.  At
-    // 5 km the float resolution at the camera is ~0.6 µm (well into precision
-    // overkill territory), so triggering here keeps us comfortably away from
-    // the precision wall without rebasing on every tiny excursion.
-    constexpr float kRebaseThresholdMeters = 5000.0f;
-    const glm::vec3 oldCamPos = m_Camera.GetPosition();
-    const float distanceFromOrigin =
-        std::sqrt(oldCamPos.x * oldCamPos.x + oldCamPos.z * oldCamPos.z);
-    if (distanceFromOrigin < kRebaseThresholdMeters)
-    {
-        return; // already in the high-precision regime
-    }
-
-    // Compute the camera's current geographic position in the OLD frame,
-    // then make THAT the new local origin.  After the rebase the camera
-    // sits at (0, oldCamPos.y, 0) with full float precision.
-    const GeoConverter oldConv(m_GeoReference);
-    const glm::dvec3 cameraGeo = oldConv.ToGeographic(glm::dvec3(oldCamPos));
-
-    GeoReference newRef;
-    newRef.originLatitude  = cameraGeo.x; // ToGeographic returns (lat, lon, height)
-    newRef.originLongitude = cameraGeo.y;
-    newRef.originHeight    = m_GeoReference.originHeight; // keep height datum stable
-
-    // Where the new origin sits in the OLD frame.  By construction this is
-    // (oldCamPos.x, 0, oldCamPos.z) — but we recompute via the converter so
-    // we're not assuming the latitude-distortion math.
-    const glm::dvec3 newOriginInOldFrame = oldConv.ToLocal(
-        newRef.originLatitude, newRef.originLongitude, newRef.originHeight);
-    const glm::vec3 translation = -glm::vec3(newOriginInOldFrame);
-
-    m_Camera.SetPosition(oldCamPos + translation);
-    for (ImportedAsset& asset : m_ImportedAssets)
-    {
-        if (!asset.useGeographicPlacement)
-        {
-            asset.position += translation;
-        }
-    }
-
-    m_GeoReference = newRef;
-
-    std::cout << "[GeoFPS] Local origin auto-rebased to (" << newRef.originLatitude
-              << "°, " << newRef.originLongitude << "°).  Camera now at ("
-              << m_Camera.GetPosition().x << ", "
-              << m_Camera.GetPosition().y << ", "
-              << m_Camera.GetPosition().z << ")\n";
+    // beyond the 50 km far plane.  Recovery from drift is handled instead by
+    // the H-key recenter, which puts the camera back above the active dataset.
 }
 
 void Application::RebuildTerrainProfileSamples(TerrainProfile& profile)

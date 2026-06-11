@@ -391,14 +391,6 @@ class Application
     void ResetOverlayToTerrainBounds(GeoImageDefinition& imageDefinition, const std::vector<TerrainPoint>& points) const;
     void ResetOverlayToTerrainBounds(GeoImageDefinition& imageDefinition) const;
     void LoadActiveTerrainIntoScene();
-    // Move m_GeoReference's lat/lon origin to the camera's current geographic
-    // location and translate everything stored in float world-space (camera,
-    // local-placed assets) so that nothing visibly changes — only the
-    // numerical scale of the coordinates does.  Restores sub-millimetre float
-    // precision around the camera, which is otherwise lost at ~6 M m from
-    // origin (Nepal-from-Greenwich).  Idempotent: a no-op if the camera is
-    // already within kRebaseThresholdMeters of origin.
-    void RebaseLocalOriginToCamera();
     void RenderMainMenuBar();
     void SetupImGui();
     void ShutdownImGui();
