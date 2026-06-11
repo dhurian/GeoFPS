@@ -252,6 +252,19 @@ void Application::RenderMiniMap()
         if (labelPosition.x < mapBottomRight.x - 24.0f && labelPosition.y < mapBottomRight.y - 16.0f)
         {
             drawList->AddText(labelPosition, IM_COL32(232, 240, 248, 220), dataset->name.c_str());
+            // Tag the active dataset explicitly.  The active terrain is the
+            // one whose coordinate frame a click teleports into; making it
+            // unmistakable here (beyond just the blue tint) heads off the
+            // "clicked the atlas, camera jumped to the wrong place" confusion
+            // by showing the user which frame is current before they click.
+            if (active)
+            {
+                const ImVec2 tagPosition(labelPosition.x, labelPosition.y + 14.0f);
+                if (tagPosition.y < mapBottomRight.y - 14.0f)
+                {
+                    drawList->AddText(tagPosition, IM_COL32(120, 210, 255, 255), "ACTIVE");
+                }
+            }
         }
     }
 
@@ -445,9 +458,43 @@ void Application::RenderCameraHud()
 
     if (ImGui::Begin("Camera HUD", nullptr, flags))
     {
+        // Active frame name on top.  Many "I clicked the atlas and the camera
+        // jumped 6000 km" / "I can't find my terrain" reports trace back to
+        // the user not realising which dataset's coordinate frame is active —
+        // the lat/lon below are expressed in THIS frame, so showing its name
+        // makes the frame visible before any teleport math happens.
+        ImGui::TextColored(ImVec4(0.65f, 0.85f, 0.95f, 1.0f), "%s",
+                           activeTerrain != nullptr ? activeTerrain->name.c_str()
+                                                    : "(no active terrain)");
+        ImGui::Separator();
         ImGui::Text("%s %.6f", localMetersMode ? "X" : "Lat", cameraGeo.x);
         ImGui::Text("%s %.6f", localMetersMode ? "Z" : "Lon", cameraGeo.y);
         ImGui::Text("Height %.2f m", cameraGeo.z);
+
+        // Origin-drift indicator.  renderOriginDistanceMeters is how far the
+        // camera has drifted from the active frame's local origin;
+        // renderOriginFloatStepMeters is the resulting single-precision float
+        // spacing at that distance.  Past ~1 M m the spacing coarsens enough
+        // (>= 0.05 m, the same threshold the diagnostics panel uses) that
+        // WASD movement starts rounding away and the camera feels stuck —
+        // the classic "megametre-land" symptom.  We surface it here, amber,
+        // with a hint to press H, so the user can self-diagnose instead of
+        // thinking movement is broken.
+        const float driftMeters = m_Diagnostics.renderOriginDistanceMeters;
+        const float floatStep   = m_Diagnostics.renderOriginFloatStepMeters;
+        const bool precisionCoarse = floatStep >= 0.05f;
+        const char* driftUnit = driftMeters >= 1000.0f ? "km" : "m";
+        const float driftValue = driftMeters >= 1000.0f ? driftMeters / 1000.0f : driftMeters;
+        if (precisionCoarse)
+        {
+            ImGui::TextColored(ImVec4(1.0f, 0.70f, 0.25f, 1.0f),
+                               "Origin drift %.1f %s  (~%.2f m steps) - press H",
+                               driftValue, driftUnit, floatStep);
+        }
+        else
+        {
+            ImGui::TextDisabled("Origin drift %.1f %s", driftValue, driftUnit);
+        }
     }
     ImGui::End();
 }
