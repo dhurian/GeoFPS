@@ -971,6 +971,57 @@ void TestCameraCommandTeleportSnapSuppressesMouseDelta()
     Require(!Near(camera.GetYaw(), 45.0), "mouse look should not fight a snap command in the same frame");
 }
 
+void TestCameraRotationOnlyMatrixIsPositionIndependent()
+{
+    // Guards the mouse-look stutter root-cause fix.  GetViewMatrixRotationOnly()
+    // must build its matrix from the *origin* (lookAt(vec3(0), forward, up)),
+    // never from m_Position.  The old code did lookAt(m_Position,
+    // m_Position + forward, up); at Nepal-from-Greenwich distances (~6 M m)
+    // single-precision float in the eye/target subtraction quantises the
+    // recovered forward vector to ~0.5 m steps, so the orientation — and thus
+    // the on-screen view — visibly stutters as the camera rotates.  The fix
+    // decouples rotation from position.  This test fails if anyone reintroduces
+    // a position dependency, by checking the matrix is identical at a tiny
+    // position and at a megametre position for the same yaw/pitch.
+    GeoFPS::Camera nearCamera;
+    nearCamera.SetPosition({0.0f, 2.0f, 5.0f});
+    nearCamera.SetYawPitch(-90.0f, -12.0f);
+
+    GeoFPS::Camera farCamera;
+    farCamera.SetPosition({5590930.0f, 5127.0f, -2243380.0f}); // Everest, Greenwich origin
+    farCamera.SetYawPitch(-90.0f, -12.0f);
+
+    const glm::mat4 nearRot = nearCamera.GetViewMatrixRotationOnly();
+    const glm::mat4 farRot = farCamera.GetViewMatrixRotationOnly();
+    for (int column = 0; column < 4; ++column)
+    {
+        for (int row = 0; row < 4; ++row)
+        {
+            Require(Near(nearRot[column][row], farRot[column][row], 1e-6),
+                    "rotation-only view matrix must not depend on camera position");
+        }
+    }
+
+    // Sanity: the *full* view matrix DOES depend on position (it translates
+    // the world by −eye).  If this ever stops being true, GetViewMatrix has
+    // lost its translation and the scene would render from the origin.
+    const glm::mat4 nearFull = nearCamera.GetViewMatrix();
+    const glm::mat4 farFull = farCamera.GetViewMatrix();
+    bool fullMatricesDiffer = false;
+    for (int column = 0; column < 4 && !fullMatricesDiffer; ++column)
+    {
+        for (int row = 0; row < 4; ++row)
+        {
+            if (!Near(nearFull[column][row], farFull[column][row], 1e-3))
+            {
+                fullMatricesDiffer = true;
+                break;
+            }
+        }
+    }
+    Require(fullMatricesDiffer, "full view matrix should depend on camera position");
+}
+
 void TestCameraRelativeRenderOriginKeepsSmallDeltas()
 {
     const glm::dvec3 origin(-1540000.0, 489.2, -1046000.0);
@@ -1025,6 +1076,7 @@ int main()
     RUN(TestCameraCommandAppliesMouseLookBeforeRender);
     RUN(TestCameraCommandGizmoDragCancelsSnap);
     RUN(TestCameraCommandTeleportSnapSuppressesMouseDelta);
+    RUN(TestCameraRotationOnlyMatrixIsPositionIndependent);
     RUN(TestCameraRelativeRenderOriginKeepsSmallDeltas);
 
     if (g_FailureCount > 0)
