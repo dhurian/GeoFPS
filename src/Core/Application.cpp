@@ -349,9 +349,19 @@ void Application::Run()
         m_Diagnostics.frameCpuMs = static_cast<float>(NowMs() - frameStartMs);
 
         // ── Perf log row (with frame_total_ms now correctly populated) ───────
-        if (m_PerfLogActive)
+        if (m_PerfLog.IsActive())
         {
-            WritePerformanceLogRow();
+            PerfLogExtras extras;
+            extras.cameraYaw          = m_Camera.GetYaw();
+            extras.cameraPitch        = m_Camera.GetPitch();
+            extras.cameraPosition     = m_Camera.GetPosition();
+            extras.rawMouseDelta      = m_Window.GetLastRawMouseDelta();
+            extras.tileJobsPending    = m_TerrainTileBuildJobs.size();
+            extras.isolineBuildPending = m_IsolineBuildPending;
+            extras.avgSwapWaitMs      = m_AvgSwapWaitMs;
+            extras.paceTargetMs       = m_NextFrameTargetMs - (1000.0 / 60.0);
+            extras.paceActualStartMs  = m_FrameStartMs;
+            m_PerfLog.WriteRow(m_Diagnostics, extras);
         }
 
         // ── 60 Hz frame pacer (absolute schedule) ────────────────────────────
@@ -656,7 +666,7 @@ void Application::ProcessInput(float deltaTime)
         (m_Window.WasCharTyped('r') || m_Window.WasCharTyped('R'));
     if (perfLogTogglePressed && !m_PerfLogToggleLastFrame)
     {
-        TogglePerformanceLog();
+        m_StatusMessage = m_PerfLog.Toggle();
     }
     m_PerfLogToggleLastFrame = perfLogTogglePressed;
 
@@ -1645,181 +1655,11 @@ void Application::Render(float deltaTime)
     m_AvgSwapWaitMs = m_AvgSwapWaitMs * (1.0f - kSwapAlpha) +
                       m_Diagnostics.swapCpuMs * kSwapAlpha;
 
-    // NOTE: WritePerformanceLogRow() is now called from Run() AFTER
+    // NOTE: the perf-log row (m_PerfLog.WriteRow) is emitted from Run() AFTER
     // frameCpuMs has been measured, so the frame_total_ms column matches
     // the rest of the row (previously the log was emitted here, which
     // captured the PREVIOUS frame's frameCpuMs and produced rows where
     // swap_ms appeared larger than frame_total_ms).
-}
-
-void Application::TogglePerformanceLog()
-{
-    if (m_PerfLogActive)
-    {
-        // ── Stop ─────────────────────────────────────────────────────────────
-        if (m_PerfLog.is_open())
-        {
-            m_PerfLog.flush();
-            m_PerfLog.close();
-        }
-        m_PerfLogActive = false;
-        std::cout << "[GeoFPS] Performance log STOPPED.  "
-                  << m_PerfLogFrameIdx << " rows written to: "
-                  << m_PerfLogPath << '\n';
-        m_StatusMessage = std::string("Perf log stopped (") +
-                          std::to_string(m_PerfLogFrameIdx) + " rows): " +
-                          m_PerfLogPath;
-        return;
-    }
-
-    // ── Start ────────────────────────────────────────────────────────────────
-    // Pick a unique filename in the user's home directory (or CWD if HOME is
-    // not set).  Ends in .csv so the file is trivially openable in any
-    // spreadsheet, and the suffix is a wall-clock timestamp so successive
-    // runs don't overwrite each other.
-    const char* home = std::getenv("HOME");
-    const std::string dir = (home != nullptr) ? std::string(home) : std::string(".");
-    char stamp[32] = {0};
-    std::time_t now = std::time(nullptr);
-    std::strftime(stamp, sizeof(stamp), "%Y%m%d_%H%M%S", std::localtime(&now));
-    m_PerfLogPath = dir + "/geofps_perf_" + stamp + ".csv";
-    m_PerfLog.open(m_PerfLogPath, std::ios::out | std::ios::trunc);
-    if (!m_PerfLog.is_open())
-    {
-        std::cerr << "[GeoFPS] Failed to open perf log at " << m_PerfLogPath << '\n';
-        m_StatusMessage = "Perf log: failed to open " + m_PerfLogPath;
-        return;
-    }
-    // Header: every column we'll write per row.  Order matches WritePerformanceLogRow.
-    m_PerfLog <<
-        "frame,"
-        "elapsed_ms,"
-        "frame_total_ms,"
-        "input_ms,"
-        "update_ms,"
-        "ui_build_ms,"
-        "camera_apply_ms,"
-        "terrain_ms,"
-        "asset_ms,"
-        "sky_ms,"
-        "world_overlay_ms,"
-        "imgui_draw_ms,"
-        "mesh_upload_ms,"
-        "swap_ms,"
-        "gpu_frame_ms,"
-        "visible_terrain_tiles,"
-        "visible_terrain_chunks,"
-        "terrain_draw_calls,"
-        "asset_draw_calls,"
-        "sky_draw_calls,"
-        "total_draw_calls,"
-        "terrain_triangles,"
-        "asset_triangles,"
-        "total_triangles,"
-        "mesh_uploads_this_frame,"
-        "tile_chunk_uploads_this_frame,"
-        "tile_jobs_pending,"
-        "isoline_build_pending,"
-        "avg_swap_wait_ms,"
-        "render_origin_distance_m,"
-        "render_origin_float_step_m,"
-        "queued_look_x,"
-        "queued_look_y,"
-        "applied_look_x,"
-        "applied_look_y,"
-        "camera_yaw,"
-        "camera_pitch,"
-        "camera_pos_x,"
-        "camera_pos_y,"
-        "camera_pos_z,"
-        // ── Mouse-input diagnostics ─────────────────────────────────────────
-        // The raw kernel-level delta returned by CGGetLastMouseDelta on macOS
-        // (or the glfwGetCursorPos diff elsewhere).  Lets us tell whether
-        // mouse-look jitter is in the OS event delivery vs. our own pipeline.
-        "raw_mouse_dx_px,"
-        "raw_mouse_dy_px,"
-        // Where the loop's pacer wanted this frame to land vs where it
-        // actually started — directly visible "schedule slip".
-        "pace_target_ms,"
-        "pace_actual_start_ms,"
-        "pace_slip_ms"
-        "\n";
-    m_PerfLogFrameIdx = 0;
-    m_PerfLogStartMs  = NowMs();
-    m_PerfLogActive   = true;
-    std::cout << "[GeoFPS] Performance log STARTED -> " << m_PerfLogPath << '\n';
-    m_StatusMessage = "Perf log started: " + m_PerfLogPath;
-}
-
-void Application::WritePerformanceLogRow()
-{
-    if (!m_PerfLog.is_open())
-    {
-        return;
-    }
-    const double elapsedMs = NowMs() - m_PerfLogStartMs;
-    const glm::vec3 cameraPos = m_Camera.GetPosition();
-    // Each row mirrors the diagnostics panel + a few internals (tile-job
-    // queue depth, isoline build pending, EMA swap wait, camera state) so we
-    // can correlate spikes with workload.
-    m_PerfLog
-        << m_PerfLogFrameIdx                                << ','
-        << elapsedMs                                        << ','
-        << m_Diagnostics.frameCpuMs                         << ','
-        << m_Diagnostics.inputCpuMs                         << ','
-        << m_Diagnostics.updateCpuMs                        << ','
-        << m_Diagnostics.uiBuildCpuMs                       << ','
-        << m_Diagnostics.cameraApplyCpuMs                   << ','
-        << m_Diagnostics.terrainCpuMs                       << ','
-        << m_Diagnostics.assetCpuMs                         << ','
-        << m_Diagnostics.skyCpuMs                           << ','
-        << m_Diagnostics.worldOverlayCpuMs                  << ','
-        << m_Diagnostics.imguiCpuMs                         << ','
-        << m_Diagnostics.meshUploadCpuMs                    << ','
-        << m_Diagnostics.swapCpuMs                          << ','
-        << m_Diagnostics.gpuFrameMs                         << ','
-        << m_Diagnostics.visibleTerrainTiles                << ','
-        << m_Diagnostics.visibleTerrainChunks               << ','
-        << m_Diagnostics.terrainDrawCalls                   << ','
-        << m_Diagnostics.assetDrawCalls                     << ','
-        << m_Diagnostics.skyDrawCalls                       << ','
-        << m_Diagnostics.totalDrawCalls                     << ','
-        << m_Diagnostics.terrainTrianglesDrawn              << ','
-        << m_Diagnostics.assetTrianglesDrawn                << ','
-        << m_Diagnostics.totalTrianglesDrawn                << ','
-        << m_Diagnostics.meshUploadsThisFrame               << ','
-        << m_Diagnostics.tileChunkUploadsThisFrame          << ','
-        << m_TerrainTileBuildJobs.size()                    << ','
-        << (m_IsolineBuildPending ? 1 : 0)                  << ','
-        << m_AvgSwapWaitMs                                  << ','
-        << m_Diagnostics.renderOriginDistanceMeters         << ','
-        << m_Diagnostics.renderOriginFloatStepMeters        << ','
-        << m_Diagnostics.queuedLookDeltaDegrees.x           << ','
-        << m_Diagnostics.queuedLookDeltaDegrees.y           << ','
-        << m_Diagnostics.appliedLookDeltaDegrees.x          << ','
-        << m_Diagnostics.appliedLookDeltaDegrees.y          << ','
-        << m_Camera.GetYaw()                                << ','
-        << m_Camera.GetPitch()                              << ','
-        << cameraPos.x                                      << ','
-        << cameraPos.y                                      << ','
-        << cameraPos.z                                      << ','
-        << m_Window.GetLastRawMouseDelta().x                << ','
-        << m_Window.GetLastRawMouseDelta().y                << ','
-        // pace_target_ms = where the pacer was aiming for this frame (the
-        // m_NextFrameTargetMs *before* this iteration's increment).
-        // pace_actual_start_ms = when this frame actually started.
-        // slip = actual - target (positive => late, negative => early).
-        << (m_NextFrameTargetMs - (1000.0 / 60.0))          << ','
-        << m_FrameStartMs                                   << ','
-        << (m_FrameStartMs - (m_NextFrameTargetMs - (1000.0 / 60.0)))
-        << '\n';
-    ++m_PerfLogFrameIdx;
-    // Flush every ~120 rows (~1s @ 120fps) so the file isn't lost if the
-    // app crashes mid-recording.
-    if ((m_PerfLogFrameIdx & 127) == 0)
-    {
-        m_PerfLog.flush();
-    }
 }
 
 void Application::InitializeProject()

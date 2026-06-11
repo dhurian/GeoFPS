@@ -4,6 +4,8 @@
 #include "Assets/GltfImporter.h"
 #include "Assets/ObjImporter.h"
 #include "Core/BackgroundJobQueue.h"
+#include "Core/DiagnosticsState.h"
+#include "Core/PerformanceLogger.h"
 #include "Core/Window.h"
 #include "Game/FPSController.h"
 #include "Mapping/GeoImage.h"
@@ -197,58 +199,6 @@ enum class WorkspaceSection
     Assets,
     Lighting,
     Diagnostics
-};
-
-// ── Diagnostics ──────────────────────────────────────────────────────────────
-struct DiagnosticsState
-{
-    static constexpr int kFrameRingSize = 128;
-    std::array<float, kFrameRingSize> frameTimesMs {};
-    int   frameRingHead    {0};
-    float frameTimeAccum   {0.0f};
-    int   frameCount       {0};
-    float avgFpsDisplay    {0.0f};
-    float avgFrameTimeMs   {0.0f};
-    float minFrameTimeMs   {999.0f};
-    float maxFrameTimeMs   {0.0f};
-    bool  showOverlay      {false};
-    bool  lowLatencyMode   {false};
-    bool  platformViewportsEnabled {false};
-
-    float inputCpuMs       {0.0f};
-    float updateCpuMs      {0.0f};
-    float uiBuildCpuMs     {0.0f};
-    float cameraApplyCpuMs {0.0f};
-    float terrainCpuMs     {0.0f};
-    float assetCpuMs       {0.0f};
-    float skyCpuMs         {0.0f};
-    float worldOverlayCpuMs {0.0f};
-    float imguiCpuMs       {0.0f};
-    float swapCpuMs        {0.0f};
-    float frameCpuMs       {0.0f};
-    float gpuFrameMs       {0.0f};
-    bool  gpuTimingAvailable {false};
-
-    size_t terrainDrawCalls {0};
-    size_t assetDrawCalls   {0};
-    size_t skyDrawCalls     {0};
-    size_t totalDrawCalls   {0};
-    size_t terrainTrianglesDrawn {0};
-    size_t assetTrianglesDrawn   {0};
-    size_t skyTrianglesDrawn     {0};
-    size_t totalTrianglesDrawn   {0};
-    size_t visibleTerrainTiles   {0};
-    size_t visibleTerrainChunks  {0};
-    size_t meshUploadsThisFrame  {0};
-    size_t tileChunkUploadsThisFrame {0};
-    float  meshUploadCpuMs       {0.0f};
-
-    glm::vec2 queuedLookDeltaDegrees {0.0f};
-    glm::vec2 appliedLookDeltaDegrees {0.0f};
-    float  renderOriginDistanceMeters {0.0f};
-    float  renderOriginFloatStepMeters {0.0f};
-    float  maxDatasetWorldTranslationMeters {0.0f};
-    float  maxRenderTranslationMeters {0.0f};
 };
 
 // ── Gravity / terrain collision ──────────────────────────────────────────────
@@ -615,20 +565,13 @@ class Application
     // subsequent frames stay locked to the original 60Hz beat.
     double m_NextFrameTargetMs {0.0};
 
-    // ── Per-frame performance logger (toggle with F11) ───────────────────────
-    // When active, every frame appends a CSV row to m_PerfLogPath capturing
-    // every diagnostic the in-app panel shows plus a few extras (camera state,
-    // background-job queue depth, isoline-build pending).  Designed so a short
-    // recording (~30s) on a stuttering scene produces enough data to identify
-    // exactly which frame phase or count is spiking.
-    std::ofstream m_PerfLog;
-    std::string   m_PerfLogPath;
-    bool          m_PerfLogActive  {false};
-    bool          m_PerfLogToggleLastFrame {false};
-    int           m_PerfLogFrameIdx {0};
-    double        m_PerfLogStartMs  {0.0};
-    void TogglePerformanceLog();
-    void WritePerformanceLogRow();
+    // ── Per-frame performance logger (toggle with R) ─────────────────────────
+    // When active, appends one CSV row per frame to ~/geofps_perf_*.csv with
+    // every diagnostic the panel shows plus a few extras.  The logger owns its
+    // file lifecycle; Application only debounces the R hotkey and feeds it the
+    // per-frame data.  m_PerfLogToggleLastFrame is the R-key edge-detect state.
+    PerformanceLogger m_PerfLog;
+    bool              m_PerfLogToggleLastFrame {false};
     // EMA of the previous frame's SwapBuffers wait time (≈ vsync slack).
     // Kept for diagnostics only; the upload budget now comes from m_FrameStartMs.
     float m_AvgSwapWaitMs  {5.0f};   // seed with a reasonable 5ms to avoid starving frame 1
