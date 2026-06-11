@@ -350,7 +350,15 @@ double TerrainProfileLineAngleDegrees(const TerrainProfileVertex& start,
     const glm::dvec3 startLocal = GroundPosition(converter, start, useLocalCoordinates, coordinateMode);
     const glm::dvec3 endLocal = GroundPosition(converter, end, useLocalCoordinates, coordinateMode);
     const double dx = endLocal.x - startLocal.x;
-    const double dz = endLocal.z - startLocal.z;
+    // Negate the local-Z delta so the reported angle stays a *geographic*
+    // bearing (east = 0°, north = 90°, south = 270°) independent of the
+    // engine's internal render-Z sign.  GeoConverter maps increasing
+    // latitude to −Z (north is −Z); without this negation a north-heading
+    // segment would report 270° instead of 90°.  This value is display-only
+    // (shown as "Line angle: N degrees" in the profile tooltip/details), so
+    // keeping it a stable geographic bearing is what users expect — the
+    // number must not jump when the internal Z convention changes.
+    const double dz = -(endLocal.z - startLocal.z);
     if (std::abs(dx) <= kCoordinateEpsilon && std::abs(dz) <= kCoordinateEpsilon)
     {
         return 0.0;

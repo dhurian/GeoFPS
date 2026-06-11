@@ -19,6 +19,15 @@
 
 namespace
 {
+// Failure accounting.  Previously Require() called std::exit(1) on the first
+// failed assertion, which masked every later failure in the run — a single
+// regression looked like one problem when it might be several.  We now count
+// failures and let the whole suite run, printing each failure as it happens
+// and returning the total from main().  This makes a sweeping change (e.g. a
+// coordinate-convention flip) show its full blast radius in one run.
+int g_FailureCount = 0;
+const char* g_CurrentTest = "<startup>";
+
 bool Near(double actual, double expected, double epsilon = 1e-6)
 {
     return std::abs(actual - expected) <= epsilon;
@@ -28,8 +37,8 @@ void Require(bool condition, const std::string& message)
 {
     if (!condition)
     {
-        std::cerr << "FAILED: " << message << '\n';
-        std::exit(1);
+        std::cerr << "FAILED [" << g_CurrentTest << "]: " << message << '\n';
+        ++g_FailureCount;
     }
 }
 
@@ -154,6 +163,34 @@ void TestGeoConverterRoundTrip()
     Require(Near(geographic.x, 48.124), "round trip latitude");
     Require(Near(geographic.y, 11.5685), "round trip longitude");
     Require(Near(geographic.z, 530.0), "round trip height");
+}
+
+void TestGeoConverterAxisDirections()
+{
+    // Pin the *direction* of the geographic→local mapping, not just that it
+    // round-trips.  A round-trip test passes even if both forward and inverse
+    // are sign-flipped together, so it cannot catch a convention change — this
+    // test can.  Convention (must match GeoConverter.cpp and the 2D map):
+    //   increasing longitude → +X  (east is +X)
+    //   increasing latitude  → −Z  (north is −Z, so north is "up" on a
+    //                                top-down view with north at the top)
+    //   increasing height    → +Y
+    GeoFPS::GeoReference reference;
+    reference.originLatitude = 10.0;
+    reference.originLongitude = 20.0;
+    reference.originHeight = 100.0;
+    GeoFPS::GeoConverter converter(reference);
+
+    const glm::dvec3 east = converter.ToLocal(10.0, 21.0, 100.0);   // +1° longitude
+    Require(east.x > 0.0, "increasing longitude must map to +X (east)");
+    Require(Near(east.z, 0.0, 1e-6), "pure-east move must not change Z");
+
+    const glm::dvec3 north = converter.ToLocal(11.0, 20.0, 100.0);  // +1° latitude
+    Require(north.z < 0.0, "increasing latitude must map to -Z (north is -Z)");
+    Require(Near(north.x, 0.0, 1e-6), "pure-north move must not change X");
+
+    const glm::dvec3 up = converter.ToLocal(10.0, 20.0, 150.0);     // +50 m height
+    Require(Near(up.y, 50.0), "increasing height must map to +Y by the same amount");
 }
 
 void TestWebMercatorCrsConversion()
@@ -950,37 +987,51 @@ void TestCameraRelativeRenderOriginKeepsSmallDeltas()
 
 } // namespace
 
+// Runs one test function, tagging any failures it produces with its name.
+#define RUN(testFn)                 \
+    do {                            \
+        g_CurrentTest = #testFn;    \
+        testFn();                   \
+    } while (0)
+
 int main()
 {
-    TestTerrainCsvLoading();
-    TestTerrainCsvDecimation();
-    TestSparseTerrainHeightGridDoesNotReturnSeaLevel();
-    TestTerrainTileManifestParsing();
-    TestGeoConverterRoundTrip();
-    TestWebMercatorCrsConversion();
-    TestGridInterpolation();
-    TestSingleLineSampling();
-    TestOutOfBoundsProfileSampling();
-    TestLocalCoordinateProfileSampling();
-    TestLocalMetersProfileSampling();
-    TestLineAngles();
-    TestLocalMetersTerrainMeshGeneration();
-    TestGeographicTerrainMeshUsesLocalHeights();
-    TestPolylineSampling();
-    TestProfileExportImport();
-    TestIsolineGeneration();
-    TestIsolineSampleGridCache();
-    TestIsolineResolution();
-    TestIsolineColorRamp();
-    TestSunPositionCalculations();
-    TestTerrainMeshGenerationLargeRaster();
-    TestWorldFileParsing();
-    TestExternalBlenderAssetTextParsing();
-    TestWorldFileSchemaDiagnostics();
-    TestCameraCommandAppliesMouseLookBeforeRender();
-    TestCameraCommandGizmoDragCancelsSnap();
-    TestCameraCommandTeleportSnapSuppressesMouseDelta();
-    TestCameraRelativeRenderOriginKeepsSmallDeltas();
+    RUN(TestTerrainCsvLoading);
+    RUN(TestTerrainCsvDecimation);
+    RUN(TestSparseTerrainHeightGridDoesNotReturnSeaLevel);
+    RUN(TestTerrainTileManifestParsing);
+    RUN(TestGeoConverterRoundTrip);
+    RUN(TestGeoConverterAxisDirections);
+    RUN(TestWebMercatorCrsConversion);
+    RUN(TestGridInterpolation);
+    RUN(TestSingleLineSampling);
+    RUN(TestOutOfBoundsProfileSampling);
+    RUN(TestLocalCoordinateProfileSampling);
+    RUN(TestLocalMetersProfileSampling);
+    RUN(TestLineAngles);
+    RUN(TestLocalMetersTerrainMeshGeneration);
+    RUN(TestGeographicTerrainMeshUsesLocalHeights);
+    RUN(TestPolylineSampling);
+    RUN(TestProfileExportImport);
+    RUN(TestIsolineGeneration);
+    RUN(TestIsolineSampleGridCache);
+    RUN(TestIsolineResolution);
+    RUN(TestIsolineColorRamp);
+    RUN(TestSunPositionCalculations);
+    RUN(TestTerrainMeshGenerationLargeRaster);
+    RUN(TestWorldFileParsing);
+    RUN(TestExternalBlenderAssetTextParsing);
+    RUN(TestWorldFileSchemaDiagnostics);
+    RUN(TestCameraCommandAppliesMouseLookBeforeRender);
+    RUN(TestCameraCommandGizmoDragCancelsSnap);
+    RUN(TestCameraCommandTeleportSnapSuppressesMouseDelta);
+    RUN(TestCameraRelativeRenderOriginKeepsSmallDeltas);
+
+    if (g_FailureCount > 0)
+    {
+        std::cerr << "TerrainProfileTests: " << g_FailureCount << " assertion(s) FAILED\n";
+        return 1;
+    }
     std::cout << "TerrainProfileTests passed\n";
     return 0;
 }

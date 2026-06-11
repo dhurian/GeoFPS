@@ -9,7 +9,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set(CMAKE_WARN_DEPRECATED OFF CACHE BOOL "Suppress dependency deprecation warnings" FORCE)
 set(CMAKE_SUPPRESS_DEVELOPER_WARNINGS 1 CACHE INTERNAL "Suppress dependency developer warnings" FORCE)
 
-option(GEOFPS_BUILD_TESTS "Build tests" OFF)
+option(GEOFPS_BUILD_TESTS "Build tests" ON)
 
 include(FetchContent)
 
@@ -176,4 +176,16 @@ if(GEOFPS_BUILD_TESTS)
     target_sources(GeoFPSTests PRIVATE src/Terrain/TerrainIsolineMetal.mm)
     target_link_libraries(GeoFPSTests PRIVATE "-framework Metal" "-framework Foundation")
   endif()
+
+  # Register with CTest.  The suite loads assets/data/sample_terrain.csv via a
+  # path relative to its working directory, so run it from the source tree
+  # where assets/ always exists (the build-dir asset copy only happens as a
+  # POST_BUILD step of the GeoFPS executable target, which tests must not depend
+  # on).  Invoke `ctest` from the build directory to run it.
+  enable_testing()
+  add_test(
+    NAME GeoFPSTests
+    COMMAND GeoFPSTests
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+  )
 endif()
