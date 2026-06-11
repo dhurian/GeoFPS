@@ -198,6 +198,17 @@ bool Window::WasCharTyped(unsigned int codepoint) const
     return false;
 }
 
+bool Window::WasCharTypedMatching(bool (*predicate)(unsigned int)) const
+{
+    if (predicate == nullptr)
+    {
+        return false;
+    }
+    for (unsigned int c : m_CharsThisFrame)
+        if (predicate(c)) return true;
+    return false;
+}
+
 void Window::OnChar(unsigned int codepoint)
 {
     m_CharsThisFrame.push_back(codepoint);

@@ -33,6 +33,11 @@ class Window
     // Scandinavian keyboard '+' lives at the GLFW_KEY_MINUS physical position,
     // but WasCharTyped('+') still returns true when that key is pressed.
     [[nodiscard]] bool WasCharTyped(unsigned int codepoint) const;
+    // Returns true if ANY character typed this frame satisfies the predicate.
+    // Lets callers test a whole class of characters (e.g. "any speed-increase
+    // key") against the single source of truth for that class, instead of
+    // OR-ing individual WasCharTyped() calls that can drift out of sync.
+    [[nodiscard]] bool WasCharTypedMatching(bool (*predicate)(unsigned int)) const;
     void OnChar(unsigned int codepoint);
 
     [[nodiscard]] int GetWidth() const { return m_Width; }

@@ -1,5 +1,6 @@
 #include "Core/Application.h"
 #include "Core/ApplicationInternal.h"
+#include "Game/SpeedKeyMapping.h"
 
 #include "imgui.h"
 #include "backends/imgui_impl_glfw.h"
@@ -539,8 +540,7 @@ void Application::ProcessInput(float deltaTime)
     // single-keypress character anywhere mainstream, and '=' isn't bound
     // to anything else here.
     const bool increaseSpeedPressed =
-        m_Window.WasCharTyped('+') ||
-        m_Window.WasCharTyped('=') ||
+        m_Window.WasCharTypedMatching(&IsSpeedIncreaseChar) ||
         m_Window.IsKeyPressed(GLFW_KEY_KP_ADD);
     if (increaseSpeedPressed && !increaseSpeedPressedLastFrame)
     {
@@ -550,8 +550,7 @@ void Application::ProcessInput(float deltaTime)
     increaseSpeedPressedLastFrame = increaseSpeedPressed;
 
     const bool decreaseSpeedPressed =
-        m_Window.WasCharTyped('-') ||
-        m_Window.WasCharTyped('_') ||
+        m_Window.WasCharTypedMatching(&IsSpeedDecreaseChar) ||
         m_Window.IsKeyPressed(GLFW_KEY_KP_SUBTRACT);
     if (decreaseSpeedPressed && !decreaseSpeedPressedLastFrame)
     {

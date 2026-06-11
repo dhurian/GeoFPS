@@ -1,6 +1,7 @@
 #include "Core/ApplicationInternal.h"
 #include "Core/WorldFileParser.h"
 #include "Game/CameraCommand.h"
+#include "Game/SpeedKeyMapping.h"
 #include "Math/GeoConverter.h"
 #include "Renderer/Camera.h"
 #include "Renderer/RenderOrigin.h"
@@ -1019,6 +1020,26 @@ void TestCameraCommandTeleportSnapSuppressesMouseDelta()
     Require(!Near(camera.GetYaw(), 45.0), "mouse look should not fight a snap command in the same frame");
 }
 
+void TestSpeedKeyCharMapping()
+{
+    // Pins the +/- speed-key character contract that has bitten us three times
+    // (Danish layout, then adding '=' / '_' fallbacks).  Increase: '+' and its
+    // unshifted-US sibling '='.  Decrease: '-' and its shifted-US sibling '_'.
+    Require(GeoFPS::IsSpeedIncreaseChar('+'), "'+' must increase speed");
+    Require(GeoFPS::IsSpeedIncreaseChar('='), "'=' (unshifted '+') must increase speed");
+    Require(GeoFPS::IsSpeedDecreaseChar('-'), "'-' must decrease speed");
+    Require(GeoFPS::IsSpeedDecreaseChar('_'), "'_' (shifted '-') must decrease speed");
+
+    // No overlap and no false positives on unrelated characters.
+    Require(!GeoFPS::IsSpeedIncreaseChar('-') && !GeoFPS::IsSpeedDecreaseChar('+'),
+            "increase and decrease character sets must not overlap");
+    for (unsigned int c : {'w', 'a', 's', 'd', 'h', 'r', '0', ' '})
+    {
+        Require(!GeoFPS::IsSpeedIncreaseChar(c), "unrelated char must not increase speed");
+        Require(!GeoFPS::IsSpeedDecreaseChar(c), "unrelated char must not decrease speed");
+    }
+}
+
 void TestCameraRotationOnlyMatrixIsPositionIndependent()
 {
     // Guards the mouse-look stutter root-cause fix.  GetViewMatrixRotationOnly()
@@ -1125,6 +1146,7 @@ int main()
     RUN(TestCameraCommandAppliesMouseLookBeforeRender);
     RUN(TestCameraCommandGizmoDragCancelsSnap);
     RUN(TestCameraCommandTeleportSnapSuppressesMouseDelta);
+    RUN(TestSpeedKeyCharMapping);
     RUN(TestCameraRotationOnlyMatrixIsPositionIndependent);
     RUN(TestCameraRelativeRenderOriginKeepsSmallDeltas);
 
