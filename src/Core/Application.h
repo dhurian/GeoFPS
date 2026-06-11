@@ -9,6 +9,7 @@
 #include "Mapping/GeoImage.h"
 #include "Math/GeoConverter.h"
 #include "Renderer/Camera.h"
+#include "Renderer/GpuFrameTimer.h"
 #include "Renderer/Mesh.h"
 #include "Renderer/RenderOrigin.h"
 #include "Renderer/Shader.h"
@@ -480,9 +481,6 @@ class Application
     void SnapCameraView(float yaw, float pitch);
     void QueueCameraTeleport(const glm::vec3& position);
     void ApplyPendingCameraCommands(float deltaTime);
-    void PollGpuFrameTiming();
-    void BeginGpuFrameTiming();
-    void EndGpuFrameTiming();
     [[nodiscard]] glm::dvec3 GetRenderOrigin() const;
     [[nodiscard]] glm::vec3 ToRenderRelative(const glm::dvec3& worldPosition) const;
     [[nodiscard]] glm::vec3 ToRenderRelative(const glm::vec3& worldPosition) const;
@@ -645,10 +643,6 @@ class Application
     unsigned int m_ProfileLineVao {0};
     unsigned int m_ProfileLineVbo {0};
     std::string m_StatusMessage;
-    std::array<unsigned int, 2> m_GpuTimerQueries {};
-    std::array<bool, 2> m_GpuTimerPending {};
-    int m_GpuTimerWriteIndex {0};
-    bool m_GpuTimerInitialized {false};
-    bool m_GpuTimerActive {false};
+    GpuFrameTimer m_GpuFrameTimer;
 };
 } // namespace GeoFPS

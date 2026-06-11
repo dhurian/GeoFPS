@@ -427,13 +427,7 @@ void Application::Shutdown()
         glDeleteVertexArrays(1, &m_ProfileLineVao);
         m_ProfileLineVao = 0;
     }
-    if (m_GpuTimerInitialized)
-    {
-        glDeleteQueries(static_cast<GLsizei>(m_GpuTimerQueries.size()), m_GpuTimerQueries.data());
-        m_GpuTimerQueries = {};
-        m_GpuTimerPending = {};
-        m_GpuTimerInitialized = false;
-    }
+    m_GpuFrameTimer.Shutdown();
     for (TerrainDataset& dataset : m_TerrainDatasets)
     {
         dataset.mesh.reset();
@@ -787,63 +781,6 @@ void Application::ApplyPendingCameraCommands(float deltaTime)
     }
 
     m_Diagnostics.cameraApplyCpuMs = static_cast<float>(NowMs() - startMs);
-}
-
-void Application::PollGpuFrameTiming()
-{
-    if (!m_GpuTimerInitialized)
-    {
-        m_Diagnostics.gpuTimingAvailable = GLAD_GL_VERSION_3_3 != 0;
-        if (!m_Diagnostics.gpuTimingAvailable)
-        {
-            return;
-        }
-        glGenQueries(static_cast<GLsizei>(m_GpuTimerQueries.size()), m_GpuTimerQueries.data());
-        m_GpuTimerInitialized = true;
-    }
-
-    for (size_t index = 0; index < m_GpuTimerQueries.size(); ++index)
-    {
-        if (!m_GpuTimerPending[index])
-        {
-            continue;
-        }
-
-        GLuint available = GL_FALSE;
-        glGetQueryObjectuiv(m_GpuTimerQueries[index], GL_QUERY_RESULT_AVAILABLE, &available);
-        if (available == GL_TRUE)
-        {
-            GLuint64 elapsedNs = 0;
-            glGetQueryObjectui64v(m_GpuTimerQueries[index], GL_QUERY_RESULT, &elapsedNs);
-            m_Diagnostics.gpuFrameMs = static_cast<float>(static_cast<double>(elapsedNs) / 1000000.0);
-            m_GpuTimerPending[index] = false;
-        }
-    }
-}
-
-void Application::BeginGpuFrameTiming()
-{
-    if (!m_GpuTimerInitialized || m_GpuTimerPending[static_cast<size_t>(m_GpuTimerWriteIndex)])
-    {
-        m_GpuTimerActive = false;
-        return;
-    }
-
-    glBeginQuery(GL_TIME_ELAPSED, m_GpuTimerQueries[static_cast<size_t>(m_GpuTimerWriteIndex)]);
-    m_GpuTimerActive = true;
-}
-
-void Application::EndGpuFrameTiming()
-{
-    if (!m_GpuTimerActive)
-    {
-        return;
-    }
-
-    glEndQuery(GL_TIME_ELAPSED);
-    m_GpuTimerPending[static_cast<size_t>(m_GpuTimerWriteIndex)] = true;
-    m_GpuTimerWriteIndex = (m_GpuTimerWriteIndex + 1) % static_cast<int>(m_GpuTimerQueries.size());
-    m_GpuTimerActive = false;
 }
 
 glm::dvec3 Application::GetRenderOrigin() const
@@ -1277,7 +1214,9 @@ void Application::Render(float deltaTime)
     RenderTerrainProfilesWindow();
     RenderEditor();
     m_Diagnostics.uiBuildCpuMs = static_cast<float>(NowMs() - uiBuildStartMs);
-    PollGpuFrameTiming();
+    m_GpuFrameTimer.Poll();
+    m_Diagnostics.gpuTimingAvailable = m_GpuFrameTimer.Available();
+    m_Diagnostics.gpuFrameMs = m_GpuFrameTimer.LastFrameMs();
     const glm::dvec3 renderOrigin = GetRenderOrigin();
     const glm::mat4 renderView = GetRenderViewMatrix();
     const glm::mat4 renderViewProjection = m_Camera.GetProjectionMatrix() * renderView;
@@ -1308,7 +1247,7 @@ void Application::Render(float deltaTime)
         drawable.Draw();
     };
 
-    BeginGpuFrameTiming();
+    m_GpuFrameTimer.Begin();
 
     const double terrainStartMs = NowMs();
     if (m_TerrainShader)
@@ -1628,7 +1567,7 @@ void Application::Render(float deltaTime)
         glEnable(GL_CULL_FACE);
     }
     m_Diagnostics.skyCpuMs = static_cast<float>(NowMs() - skyStartMs);
-    EndGpuFrameTiming();
+    m_GpuFrameTimer.End();
     m_Diagnostics.totalDrawCalls = m_Diagnostics.terrainDrawCalls +
                                    m_Diagnostics.assetDrawCalls +
                                    m_Diagnostics.skyDrawCalls;
