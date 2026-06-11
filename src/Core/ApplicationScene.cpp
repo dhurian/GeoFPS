@@ -2096,80 +2096,31 @@ void Application::RebuildTerrainIsolineSampleGridIfNeeded()
         return;
     }
 
-    // Compute union bounds across every contributing dataset.
-    double unionMinLat = std::numeric_limits<double>::max();
-    double unionMaxLat = std::numeric_limits<double>::lowest();
-    double unionMinLon = std::numeric_limits<double>::max();
-    double unionMaxLon = std::numeric_limits<double>::lowest();
-    double unionMinHeight = std::numeric_limits<double>::max();
-    double unionMaxHeight = std::numeric_limits<double>::lowest();
+    // Adapt the contributing datasets into the pure union builder's input:
+    // each source carries its bounds plus a callback that samples its height
+    // (walking tiles / the dataset's height grid as appropriate).  The builder
+    // owns the union-bounds + per-cell ownership logic and is unit-tested.
+    std::vector<IsolineUnionSource> sources;
+    sources.reserve(contributingDatasets.size());
     for (const TerrainDataset* dataset : contributingDatasets)
     {
-        unionMinLat    = std::min(unionMinLat,    dataset->bounds.minLatitude);
-        unionMaxLat    = std::max(unionMaxLat,    dataset->bounds.maxLatitude);
-        unionMinLon    = std::min(unionMinLon,    dataset->bounds.minLongitude);
-        unionMaxLon    = std::max(unionMaxLon,    dataset->bounds.maxLongitude);
-        unionMinHeight = std::min(unionMinHeight, dataset->bounds.minHeight);
-        unionMaxHeight = std::max(unionMaxHeight, dataset->bounds.maxHeight);
+        IsolineUnionSource source;
+        source.minLatitude  = dataset->bounds.minLatitude;
+        source.maxLatitude  = dataset->bounds.maxLatitude;
+        source.minLongitude = dataset->bounds.minLongitude;
+        source.maxLongitude = dataset->bounds.maxLongitude;
+        source.minHeight    = dataset->bounds.minHeight;
+        source.maxHeight    = dataset->bounds.maxHeight;
+        source.sampleHeight = [this, dataset](double latitude, double longitude) {
+            return SampleTerrainHeightAt(*dataset, latitude, longitude);
+        };
+        sources.push_back(std::move(source));
     }
 
-    TerrainIsolineSampleGrid sampleGrid;
-    sampleGrid.resolutionX  = std::clamp(m_IsolineSettings.resolutionX, 2, 512);
-    sampleGrid.resolutionZ  = std::clamp(m_IsolineSettings.resolutionZ, 2, 512);
-    sampleGrid.minLatitude  = unionMinLat;
-    sampleGrid.maxLatitude  = unionMaxLat;
-    sampleGrid.minLongitude = unionMinLon;
-    sampleGrid.maxLongitude = unionMaxLon;
-    sampleGrid.heights.assign(static_cast<size_t>(sampleGrid.resolutionX * sampleGrid.resolutionZ), 0.0f);
-    sampleGrid.minHeight = std::numeric_limits<double>::max();
-    sampleGrid.maxHeight = std::numeric_limits<double>::lowest();
-
-    // Per-cell loop: walks the union grid, sampling from whichever dataset
-    // contains the cell's lat/lon.  Cells outside every dataset's footprint
-    // get a sentinel "ground level" value (the union's min height) so they
-    // don't introduce spurious contour lines along the union-bounds boundary.
-    const double sentinelHeight = unionMinHeight;
-    for (int z = 0; z < sampleGrid.resolutionZ; ++z)
-    {
-        const double v = static_cast<double>(z) / static_cast<double>(sampleGrid.resolutionZ - 1);
-        const double latitude = sampleGrid.minLatitude +
-                                ((sampleGrid.maxLatitude - sampleGrid.minLatitude) * v);
-        for (int x = 0; x < sampleGrid.resolutionX; ++x)
-        {
-            const double u = static_cast<double>(x) / static_cast<double>(sampleGrid.resolutionX - 1);
-            const double longitude = sampleGrid.minLongitude +
-                                     ((sampleGrid.maxLongitude - sampleGrid.minLongitude) * u);
-
-            // Find the first dataset whose bounds contain this cell's coords.
-            // For non-overlapping datasets at most one will match; for
-            // overlapping datasets the first wins (deterministic tie-break).
-            const TerrainDataset* containingDataset = nullptr;
-            for (const TerrainDataset* dataset : contributingDatasets)
-            {
-                if (TerrainDatasetContainsCoordinate(*dataset, latitude, longitude))
-                {
-                    containingDataset = dataset;
-                    break;
-                }
-            }
-
-            const double height = (containingDataset != nullptr)
-                                      ? static_cast<double>(SampleTerrainHeightAt(*containingDataset,
-                                                                                   latitude, longitude))
-                                      : sentinelHeight;
-            sampleGrid.heights[static_cast<size_t>(z * sampleGrid.resolutionX + x)] = static_cast<float>(height);
-            sampleGrid.minHeight = std::min(sampleGrid.minHeight, height);
-            sampleGrid.maxHeight = std::max(sampleGrid.maxHeight, height);
-        }
-    }
-
-    if (sampleGrid.minHeight == std::numeric_limits<double>::max())
-    {
-        sampleGrid.minHeight = unionMinHeight;
-        sampleGrid.maxHeight = unionMaxHeight;
-    }
-
-    m_TerrainIsolineSampleGrid = std::move(sampleGrid);
+    m_TerrainIsolineSampleGrid = BuildUnionIsolineSampleGrid(
+        sources,
+        std::clamp(m_IsolineSettings.resolutionX, 2, 512),
+        std::clamp(m_IsolineSettings.resolutionZ, 2, 512));
     m_TerrainIsolineSampleGridDirty = false;
 }
 

@@ -511,6 +511,54 @@ void TestIsolineSampleGridCache()
     }
 }
 
+void TestUnionIsolineSampleGrid()
+{
+    // Guards the multi-dataset isoline fix: two non-overlapping datasets must
+    // produce a sample grid spanning the UNION of their bounds, with each cell
+    // sampled from whichever dataset contains it, and cells in the gap between
+    // them taking the sentinel (= union min height).  Before the fix the grid
+    // only covered the active dataset, so the second terrain showed no isolines.
+    //
+    // Layout: source A over lon [0,1], source B over lon [3,4], both lat [0,1].
+    // A returns height 100 everywhere it owns; B returns 500.  The union spans
+    // lon [0,4]; the middle (lon ~1.5..2.5) is owned by neither → sentinel.
+    std::vector<GeoFPS::IsolineUnionSource> sources;
+
+    GeoFPS::IsolineUnionSource a;
+    a.minLatitude = 0.0; a.maxLatitude = 1.0;
+    a.minLongitude = 0.0; a.maxLongitude = 1.0;
+    a.minHeight = 100.0; a.maxHeight = 100.0;
+    a.sampleHeight = [](double, double) { return 100.0f; };
+    sources.push_back(a);
+
+    GeoFPS::IsolineUnionSource b;
+    b.minLatitude = 0.0; b.maxLatitude = 1.0;
+    b.minLongitude = 3.0; b.maxLongitude = 4.0;
+    b.minHeight = 500.0; b.maxHeight = 500.0;
+    b.sampleHeight = [](double, double) { return 500.0f; };
+    sources.push_back(b);
+
+    const GeoFPS::TerrainIsolineSampleGrid grid = GeoFPS::BuildUnionIsolineSampleGrid(sources, 9, 3);
+    Require(grid.IsValid(), "union sample grid should be valid");
+    Require(Near(grid.minLongitude, 0.0), "union grid should start at the westmost source");
+    Require(Near(grid.maxLongitude, 4.0), "union grid should end at the eastmost source");
+    Require(Near(grid.minLatitude, 0.0) && Near(grid.maxLatitude, 1.0), "union grid latitude bounds");
+
+    // Sample the row at latitude 0: column 0 (lon 0) is in A → 100; the last
+    // column (lon 4) is in B → 500; a middle column (lon 2) is owned by neither
+    // → sentinel = union min height = 100.
+    const int resX = grid.resolutionX; // 9
+    const float west = grid.heights[0];
+    const float east = grid.heights[static_cast<size_t>(resX - 1)];
+    Require(Near(west, 100.0f), "westmost cell sampled from source A");
+    Require(Near(east, 500.0f), "eastmost cell sampled from source B");
+    Require(Near(grid.maxHeight, 500.0), "union grid max height comes from source B");
+
+    // Empty sources → invalid grid (caller falls back).
+    const GeoFPS::TerrainIsolineSampleGrid empty = GeoFPS::BuildUnionIsolineSampleGrid({}, 8, 8);
+    Require(!empty.IsValid(), "empty source list yields an invalid grid");
+}
+
 void TestIsolineResolution()
 {
     GeoFPS::TerrainHeightGrid grid;
@@ -1066,6 +1114,7 @@ int main()
     RUN(TestProfileExportImport);
     RUN(TestIsolineGeneration);
     RUN(TestIsolineSampleGridCache);
+    RUN(TestUnionIsolineSampleGrid);
     RUN(TestIsolineResolution);
     RUN(TestIsolineColorRamp);
     RUN(TestSunPositionCalculations);

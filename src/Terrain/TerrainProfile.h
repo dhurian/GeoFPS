@@ -4,6 +4,7 @@
 #include "Terrain/TerrainImporter.h"
 #include "Terrain/TerrainMeshBuilder.h"
 #include <glm/glm.hpp>
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -123,6 +124,31 @@ class TerrainHeightGrid
                                                                         const TerrainIsolineSettings& settings);
 [[nodiscard]] TerrainIsolineSampleGrid BuildTerrainIsolineSampleGrid(const TerrainHeightGrid& heightGrid,
                                                                      const TerrainIsolineSettings& settings);
+
+// One contributing terrain for a multi-dataset isoline sample grid: its
+// geographic bounds plus a callback that samples its height at a lat/lon.
+// Decoupled from the (GL-heavy) TerrainDataset type so the union builder is a
+// pure function the caller adapts its datasets into.
+struct IsolineUnionSource
+{
+    double minLatitude {0.0};
+    double maxLatitude {0.0};
+    double minLongitude {0.0};
+    double maxLongitude {0.0};
+    double minHeight {0.0};
+    double maxHeight {0.0};
+    std::function<float(double latitude, double longitude)> sampleHeight;
+};
+
+// Build a sample grid spanning the *union* of every source's bounds, sampling
+// each cell from the first source whose bounds contain it (deterministic
+// tie-break on overlap).  Cells outside every source's footprint take a
+// sentinel = the union's minimum height, so they don't introduce spurious
+// contour lines along the union boundary.  Returns an invalid grid if sources
+// is empty or the resolution is degenerate.
+[[nodiscard]] TerrainIsolineSampleGrid BuildUnionIsolineSampleGrid(const std::vector<IsolineUnionSource>& sources,
+                                                                   int resolutionX,
+                                                                   int resolutionZ);
 [[nodiscard]] std::vector<TerrainIsolineSegment> GenerateTerrainIsolinesFromSampleGrid(const TerrainIsolineSampleGrid& sampleGrid,
                                                                                       const TerrainIsolineSettings& settings);
 [[nodiscard]] std::vector<TerrainIsolineSegment> GenerateTerrainIsolinesAccelerated(const TerrainHeightGrid& heightGrid,

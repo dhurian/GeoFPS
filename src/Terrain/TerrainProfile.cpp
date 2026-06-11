@@ -501,6 +501,88 @@ TerrainIsolineSampleGrid BuildTerrainIsolineSampleGrid(const TerrainHeightGrid& 
     return sampleGrid;
 }
 
+TerrainIsolineSampleGrid BuildUnionIsolineSampleGrid(const std::vector<IsolineUnionSource>& sources,
+                                                     int resolutionX,
+                                                     int resolutionZ)
+{
+    TerrainIsolineSampleGrid sampleGrid;
+    if (sources.empty() || resolutionX < 2 || resolutionZ < 2)
+    {
+        return sampleGrid;
+    }
+
+    // Union bounds across every source.
+    double unionMinLat = std::numeric_limits<double>::max();
+    double unionMaxLat = std::numeric_limits<double>::lowest();
+    double unionMinLon = std::numeric_limits<double>::max();
+    double unionMaxLon = std::numeric_limits<double>::lowest();
+    double unionMinHeight = std::numeric_limits<double>::max();
+    double unionMaxHeight = std::numeric_limits<double>::lowest();
+    for (const IsolineUnionSource& source : sources)
+    {
+        unionMinLat    = std::min(unionMinLat,    source.minLatitude);
+        unionMaxLat    = std::max(unionMaxLat,    source.maxLatitude);
+        unionMinLon    = std::min(unionMinLon,    source.minLongitude);
+        unionMaxLon    = std::max(unionMaxLon,    source.maxLongitude);
+        unionMinHeight = std::min(unionMinHeight, source.minHeight);
+        unionMaxHeight = std::max(unionMaxHeight, source.maxHeight);
+    }
+
+    sampleGrid.resolutionX  = std::clamp(resolutionX, 2, 512);
+    sampleGrid.resolutionZ  = std::clamp(resolutionZ, 2, 512);
+    sampleGrid.minLatitude  = unionMinLat;
+    sampleGrid.maxLatitude  = unionMaxLat;
+    sampleGrid.minLongitude = unionMinLon;
+    sampleGrid.maxLongitude = unionMaxLon;
+    sampleGrid.heights.assign(static_cast<size_t>(sampleGrid.resolutionX * sampleGrid.resolutionZ), 0.0f);
+    sampleGrid.minHeight = std::numeric_limits<double>::max();
+    sampleGrid.maxHeight = std::numeric_limits<double>::lowest();
+
+    // Cells outside every source's footprint take this sentinel so they don't
+    // introduce spurious contour lines along the union boundary.
+    const double sentinelHeight = unionMinHeight;
+    for (int z = 0; z < sampleGrid.resolutionZ; ++z)
+    {
+        const double v = static_cast<double>(z) / static_cast<double>(sampleGrid.resolutionZ - 1);
+        const double latitude = sampleGrid.minLatitude +
+                                ((sampleGrid.maxLatitude - sampleGrid.minLatitude) * v);
+        for (int x = 0; x < sampleGrid.resolutionX; ++x)
+        {
+            const double u = static_cast<double>(x) / static_cast<double>(sampleGrid.resolutionX - 1);
+            const double longitude = sampleGrid.minLongitude +
+                                     ((sampleGrid.maxLongitude - sampleGrid.minLongitude) * u);
+
+            // First source whose bounds contain this cell wins (deterministic
+            // tie-break for overlapping sources).
+            const IsolineUnionSource* owner = nullptr;
+            for (const IsolineUnionSource& source : sources)
+            {
+                if (latitude >= source.minLatitude && latitude <= source.maxLatitude &&
+                    longitude >= source.minLongitude && longitude <= source.maxLongitude)
+                {
+                    owner = &source;
+                    break;
+                }
+            }
+
+            const double height = (owner != nullptr && owner->sampleHeight)
+                                      ? static_cast<double>(owner->sampleHeight(latitude, longitude))
+                                      : sentinelHeight;
+            sampleGrid.heights[static_cast<size_t>(z * sampleGrid.resolutionX + x)] = static_cast<float>(height);
+            sampleGrid.minHeight = std::min(sampleGrid.minHeight, height);
+            sampleGrid.maxHeight = std::max(sampleGrid.maxHeight, height);
+        }
+    }
+
+    if (sampleGrid.minHeight == std::numeric_limits<double>::max())
+    {
+        sampleGrid.minHeight = unionMinHeight;
+        sampleGrid.maxHeight = unionMaxHeight;
+    }
+
+    return sampleGrid;
+}
+
 std::vector<TerrainIsolineSegment> GenerateTerrainIsolinesFromSampleGrid(const TerrainIsolineSampleGrid& sampleGrid,
                                                                          const TerrainIsolineSettings& settings)
 {
