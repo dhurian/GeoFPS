@@ -133,6 +133,18 @@ if(APPLE)
   )
   target_sources(GeoFPS PRIVATE src/Terrain/TerrainIsolineMetal.mm src/Core/NativeFileDialog.mm src/Core/RawMouseMacOS.mm)
   target_link_libraries(GeoFPS PRIVATE "-framework Cocoa" "-framework IOKit" "-framework CoreVideo" "-framework Metal" "-framework Foundation" "-framework ApplicationServices")
+
+  # glfw lands on the final link line twice — once as GeoFPS's direct
+  # dependency (Window.cpp uses GLFW directly) and once propagated from
+  # imgui's PRIVATE link requirement (static archives don't embed their
+  # deps).  Both are correct; the duplication is inherent to the static-lib
+  # graph.  Xcode 15's new linker warns where the old one silently deduped.
+  # Suppress the cosmetic warning when the linker understands the flag.
+  include(CheckLinkerFlag)
+  check_linker_flag(CXX "-Wl,-no_warn_duplicate_libraries" GEOFPS_HAVE_NO_WARN_DUP_LIBS)
+  if(GEOFPS_HAVE_NO_WARN_DUP_LIBS)
+    target_link_options(GeoFPS PRIVATE "-Wl,-no_warn_duplicate_libraries")
+  endif()
 endif()
 
 if(MSVC)
