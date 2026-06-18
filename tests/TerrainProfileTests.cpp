@@ -560,6 +560,71 @@ void TestUnionIsolineSampleGrid()
     Require(!empty.IsValid(), "empty source list yields an invalid grid");
 }
 
+void TestProfileLineOfSight()
+{
+    using GeoFPS::TerrainProfileSample;
+    auto makeSample = [](double dist, double height) {
+        TerrainProfileSample s;
+        s.distanceMeters = dist;
+        s.height = height;
+        s.valid = true;
+        return s;
+    };
+
+    // ── Flat ground: the observer (eye 2 m up) sees everything. ──────────────
+    {
+        std::vector<TerrainProfileSample> flat = {
+            makeSample(0, 100), makeSample(10, 100), makeSample(20, 100),
+            makeSample(30, 100), makeSample(40, 100)};
+        const auto los = GeoFPS::ComputeProfileLineOfSight(flat, 2.0);
+        Require(los.observerSampleIndex == 0, "observer is the first valid sample");
+        Require(Near(los.observerEyeHeight, 102.0), "observer eye = ground + offset");
+        for (size_t i = 0; i < flat.size(); ++i)
+        {
+            Require(los.visible[i], "flat ground should be fully visible");
+        }
+        Require(los.endpointVisible, "flat-ground endpoint visible");
+        Require(los.firstBlockedSampleIndex == -1, "flat ground has no blocked sample");
+    }
+
+    // ── A ridge hides the valley behind it. ──────────────────────────────────
+    {
+        std::vector<TerrainProfileSample> ridge = {
+            makeSample(0, 100),   // observer
+            makeSample(10, 100),
+            makeSample(20, 200),  // ridge crest
+            makeSample(30, 100),  // valley behind ridge — hidden
+            makeSample(40, 100)}; // still hidden
+        const auto los = GeoFPS::ComputeProfileLineOfSight(ridge, 2.0);
+        Require(los.visible[0] && los.visible[1] && los.visible[2],
+                "observer, near ground, and ridge crest are visible");
+        Require(!los.visible[3] && !los.visible[4],
+                "ground behind the ridge is hidden");
+        Require(los.firstBlockedSampleIndex == 3, "first blocked sample is just past the ridge");
+        Require(!los.endpointVisible, "endpoint behind ridge is not visible");
+    }
+
+    // ── Observer on a peak looking down a descending slope: all visible. ──────
+    {
+        std::vector<TerrainProfileSample> peak = {
+            makeSample(0, 300), makeSample(10, 100), makeSample(20, 90), makeSample(30, 80)};
+        const auto los = GeoFPS::ComputeProfileLineOfSight(peak, 2.0);
+        for (size_t i = 0; i < peak.size(); ++i)
+        {
+            Require(los.visible[i], "descending slope from a peak is fully visible");
+        }
+        Require(los.endpointVisible, "far end of descending slope is visible");
+    }
+
+    // ── No valid samples: nothing visible, no observer. ──────────────────────
+    {
+        std::vector<TerrainProfileSample> none;
+        const auto los = GeoFPS::ComputeProfileLineOfSight(none, 2.0);
+        Require(los.observerSampleIndex == -1, "no observer when there are no samples");
+        Require(!los.endpointVisible, "no endpoint visibility without samples");
+    }
+}
+
 void TestIsolineResolution()
 {
     GeoFPS::TerrainHeightGrid grid;
@@ -1136,6 +1201,7 @@ int main()
     RUN(TestIsolineGeneration);
     RUN(TestIsolineSampleGridCache);
     RUN(TestUnionIsolineSampleGrid);
+    RUN(TestProfileLineOfSight);
     RUN(TestIsolineResolution);
     RUN(TestIsolineColorRamp);
     RUN(TestSunPositionCalculations);

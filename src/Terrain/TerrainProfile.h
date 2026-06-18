@@ -29,6 +29,19 @@ struct TerrainProfileSample
     bool valid {true};
 };
 
+// Per-sample line-of-sight result along a profile, computed from a single
+// observer standing at the first valid sample.  `visible[i]` is true when the
+// terrain at sample i can be seen by the observer (false for hidden samples
+// AND for invalid/out-of-coverage ones).  See ComputeProfileLineOfSight.
+struct ProfileLineOfSightResult
+{
+    std::vector<bool> visible;          // one entry per input sample
+    int    observerSampleIndex {-1};    // first valid sample (the observer)
+    double observerEyeHeight {0.0};     // absolute eye elevation (ground + offset)
+    bool   endpointVisible {false};     // can the observer see the last valid sample
+    int    firstBlockedSampleIndex {-1}; // first hidden sample past the observer, or -1
+};
+
 struct TerrainProfile
 {
     std::string name {"Profile 1"};
@@ -160,6 +173,16 @@ struct IsolineUnionSource
                                                                                    bool* usedGpu = nullptr);
 [[nodiscard]] glm::vec4 IsolineColorForHeight(double height, double minHeight, double maxHeight, float opacity);
 [[nodiscard]] double ResolveContourInterval(double minHeight, double maxHeight, const TerrainIsolineSettings& settings);
+
+// Compute terrain line-of-sight along a profile from an observer standing at
+// the first valid sample, whose eye sits observerEyeHeightMeters above the
+// ground there.  Uses the running-maximum-elevation-angle method: walking
+// outward, a sample is visible iff its elevation angle from the observer eye
+// is at least the highest angle of any nearer terrain (anything steeper closer
+// in blocks the view past it).  Invalid (out-of-coverage) samples are marked
+// not-visible and do not occlude.  Pure function — no engine state.
+[[nodiscard]] ProfileLineOfSightResult ComputeProfileLineOfSight(const std::vector<TerrainProfileSample>& samples,
+                                                                 double observerEyeHeightMeters);
 
 bool ExportTerrainProfiles(const std::string& path, const std::vector<TerrainProfile>& profiles);
 bool ImportTerrainProfiles(const std::string& path, std::vector<TerrainProfile>& profiles, std::string& errorMessage);

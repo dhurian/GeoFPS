@@ -425,6 +425,73 @@ std::vector<TerrainProfileSample> SampleTerrainProfile(const std::vector<Terrain
     return samples;
 }
 
+ProfileLineOfSightResult ComputeProfileLineOfSight(const std::vector<TerrainProfileSample>& samples,
+                                                   double observerEyeHeightMeters)
+{
+    ProfileLineOfSightResult result;
+    result.visible.assign(samples.size(), false);
+
+    // Locate the observer = first valid sample.
+    int observerIndex = -1;
+    for (int i = 0; i < static_cast<int>(samples.size()); ++i)
+    {
+        if (samples[static_cast<size_t>(i)].valid)
+        {
+            observerIndex = i;
+            break;
+        }
+    }
+    if (observerIndex < 0)
+    {
+        return result; // no valid terrain anywhere
+    }
+
+    const TerrainProfileSample& observer = samples[static_cast<size_t>(observerIndex)];
+    const double observerEye = observer.height + observerEyeHeightMeters;
+    const double observerDist = observer.distanceMeters;
+    result.observerSampleIndex = observerIndex;
+    result.observerEyeHeight = observerEye;
+    result.visible[static_cast<size_t>(observerIndex)] = true; // you can see where you stand
+
+    // Walk outward, tracking the steepest elevation angle seen so far.  A
+    // sample is visible iff its angle from the eye is at least that running
+    // max — anything steeper and closer rises into the line and blocks it.
+    constexpr double kAngleEpsilon = 1e-9;
+    double maxAngle = std::numeric_limits<double>::lowest();
+    int lastValidIndex = observerIndex;
+    for (int i = observerIndex + 1; i < static_cast<int>(samples.size()); ++i)
+    {
+        const TerrainProfileSample& sample = samples[static_cast<size_t>(i)];
+        if (!sample.valid)
+        {
+            // No terrain here: nothing to see, nothing to occlude.
+            continue;
+        }
+
+        const double horizontal = sample.distanceMeters - observerDist;
+        if (horizontal <= 0.0)
+        {
+            // Degenerate (coincident with / behind the observer): treat as visible.
+            result.visible[static_cast<size_t>(i)] = true;
+            lastValidIndex = i;
+            continue;
+        }
+
+        const double angle = std::atan2(sample.height - observerEye, horizontal);
+        const bool visible = angle >= maxAngle - kAngleEpsilon;
+        result.visible[static_cast<size_t>(i)] = visible;
+        if (!visible && result.firstBlockedSampleIndex < 0)
+        {
+            result.firstBlockedSampleIndex = i;
+        }
+        maxAngle = std::max(maxAngle, angle);
+        lastValidIndex = i;
+    }
+
+    result.endpointVisible = result.visible[static_cast<size_t>(lastValidIndex)];
+    return result;
+}
+
 glm::vec4 IsolineColorForHeight(double height, double minHeight, double maxHeight, float opacity)
 {
     const double span = std::max(maxHeight - minHeight, 1.0);
