@@ -208,6 +208,32 @@ void Application::RenderMainMenuBar()
         ImGui::MenuItem("Aerial Overlay", nullptr, &m_ShowAerialOverlayWindow);
         ImGui::MenuItem("Blender Assets", nullptr, &m_ShowBlenderAssetsWindow);
         ImGui::MenuItem("Terrain Profiles", nullptr, &m_ShowTerrainProfilesWindow);
+        ImGui::Separator();
+        // Multi-window mode: when on, any panel dragged out of the main window
+        // (by its title bar) becomes its own OS window — e.g. pop the Terrain
+        // Profiles window onto a second monitor.  Toggles ImGui's platform
+        // viewports at runtime.  Off by default because it switches every panel
+        // to opaque, square OS-style windows.
+        {
+            ImGuiIO& io = ImGui::GetIO();
+            bool detachable = (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) != 0;
+            if (ImGui::MenuItem("Detach panels to separate windows", nullptr, &detachable))
+            {
+                m_Diagnostics.platformViewportsEnabled = detachable;
+                if (detachable)
+                {
+                    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+                }
+                else
+                {
+                    io.ConfigFlags &= ~ImGuiConfigFlags_ViewportsEnable;
+                }
+            }
+            if (ImGui::IsItemHovered())
+            {
+                ImGui::SetTooltip("Drag a panel's title bar outside the main window to pop it out.");
+            }
+        }
         ImGui::EndMenu();
     }
 
