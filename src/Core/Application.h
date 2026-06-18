@@ -5,6 +5,7 @@
 #include "Assets/ObjImporter.h"
 #include "Core/BackgroundJobQueue.h"
 #include "Core/DiagnosticsState.h"
+#include "Core/FramePacer.h"
 #include "Core/IsolineSystem.h"
 #include "Core/PerformanceLogger.h"
 #include "Core/Window.h"
@@ -567,12 +568,9 @@ class Application
     // far more accurate than lagged EMAs since it measures THIS frame's slack.
     double m_FrameStartMs {0.0};
 
-    // Absolute monotonic target for the next frame's start, in NowMs() units.
-    // Run()'s pacer increments this by 16.67ms each iteration and busy-waits
-    // until reached.  Using an absolute schedule (not "frameStart + 16.67")
-    // means a single oversleep doesn't push the entire timeline forward —
-    // subsequent frames stay locked to the original 60Hz beat.
-    double m_NextFrameTargetMs {0.0};
+    // 60 Hz loop pacer (absolute schedule) — owns the next-frame target and the
+    // sleep/busy-wait logic that used to sit inline at the bottom of Run().
+    FramePacer m_FramePacer;
 
     // ── Per-frame performance logger (toggle with R) ─────────────────────────
     // When active, appends one CSV row per frame to ~/geofps_perf_*.csv with

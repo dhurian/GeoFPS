@@ -360,63 +360,14 @@ void Application::Run()
             extras.tileJobsPending    = m_TerrainTileBuildJobs.size();
             extras.isolineBuildPending = m_Isolines.segmentBuildPending();
             extras.avgSwapWaitMs      = m_AvgSwapWaitMs;
-            extras.paceTargetMs       = m_NextFrameTargetMs - (1000.0 / 60.0);
+            extras.paceTargetMs       = m_FramePacer.nextTargetMs() - (1000.0 / 60.0);
             extras.paceActualStartMs  = m_FrameStartMs;
             m_PerfLog.WriteRow(m_Diagnostics, extras);
         }
 
-        // ── 60 Hz frame pacer (absolute schedule) ────────────────────────────
-        // The Apple OpenGL → Metal swap chain is triple-buffered with vsync
-        // at the display's adaptive (ProMotion) rate, which produces a bursty
-        // frame-interval pattern.  Even when our render is fast, the
-        // *interval between glfwPollEvents calls* is irregular, so cursor
-        // delta accumulates over irregular windows and mouse-look stutters.
-        //
-        // We sidestep that by pacing the loop ourselves to a fixed 60 Hz beat
-        // (16.67 ms per iteration), driven by an ABSOLUTE schedule:
-        //
-        //   m_NextFrameTargetMs += 16.67;   // accumulating tick
-        //   wait until NowMs() >= m_NextFrameTargetMs
-        //
-        // The absolute schedule is the key — if a single sleep oversleeps by
-        // 4 ms, the *next* target is still on the original beat (not "16.67ms
-        // after this overshooting frame"), so the system corrects itself
-        // within one frame instead of drifting.  A previous version used a
-        // per-frame target (frameStart + 16.67) which let oversleeps push
-        // every subsequent frame later; the perf log showed bimodal intervals
-        // 11-15 / 18-24 ms exactly because of that.
-        //
-        // Wait strategy:
-        //   • If >4 ms remain, sleep_for(remaining − 4 ms).  macOS can over-
-        //     sleep by up to 2-3 ms, so the 4 ms safety window absorbs that.
-        //   • Then busy-wait the last 0–4 ms — burns one core for that window
-        //     but lands the loop within ~50 µs of target reliably.
-        //   • If we're hopelessly behind (>50 ms past target — e.g. paused in
-        //     a debugger), re-anchor instead of frantically catching up.
-        constexpr double kTargetFrameMs = 1000.0 / 60.0; // 16.67 ms (60 Hz)
-        constexpr double kBusyWaitWindowMs = 4.0;        // tolerate sleep overshoot up to this
-        constexpr double kReanchorIfBehindMs = 50.0;
-        if (m_NextFrameTargetMs == 0.0)
-        {
-            m_NextFrameTargetMs = NowMs(); // first iteration — anchor schedule
-        }
-        m_NextFrameTargetMs += kTargetFrameMs;
-        const double nowMs = NowMs();
-        if (nowMs > m_NextFrameTargetMs + kReanchorIfBehindMs)
-        {
-            // Long stall (debugger, OS hiccup) — give up catching up.
-            m_NextFrameTargetMs = nowMs;
-        }
-        else
-        {
-            const double remainingMs = m_NextFrameTargetMs - nowMs;
-            if (remainingMs > kBusyWaitWindowMs)
-            {
-                std::this_thread::sleep_for(std::chrono::microseconds(
-                    static_cast<long>((remainingMs - kBusyWaitWindowMs) * 1000.0)));
-            }
-            while (NowMs() < m_NextFrameTargetMs) { /* busy-wait */ }
-        }
+        // Pace the loop to a steady 60 Hz beat (absolute schedule) so the
+        // glfwPollEvents cadence is regular and mouse-look doesn't stutter.
+        m_FramePacer.WaitForNextFrame();
     }
 }
 
