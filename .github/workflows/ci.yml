@@ -1,0 +1,45 @@
+name: CI
+
+# Build the engine and run the test suite on every push to main and every PR.
+# The whole reason the suite was wired into CTest was that it had silently
+# stopped being run — this workflow is what keeps it honest.
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+# Cancel an in-flight run when a newer commit is pushed to the same ref.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Build & test (macOS)
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Cache the FetchContent dependency clones (glfw, glm, glad, stb,
+      # tinygltf, imgui) so most runs skip the network fetch + reconfigure.
+      - name: Cache CMake dependencies
+        uses: actions/cache@v4
+        with:
+          path: build/_deps
+          key: deps-${{ runner.os }}-${{ hashFiles('CMakeLists.txt') }}
+          restore-keys: |
+            deps-${{ runner.os }}-
+
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DGEOFPS_BUILD_TESTS=ON
+
+      - name: Build
+        run: cmake --build build -j
+
+      # GeoFPSTests is pure logic — no window or GL/Metal context — so it runs
+      # headless on the CI runner.
+      - name: Run tests
+        run: ctest --test-dir build --output-on-failure
