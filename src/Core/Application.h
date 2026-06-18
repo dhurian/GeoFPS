@@ -502,6 +502,9 @@ class Application
     int m_SelectedProfileSampleIndex {-1};
     int m_HoveredProfileSampleIndex {-1};
     TerrainProfileSample m_ProfileGraphHoverSample {};
+    // Sample captured when the elevation graph's right-click context menu was
+    // opened, so the menu acts on the point under the cursor at open time.
+    TerrainProfileSample m_ProfileGraphContextSample {};
     ProfileElevationScaleMode m_ProfileScaleMode {ProfileElevationScaleMode::Auto};
     ProfileMapSizeMode m_ProfileMapSizeMode {ProfileMapSizeMode::Large};
     WorkspaceSection m_ActiveWorkspaceSection {WorkspaceSection::World};

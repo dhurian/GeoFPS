@@ -2648,6 +2648,38 @@ void Application::RenderTerrainProfileGraph(TerrainProfile& activeProfile)
     drawList->AddRect(graphTopLeft, graphBottomRight, IM_COL32(152, 172, 192, 255), 4.0f, 0, 1.5f);
 
     ImGui::InvisibleButton("##terrain_profile_graph", ImVec2(graphWidth, graphHeight));
+
+    // ── Right-click context menu ─────────────────────────────────────────────
+    // Capture the point under the cursor the moment the menu opens (the mouse
+    // may move before the popup renders), then offer to jump the camera there.
+    // Right-click is unused by the graph's left-click select/insert/zoom
+    // gestures, so there is no conflict.
+    if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right))
+    {
+        const float contextX = std::clamp(ImGui::GetIO().MousePos.x, plotTopLeft.x, plotBottomRight.x);
+        const double contextDistance = zoomedMinDist +
+            (static_cast<double>(contextX - plotTopLeft.x) / static_cast<double>(plotWidth)) * zoomedRange;
+        m_ProfileGraphContextSample = sampleAtDistance(contextDistance);
+    }
+    if (ImGui::BeginPopupContextItem("##terrain_profile_graph_context"))
+    {
+        const TerrainProfileSample& contextSample = m_ProfileGraphContextSample;
+        ImGui::TextDisabled("%.0f m along path  |  %.1f m elevation",
+                            contextSample.distanceMeters, contextSample.height);
+        ImGui::Separator();
+        ImGui::BeginDisabled(!contextSample.valid);
+        if (ImGui::MenuItem("Jump camera here"))
+        {
+            JumpCameraToProfileSample(activeProfile, contextSample);
+        }
+        ImGui::EndDisabled();
+        if (!contextSample.valid)
+        {
+            ImGui::TextDisabled("(point is outside terrain coverage)");
+        }
+        ImGui::EndPopup();
+    }
+
     bool foundHoveredSample = false;
     if (ImGui::IsItemHovered())
     {
