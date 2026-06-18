@@ -2411,6 +2411,28 @@ void Application::RenderTerrainProfileGraph(TerrainProfile& activeProfile)
         ImGui::SameLine();
         ImGui::TextDisabled("from the first vertex");
     }
+    // Jump-to-point button: teleports the camera to the currently selected
+    // graph sample (left-click a point on the graph to select it).  Right-
+    // clicking the graph offers the same action in a context menu.
+    {
+        const bool hasSelectedSample =
+            m_SelectedProfileSampleIndex >= 0 &&
+            m_SelectedProfileSampleIndex < static_cast<int>(activeProfile.samples.size()) &&
+            activeProfile.samples[static_cast<size_t>(m_SelectedProfileSampleIndex)].valid;
+        ImGui::BeginDisabled(!hasSelectedSample);
+        if (ImGui::Button("Jump camera to selected point"))
+        {
+            JumpCameraToProfileSample(activeProfile,
+                                      activeProfile.samples[static_cast<size_t>(m_SelectedProfileSampleIndex)]);
+        }
+        ImGui::EndDisabled();
+        if (!hasSelectedSample)
+        {
+            ImGui::SameLine();
+            ImGui::TextDisabled("(click a point on the graph to select it)");
+        }
+    }
+
     // Compute visibility once per frame when enabled; consumed by the line
     // colouring and overlay markers below.
     ProfileLineOfSightResult losResult;

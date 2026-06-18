@@ -439,6 +439,10 @@ class Application
     [[nodiscard]] glm::dvec3 GetDatasetWorldTranslation(const TerrainDataset& dataset) const;
     // Navigate camera to the active imported asset
     void GoToActiveAsset();
+    // Teleport the camera to a point picked on a terrain profile.  Activates
+    // the profile's primary terrain (so the active frame matches the sample's
+    // localPosition), then stands the camera on that point at eye height.
+    void JumpCameraToProfileSample(const TerrainProfile& profile, const TerrainProfileSample& sample);
 
     Window m_Window;
     Camera m_Camera;

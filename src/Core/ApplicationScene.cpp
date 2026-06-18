@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <cstdio>
 #include <exception>
 #include <filesystem>
 #include <fstream>
@@ -2470,6 +2471,55 @@ void Application::GoToActiveAsset()
     std::cout << "[GeoFPS] Camera teleported to asset '" << asset->name
               << "' at (" << asset->position.x << ", " << asset->position.y
               << ", " << asset->position.z << "), view dist=" << viewDist << " m\n";
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Navigate camera to a point picked on a terrain profile
+// ─────────────────────────────────────────────────────────────────────────────
+void Application::JumpCameraToProfileSample(const TerrainProfile& profile, const TerrainProfileSample& sample)
+{
+    if (!sample.valid)
+    {
+        m_StatusMessage = "That profile point is outside terrain coverage.";
+        return;
+    }
+
+    // Activate the profile's primary terrain first so the active coordinate
+    // frame (m_GeoReference) matches the frame the sample's localPosition was
+    // computed in — otherwise the teleport would land in the wrong frame, the
+    // same megametre-drift bug the atlas-click fix addressed.
+    const TerrainDataset* primary = GetPrimaryTerrainForProfile(profile);
+    if (primary != nullptr)
+    {
+        int primaryIndex = -1;
+        for (size_t i = 0; i < m_TerrainDatasets.size(); ++i)
+        {
+            if (&m_TerrainDatasets[i] == primary)
+            {
+                primaryIndex = static_cast<int>(i);
+                break;
+            }
+        }
+        if (primaryIndex >= 0 && primaryIndex != m_ActiveTerrainIndex)
+        {
+            ActivateTerrainDataset(primaryIndex);
+        }
+    }
+
+    // Stand the camera on the picked ground point at eye height, looking at a
+    // gentle downward angle while keeping the current heading.
+    const glm::vec3 ground(static_cast<float>(sample.localPosition.x),
+                           static_cast<float>(sample.localPosition.y),
+                           static_cast<float>(sample.localPosition.z));
+    const float eyeHeight = std::max(m_GravitySettings.playerHeightMeters, 1.6f);
+    QueueCameraTeleport(ground + glm::vec3(0.0f, eyeHeight, 0.0f));
+    SnapCameraView(m_Camera.GetYaw(), -8.0f);
+
+    char status[160];
+    std::snprintf(status, sizeof(status),
+                  "Jumped to profile point: %.6f, %.6f at %.1f m",
+                  sample.latitude, sample.longitude, sample.height);
+    m_StatusMessage = status;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
