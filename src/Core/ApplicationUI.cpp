@@ -449,14 +449,19 @@ void Application::RenderCameraHud()
                                                              static_cast<double>(cameraPosition.y),
                                                              static_cast<double>(cameraPosition.z)});
 
+    // Position only on first use, then let the user drag it anywhere (and,
+    // with multi-viewport enabled, out of the main window onto the desktop).
+    // A title bar gives an obvious drag handle and an X that hides the box;
+    // the Panels menu / On-Screen Overlays panel bring it back.  The position
+    // persists between sessions (imgui.ini is local-only / git-ignored).
     ImGuiViewport* viewport = ImGui::GetMainViewport();
-    ImGui::SetNextWindowPos(ImVec2(viewport->Pos.x + 16.0f, viewport->Pos.y + 16.0f), ImGuiCond_Always);
-    ImGui::SetNextWindowBgAlpha(0.65f);
-    ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize |
-                             ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing |
+    ImGui::SetNextWindowPos(ImVec2(viewport->Pos.x + 16.0f, viewport->Pos.y + 16.0f), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowBgAlpha(0.78f);
+    ImGuiWindowFlags flags = ImGuiWindowFlags_AlwaysAutoResize |
+                             ImGuiWindowFlags_NoFocusOnAppearing |
                              ImGuiWindowFlags_NoNav;
 
-    if (ImGui::Begin("Camera HUD", nullptr, flags))
+    if (ImGui::Begin("Camera HUD", &m_ShowCameraHud, flags))
     {
         // Active frame name on top.  Many "I clicked the atlas and the camera
         // jumped 6000 km" / "I can't find my terrain" reports trace back to
