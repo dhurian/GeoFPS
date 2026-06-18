@@ -785,22 +785,7 @@ void Application::Update(float deltaTime)
     m_ElapsedTime += deltaTime;
 
     // ── Diagnostics ring buffer ───────────────────────────────────────────────
-    {
-        const float dtMs = deltaTime * 1000.0f;
-        m_Diagnostics.frameTimesMs[static_cast<size_t>(m_Diagnostics.frameRingHead)] = dtMs;
-        m_Diagnostics.frameRingHead = (m_Diagnostics.frameRingHead + 1) % DiagnosticsState::kFrameRingSize;
-        m_Diagnostics.frameTimeAccum += dtMs;
-        m_Diagnostics.frameCount++;
-        if (m_Diagnostics.frameTimeAccum >= 500.0f)
-        {
-            m_Diagnostics.avgFpsDisplay  = 1000.0f / (m_Diagnostics.frameTimeAccum / static_cast<float>(m_Diagnostics.frameCount));
-            m_Diagnostics.avgFrameTimeMs = m_Diagnostics.frameTimeAccum / static_cast<float>(m_Diagnostics.frameCount);
-            m_Diagnostics.frameTimeAccum = 0.0f;
-            m_Diagnostics.frameCount     = 0;
-            m_Diagnostics.minFrameTimeMs = *std::min_element(m_Diagnostics.frameTimesMs.begin(), m_Diagnostics.frameTimesMs.end());
-            m_Diagnostics.maxFrameTimeMs = *std::max_element(m_Diagnostics.frameTimesMs.begin(), m_Diagnostics.frameTimesMs.end());
-        }
-    }
+    m_Diagnostics.PushFrameTime(deltaTime * 1000.0f);
 
     // ── LOD tile streaming ────────────────────────────────────────────────────
     if (m_TileLODSettings.enabled)

@@ -2,6 +2,7 @@
 
 #include <glm/glm.hpp>
 
+#include <algorithm>
 #include <array>
 #include <cstddef>
 
@@ -10,7 +11,9 @@ namespace GeoFPS
 // Per-frame instrumentation aggregate: timings, draw/triangle counts, upload
 // counters, camera-look deltas, and floating-origin precision metrics.  Owned
 // by Application, populated across the frame, and consumed by the diagnostics
-// overlay/panel and the performance logger.  Plain data — no behaviour.
+// overlay/panel and the performance logger.  The per-frame fields are filled
+// in by Application; the frame-time ring buffer maintains itself via
+// PushFrameTime().
 struct DiagnosticsState
 {
     static constexpr int kFrameRingSize = 128;
@@ -60,5 +63,24 @@ struct DiagnosticsState
     float  renderOriginFloatStepMeters {0.0f};
     float  maxDatasetWorldTranslationMeters {0.0f};
     float  maxRenderTranslationMeters {0.0f};
+
+    // Record one frame's duration into the rolling ring buffer and refresh the
+    // displayed averages every ~500 ms.  Called once per frame by Application.
+    void PushFrameTime(float frameMs)
+    {
+        frameTimesMs[static_cast<size_t>(frameRingHead)] = frameMs;
+        frameRingHead = (frameRingHead + 1) % kFrameRingSize;
+        frameTimeAccum += frameMs;
+        ++frameCount;
+        if (frameTimeAccum >= 500.0f)
+        {
+            avgFpsDisplay  = 1000.0f / (frameTimeAccum / static_cast<float>(frameCount));
+            avgFrameTimeMs = frameTimeAccum / static_cast<float>(frameCount);
+            frameTimeAccum = 0.0f;
+            frameCount     = 0;
+            minFrameTimeMs = *std::min_element(frameTimesMs.begin(), frameTimesMs.end());
+            maxFrameTimeMs = *std::max_element(frameTimesMs.begin(), frameTimesMs.end());
+        }
+    }
 };
 } // namespace GeoFPS
