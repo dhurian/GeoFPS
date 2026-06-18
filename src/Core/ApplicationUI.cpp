@@ -2398,6 +2398,28 @@ void Application::RenderTerrainProfileGraph(TerrainProfile& activeProfile)
     ImGui::Checkbox("Add A Vertices From Height Graph", &m_ProfileGraphAuxiliaryInsertMode);
     ImGui::SameLine();
     ImGui::TextDisabled("Click the elevation profile to insert an A vertex at the nearest distance.");
+    // ── Line-of-sight controls ───────────────────────────────────────────────
+    ImGui::Checkbox("Line of sight", &m_LineOfSightEnabled);
+    if (m_LineOfSightEnabled)
+    {
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(120.0f);
+        if (ImGui::DragFloat("Observer eye (m)", &m_ObserverEyeHeightMeters, 0.5f, 0.0f, 500.0f, "%.1f"))
+        {
+            m_ObserverEyeHeightMeters = std::clamp(m_ObserverEyeHeightMeters, 0.0f, 500.0f);
+        }
+        ImGui::SameLine();
+        ImGui::TextDisabled("from the first vertex");
+    }
+    // Compute visibility once per frame when enabled; consumed by the line
+    // colouring and overlay markers below.
+    ProfileLineOfSightResult losResult;
+    const bool losActive = m_LineOfSightEnabled && activeProfile.samples.size() >= 2;
+    if (losActive)
+    {
+        losResult = ComputeProfileLineOfSight(activeProfile.samples,
+                                              static_cast<double>(m_ObserverEyeHeightMeters));
+    }
     const ImVec2 graphTopLeft = ImGui::GetCursorScreenPos();
     const ImVec2 plotTopLeft(graphTopLeft.x + leftAxisWidth, graphTopLeft.y);
     const ImVec2 graphBottomRight(graphTopLeft.x + graphWidth, graphTopLeft.y + graphHeight);
@@ -2509,16 +2531,68 @@ void Application::RenderTerrainProfileGraph(TerrainProfile& activeProfile)
     drawList->AddLine(ImVec2(plotTopLeft.x, plotTopLeft.y), ImVec2(plotTopLeft.x, plotBottomRight.y), IM_COL32(152, 172, 192, 255), 1.2f);
     // Clip all profile geometry so zoomed samples don't bleed outside the plot area
     drawList->PushClipRect(plotTopLeft, plotBottomRight, true);
+    const ImU32 kLosVisibleColor = IM_COL32(95, 200, 95, 255);   // green = visible
+    const ImU32 kLosHiddenColor  = IM_COL32(225, 80, 70, 255);   // red = hidden
     for (size_t index = 0; index + 1 < activeProfile.samples.size(); ++index)
     {
         if (!activeProfile.samples[index].valid || !activeProfile.samples[index + 1].valid)
         {
             continue;
         }
+        // Under line-of-sight, colour each segment by visibility: green only
+        // when both ends are visible from the observer, red otherwise.
+        ImU32 segmentColor = ProfileColorU32(activeProfile);
+        if (losActive)
+        {
+            const bool bothVisible = losResult.visible[index] && losResult.visible[index + 1];
+            segmentColor = bothVisible ? kLosVisibleColor : kLosHiddenColor;
+        }
         drawList->AddLine(graphPointFromSample(activeProfile.samples[index]),
                           graphPointFromSample(activeProfile.samples[index + 1]),
-                          ProfileColorU32(activeProfile),
+                          segmentColor,
                           std::max(activeProfile.thickness, 1.5f));
+    }
+
+    // ── Line-of-sight overlay: observer eye (mast), direct sight line to the
+    //    endpoint, and a marker at the first blocked point. ──────────────────
+    if (losActive && losResult.observerSampleIndex >= 0)
+    {
+        const auto graphPointFromDistHeight = [&](double distanceMeters, double height) {
+            const float x = plotTopLeft.x +
+                static_cast<float>((distanceMeters - zoomedMinDist) / zoomedRange) * plotWidth;
+            const float y = plotBottomRight.y -
+                static_cast<float>((height - graphMinHeight) / graphHeightRange) * graphHeight;
+            return ImVec2(x, std::clamp(y, plotTopLeft.y, plotBottomRight.y));
+        };
+        const TerrainProfileSample& observer =
+            activeProfile.samples[static_cast<size_t>(losResult.observerSampleIndex)];
+        const ImVec2 groundPt = graphPointFromSample(observer);
+        const ImVec2 eyePt = graphPointFromDistHeight(observer.distanceMeters, losResult.observerEyeHeight);
+        // Mast from the ground up to the eye, then the eye dot.
+        drawList->AddLine(groundPt, eyePt, IM_COL32(120, 200, 255, 230), 2.0f);
+        drawList->AddCircleFilled(eyePt, 4.5f, IM_COL32(120, 200, 255, 255), 16);
+
+        // Direct sight line from the eye to the last valid sample (dashed feel
+        // via reduced opacity), tinted by whether that endpoint is visible.
+        const TerrainProfileSample& endSample = activeProfile.samples.back();
+        const ImVec2 endPt = graphPointFromSample(endSample);
+        drawList->AddLine(eyePt, endPt,
+                          losResult.endpointVisible ? IM_COL32(95, 200, 95, 140)
+                                                    : IM_COL32(225, 80, 70, 140),
+                          1.5f);
+
+        if (losResult.firstBlockedSampleIndex >= 0 &&
+            losResult.firstBlockedSampleIndex < static_cast<int>(activeProfile.samples.size()))
+        {
+            const TerrainProfileSample& blocked =
+                activeProfile.samples[static_cast<size_t>(losResult.firstBlockedSampleIndex)];
+            const ImVec2 blockedPt = graphPointFromSample(blocked);
+            drawList->AddCircle(blockedPt, 7.0f, IM_COL32(225, 80, 70, 255), 16, 2.0f);
+            drawList->AddLine(ImVec2(blockedPt.x - 5.0f, blockedPt.y - 5.0f),
+                              ImVec2(blockedPt.x + 5.0f, blockedPt.y + 5.0f), IM_COL32(225, 80, 70, 255), 2.0f);
+            drawList->AddLine(ImVec2(blockedPt.x + 5.0f, blockedPt.y - 5.0f),
+                              ImVec2(blockedPt.x - 5.0f, blockedPt.y + 5.0f), IM_COL32(225, 80, 70, 255), 2.0f);
+        }
     }
 
     for (int vertexIndex = 0; vertexIndex < static_cast<int>(activeProfile.vertices.size()); ++vertexIndex)
@@ -2740,6 +2814,21 @@ void Application::RenderTerrainProfileGraph(TerrainProfile& activeProfile)
     }
 
     ImGui::Text("Elevation: %.2f m to %.2f m  Path length: %.2f m", graphMinHeight, graphMaxHeight, totalDistance);
+    if (losActive)
+    {
+        if (losResult.endpointVisible)
+        {
+            ImGui::TextColored(ImVec4(0.37f, 0.78f, 0.37f, 1.0f),
+                               "Line of sight: end of path is VISIBLE from the observer.");
+        }
+        else if (losResult.firstBlockedSampleIndex >= 0 &&
+                 losResult.firstBlockedSampleIndex < static_cast<int>(activeProfile.samples.size()))
+        {
+            ImGui::TextColored(ImVec4(0.88f, 0.31f, 0.27f, 1.0f),
+                               "Line of sight: BLOCKED at %.0f m along the path.",
+                               activeProfile.samples[static_cast<size_t>(losResult.firstBlockedSampleIndex)].distanceMeters);
+        }
+    }
     if (invalidSampleCount > 0)
     {
         ImGui::TextColored(ImVec4(1.0f, 0.55f, 0.25f, 1.0f),

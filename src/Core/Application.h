@@ -479,6 +479,12 @@ class Application
     bool m_ProfileAuxiliaryDrawMode {false};
     bool m_ProfileGraphAuxiliaryInsertMode {false};
     bool m_ProfileGraphHoverActive {false};
+    // ── Line of sight (Tier 1) ───────────────────────────────────────────────
+    // When enabled, the elevation graph colours its line by what an observer
+    // standing at the profile's first vertex (eye m_ObserverEyeHeightMeters
+    // above the ground) can see: green = visible, red = hidden behind terrain.
+    bool  m_LineOfSightEnabled {false};
+    float m_ObserverEyeHeightMeters {2.0f};
     bool m_TerrainIsolinesDirty {true};
     bool m_TerrainIsolineSampleGridDirty {true};
     bool m_ProfileMapViewInitialized {false};
