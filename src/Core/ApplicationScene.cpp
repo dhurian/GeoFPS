@@ -1008,7 +1008,13 @@ void Application::ProcessBackgroundJobs()
             {
                 // Patch only this tile's grid cells instead of rebuilding the
                 // entire sample grid — the heightmap stays correct in real time.
-                UpdateTerrainIsolineSampleGridForTile(tile);
+                m_Isolines.PatchSampleGridForTile(tile.heightGrid,
+                                                  tile.loaded,
+                                                  tile.bounds.valid,
+                                                  tile.bounds.minLatitude,
+                                                  tile.bounds.maxLatitude,
+                                                  tile.bounds.minLongitude,
+                                                  tile.bounds.maxLongitude);
             }
 
             iterator = m_TerrainTileBuildJobs.erase(iterator);
@@ -1809,7 +1815,7 @@ void Application::LoadActiveTerrainIntoScene()
     }
     m_TerrainHeightGrid = dataset->heightGrid;
     m_ProfileMapViewInitialized = false;
-    MarkTerrainIsolineSampleGridDirty();
+    m_Isolines.MarkSampleGridDirty();
     RebuildAllTerrainProfileSamples();
     // NOTE: we deliberately do NOT translate the camera into the new frame
     // here.  An earlier version did, on the theory that preserving the
@@ -1983,78 +1989,9 @@ void Application::RebuildAllTerrainProfileSamples()
     }
 }
 
-void Application::MarkTerrainIsolinesDirty()
+void Application::RebuildIsolineSampleGridIfNeeded()
 {
-    m_TerrainIsolinesDirty = true;
-}
-
-void Application::MarkTerrainIsolineSampleGridDirty()
-{
-    m_TerrainIsolineSampleGridDirty = true;
-    MarkTerrainIsolinesDirty();
-}
-
-void Application::UpdateTerrainIsolineSampleGridForTile(const TerrainTile& tile)
-{
-    // If the sample grid hasn't been built yet, fall back to a full rebuild.
-    if (!m_TerrainIsolineSampleGrid.IsValid())
-    {
-        MarkTerrainIsolineSampleGridDirty();
-        return;
-    }
-
-    // Tile must have usable height data.
-    if (!tile.loaded || !tile.heightGrid.IsValid() || !tile.bounds.valid)
-        return;
-
-    TerrainIsolineSampleGrid& grid = m_TerrainIsolineSampleGrid;
-    const int resX = grid.resolutionX;
-    const int resZ = grid.resolutionZ;
-
-    // Patch only the grid cells whose lat/lon falls inside this tile's bounds.
-    // For a 64×64 grid over 260 equal tiles, this touches ~16 cells per tile —
-    // orders of magnitude cheaper than the full O(resX × resZ × numTiles) rebuild.
-    bool updated = false;
-    for (int z = 0; z < resZ; ++z)
-    {
-        const double v        = static_cast<double>(z) / static_cast<double>(resZ - 1);
-        const double latitude = grid.minLatitude + (grid.maxLatitude - grid.minLatitude) * v;
-        if (latitude < tile.bounds.minLatitude || latitude > tile.bounds.maxLatitude)
-            continue;
-
-        for (int x = 0; x < resX; ++x)
-        {
-            const double u         = static_cast<double>(x) / static_cast<double>(resX - 1);
-            const double longitude = grid.minLongitude + (grid.maxLongitude - grid.minLongitude) * u;
-            if (longitude < tile.bounds.minLongitude || longitude > tile.bounds.maxLongitude)
-                continue;
-
-            // Sample directly from this tile — no multi-tile scan.
-            grid.heights[static_cast<size_t>(z * resX + x)] =
-                static_cast<float>(tile.heightGrid.SampleHeight(latitude, longitude));
-            updated = true;
-        }
-    }
-
-    if (!updated)
-        return;
-
-    // Recompute global height extents from the patched grid (cheap: just floats).
-    grid.minHeight = std::numeric_limits<double>::max();
-    grid.maxHeight = std::numeric_limits<double>::lowest();
-    for (const float h : grid.heights)
-    {
-        grid.minHeight = std::min(grid.minHeight, static_cast<double>(h));
-        grid.maxHeight = std::max(grid.maxHeight, static_cast<double>(h));
-    }
-
-    // Only the isoline segments need regeneration — the sample grid is already correct.
-    MarkTerrainIsolinesDirty();
-}
-
-void Application::RebuildTerrainIsolineSampleGridIfNeeded()
-{
-    if (!m_TerrainIsolineSampleGridDirty)
+    if (!m_Isolines.sampleGridDirty())
     {
         return;
     }
@@ -2083,17 +2020,15 @@ void Application::RebuildTerrainIsolineSampleGridIfNeeded()
         !contributingDatasets[0]->hasTileManifest &&
         contributingDatasets[0]->heightGrid.IsValid())
     {
-        m_TerrainIsolineSampleGrid = BuildTerrainIsolineSampleGrid(contributingDatasets[0]->heightGrid,
-                                                                    m_IsolineSettings);
-        m_TerrainIsolineSampleGridDirty = false;
+        m_Isolines.SetSampleGrid(BuildTerrainIsolineSampleGrid(contributingDatasets[0]->heightGrid,
+                                                               m_Isolines.settings()));
         return;
     }
 
     if (contributingDatasets.empty())
     {
         // No usable datasets — fall back to the global height grid (legacy behaviour).
-        m_TerrainIsolineSampleGrid = BuildTerrainIsolineSampleGrid(m_TerrainHeightGrid, m_IsolineSettings);
-        m_TerrainIsolineSampleGridDirty = false;
+        m_Isolines.SetSampleGrid(BuildTerrainIsolineSampleGrid(m_TerrainHeightGrid, m_Isolines.settings()));
         return;
     }
 
@@ -2118,87 +2053,19 @@ void Application::RebuildTerrainIsolineSampleGridIfNeeded()
         sources.push_back(std::move(source));
     }
 
-    m_TerrainIsolineSampleGrid = BuildUnionIsolineSampleGrid(
+    m_Isolines.SetSampleGrid(BuildUnionIsolineSampleGrid(
         sources,
-        std::clamp(m_IsolineSettings.resolutionX, 2, 512),
-        std::clamp(m_IsolineSettings.resolutionZ, 2, 512));
-    m_TerrainIsolineSampleGridDirty = false;
+        std::clamp(m_Isolines.settings().resolutionX, 2, 512),
+        std::clamp(m_Isolines.settings().resolutionZ, 2, 512)));
 }
 
-void Application::RebuildTerrainIsolines()
+void Application::RefreshIsolinesIfNeeded()
 {
-    // Build (or update) the sample grid synchronously — this is cheap for
-    // incremental tile patches and only expensive once (initial tiled build).
-    RebuildTerrainIsolineSampleGridIfNeeded();
-
-    if (!m_TerrainIsolineSampleGrid.IsValid())
-    {
-        m_TerrainIsolines.clear();
-        m_TerrainIsolinesUsedGpu = false;
-        m_TerrainIsolinesDirty   = false;
-        return;
-    }
-
-    // If a build is already in flight, let it finish — don't queue another.
-    // The dirty flag was already cleared when the job was submitted; it will
-    // be set again by MarkTerrainIsolinesDirty() if the data changes.
-    if (m_IsolineBuildPending)
-        return;
-
-    // Submit segment generation to a background worker.  We always use the
-    // CPU marching-squares path (useGpu = false) because Metal compute cannot
-    // be safely dispatched from a worker thread on macOS.  The previous set of
-    // isoline segments remains visible until the result is harvested — no gap.
-    auto gridCopy     = m_TerrainIsolineSampleGrid; // value copy (floats + metadata)
-    auto settingsCopy = m_IsolineSettings;
-
-    if (m_BackgroundJobs)
-    {
-        m_IsolineBuildFuture = m_BackgroundJobs->Enqueue(
-            [grid = std::move(gridCopy), settings = std::move(settingsCopy)]() mutable {
-                bool usedGpu = false;
-                return GenerateTerrainIsolinesAccelerated(grid, settings, /*useGpu=*/false, &usedGpu);
-            });
-        m_IsolineBuildPending  = true;
-        m_TerrainIsolinesDirty = false;
-    }
-    else
-    {
-        // No job queue (e.g. early init) — fall back to synchronous CPU build.
-        m_TerrainIsolines = GenerateTerrainIsolinesAccelerated(
-            m_TerrainIsolineSampleGrid, m_IsolineSettings, /*useGpu=*/false, &m_TerrainIsolinesUsedGpu);
-        m_TerrainIsolinesDirty   = false;
-        m_TerrainIsolinesUsedGpu = false;
-    }
-}
-
-void Application::RebuildTerrainIsolinesIfNeeded()
-{
-    // ── Harvest a completed async build ─────────────────────────────────────
-    // Check this unconditionally so the result is picked up even on frames
-    // where m_TerrainIsolinesDirty happens to be false.
-    if (m_IsolineBuildPending &&
-        m_IsolineBuildFuture.valid() &&
-        m_IsolineBuildFuture.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
-    {
-        try
-        {
-            m_TerrainIsolines = m_IsolineBuildFuture.get();
-        }
-        catch (const std::exception& ex)
-        {
-            std::cerr << "[GeoFPS] Async isoline build failed: " << ex.what() << '\n';
-            m_TerrainIsolines.clear();
-        }
-        m_IsolineBuildPending    = false;
-        m_TerrainIsolinesUsedGpu = false; // CPU path was always used
-    }
-
-    // ── Submit a new build if data changed ───────────────────────────────────
-    if (!m_TerrainIsolinesDirty)
-        return;
-
-    RebuildTerrainIsolines();
+    // First rebuild the terrain-sampled grid if the terrain footprint changed
+    // (terrain-coupled, so it lives here), then let the IsolineSystem harvest
+    // any finished async segment build and submit a new one if needed.
+    RebuildIsolineSampleGridIfNeeded();
+    m_Isolines.RefreshSegments(m_BackgroundJobs.get());
 }
 
 size_t Application::CountSceneTriangles() const

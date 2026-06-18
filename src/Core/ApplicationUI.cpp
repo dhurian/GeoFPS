@@ -1440,26 +1440,27 @@ void Application::RenderTerrainProfileDetails(TerrainProfile& activeProfile)
             ImGui::EndCombo();
         }
 
-        if (ImGui::Checkbox("Show Isolines", &m_IsolineSettings.enabled))
+        if (ImGui::Checkbox("Show Isolines", &m_Isolines.settings().enabled))
         {
-            MarkTerrainIsolinesDirty();
+            m_Isolines.MarkSegmentsDirty();
         }
-        if (ImGui::Checkbox("Use GPU Isolines", &m_UseGpuIsolineGeneration))
+        if (ImGui::Checkbox("Use GPU Isolines", &m_Isolines.useGpuGeneration()))
         {
-            MarkTerrainIsolinesDirty();
+            m_Isolines.MarkSegmentsDirty();
         }
         ImGui::SameLine();
         if (ImGui::Button("Rebuild Isolines"))
         {
-            RebuildTerrainIsolines();
+            m_Isolines.MarkSegmentsDirty();
+            RefreshIsolinesIfNeeded();
         }
         ImGui::Text("Isoline Status: %s  Sample Grid: %s  Backend: %s",
-                    m_TerrainIsolinesDirty ? "stale" : "current",
-                    m_TerrainIsolineSampleGridDirty ? "stale" : "cached",
-                    m_TerrainIsolinesUsedGpu ? "Metal GPU" : "CPU");
-        if (ImGui::BeginCombo("Isoline Resolution", m_IsolineSettings.resolutionX == 32 ? "Fast 32 x 32" :
-                                                        m_IsolineSettings.resolutionX == 128 ? "Medium 128 x 128" :
-                                                        m_IsolineSettings.resolutionX == 256 ? "High 256 x 256" : "Low 64 x 64"))
+                    m_Isolines.segmentsDirty() ? "stale" : "current",
+                    m_Isolines.sampleGridDirty() ? "stale" : "cached",
+                    m_Isolines.usedGpu() ? "Metal GPU" : "CPU");
+        if (ImGui::BeginCombo("Isoline Resolution", m_Isolines.settings().resolutionX == 32 ? "Fast 32 x 32" :
+                                                        m_Isolines.settings().resolutionX == 128 ? "Medium 128 x 128" :
+                                                        m_Isolines.settings().resolutionX == 256 ? "High 256 x 256" : "Low 64 x 64"))
         {
             struct ResolutionOption
             {
@@ -1469,32 +1470,32 @@ void Application::RenderTerrainProfileDetails(TerrainProfile& activeProfile)
             const ResolutionOption options[] = {{"Fast 32 x 32", 32}, {"Low 64 x 64", 64}, {"Medium 128 x 128", 128}, {"High 256 x 256", 256}};
             for (const ResolutionOption& option : options)
             {
-                const bool selected = m_IsolineSettings.resolutionX == option.value;
+                const bool selected = m_Isolines.settings().resolutionX == option.value;
                 if (ImGui::Selectable(option.label, selected))
                 {
-                    m_IsolineSettings.resolutionX = option.value;
-                    m_IsolineSettings.resolutionZ = option.value;
-                    MarkTerrainIsolineSampleGridDirty();
+                    m_Isolines.settings().resolutionX = option.value;
+                    m_Isolines.settings().resolutionZ = option.value;
+                    m_Isolines.MarkSampleGridDirty();
                 }
             }
             ImGui::EndCombo();
         }
-        if (ImGui::Checkbox("Auto Interval", &m_IsolineSettings.autoInterval))
+        if (ImGui::Checkbox("Auto Interval", &m_Isolines.settings().autoInterval))
         {
-            MarkTerrainIsolinesDirty();
+            m_Isolines.MarkSegmentsDirty();
         }
-        if (!m_IsolineSettings.autoInterval && ImGui::InputDouble("Interval (m)", &m_IsolineSettings.contourIntervalMeters, 1.0, 10.0, "%.2f"))
+        if (!m_Isolines.settings().autoInterval && ImGui::InputDouble("Interval (m)", &m_Isolines.settings().contourIntervalMeters, 1.0, 10.0, "%.2f"))
         {
-            m_IsolineSettings.contourIntervalMeters = std::max(m_IsolineSettings.contourIntervalMeters, 0.1);
-            MarkTerrainIsolinesDirty();
+            m_Isolines.settings().contourIntervalMeters = std::max(m_Isolines.settings().contourIntervalMeters, 0.1);
+            m_Isolines.MarkSegmentsDirty();
         }
-        if (ImGui::SliderFloat("Isoline Thickness", &m_IsolineSettings.thickness, 0.5f, 5.0f, "%.1f px"))
+        if (ImGui::SliderFloat("Isoline Thickness", &m_Isolines.settings().thickness, 0.5f, 5.0f, "%.1f px"))
         {
-            m_IsolineSettings.thickness = std::max(m_IsolineSettings.thickness, 0.1f);
+            m_Isolines.settings().thickness = std::max(m_Isolines.settings().thickness, 0.1f);
         }
-        if (ImGui::SliderFloat("Isoline Opacity", &m_IsolineSettings.opacity, 0.1f, 1.0f, "%.2f"))
+        if (ImGui::SliderFloat("Isoline Opacity", &m_Isolines.settings().opacity, 0.1f, 1.0f, "%.2f"))
         {
-            MarkTerrainIsolinesDirty();
+            m_Isolines.MarkSegmentsDirty();
         }
     }
 
@@ -1746,9 +1747,9 @@ void Application::RenderTerrainProfileToolbar(TerrainProfile& activeProfile)
     ImGui::SameLine();
     ImGui::Checkbox("Samples", &m_ShowProfileSamples);
     ImGui::SameLine();
-    if (ImGui::Checkbox("Isolines", &m_IsolineSettings.enabled))
+    if (ImGui::Checkbox("Isolines", &m_Isolines.settings().enabled))
     {
-        MarkTerrainIsolinesDirty();
+        m_Isolines.MarkSegmentsDirty();
     }
     ImGui::SameLine();
     if (ImGui::Button("CSV##export_profile_csv"))
@@ -1932,15 +1933,15 @@ void Application::RenderTerrainProfileMap(TerrainProfile& activeProfile)
     }
     drawList->AddRect(mapTopLeft, mapBottomRight, IM_COL32(152, 172, 192, 255), 4.0f, 0, 1.5f);
 
-    if (m_IsolineSettings.enabled)
+    if (m_Isolines.settings().enabled)
     {
-        RebuildTerrainIsolinesIfNeeded();
-        for (const TerrainIsolineSegment& segment : m_TerrainIsolines)
+        RefreshIsolinesIfNeeded();
+        for (const TerrainIsolineSegment& segment : m_Isolines.segments())
         {
             drawList->AddLine(mapPointFromGeoUnclamped(segment.start.latitude, segment.start.longitude),
                               mapPointFromGeoUnclamped(segment.end.latitude, segment.end.longitude),
                               ColorU32(segment.color),
-                              m_IsolineSettings.thickness);
+                              m_Isolines.settings().thickness);
         }
     }
 
@@ -2284,22 +2285,22 @@ void Application::RenderTerrainProfileMap(TerrainProfile& activeProfile)
     drawList->PopClipRect();
     ImGui::SetCursorScreenPos(ImVec2(mapTopLeft.x, mapBottomRight.y));
 
-    if (m_IsolineSettings.enabled)
+    if (m_Isolines.settings().enabled)
     {
-        const double minHeight = m_TerrainIsolineSampleGrid.IsValid() ? m_TerrainIsolineSampleGrid.minHeight : 0.0;
-        const double maxHeight = m_TerrainIsolineSampleGrid.IsValid() ? m_TerrainIsolineSampleGrid.maxHeight : 0.0;
-        const double interval = ResolveContourInterval(minHeight, maxHeight, m_IsolineSettings);
+        const double minHeight = m_Isolines.sampleGrid().IsValid() ? m_Isolines.sampleGrid().minHeight : 0.0;
+        const double maxHeight = m_Isolines.sampleGrid().IsValid() ? m_Isolines.sampleGrid().maxHeight : 0.0;
+        const double interval = ResolveContourInterval(minHeight, maxHeight, m_Isolines.settings());
         ImGui::Text("Map source: %s  Isolines: %zu%s  Interval: %.2f m  Height: %.2f to %.2f m",
                     overlayReady ? "active aerial overlay" : "terrain bounds grid",
-                    m_TerrainIsolines.size(),
-                    m_TerrainIsolinesDirty ? " (stale)" : "",
+                    m_Isolines.segments().size(),
+                    m_Isolines.segmentsDirty() ? " (stale)" : "",
                     interval,
                     minHeight,
                     maxHeight);
         ImGui::SameLine();
         ImGui::Text("Backend: %s%s",
-                    m_UseGpuIsolineGeneration ? (m_TerrainIsolinesUsedGpu ? "Metal GPU" : "CPU fallback") : "CPU",
-                    m_TerrainIsolineSampleGridDirty ? "  Grid stale" : "");
+                    m_Isolines.useGpuGeneration() ? (m_Isolines.usedGpu() ? "Metal GPU" : "CPU fallback") : "CPU",
+                    m_Isolines.sampleGridDirty() ? "  Grid stale" : "");
     }
     else
     {

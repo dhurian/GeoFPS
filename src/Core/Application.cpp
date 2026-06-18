@@ -358,7 +358,7 @@ void Application::Run()
             extras.cameraPosition     = m_Camera.GetPosition();
             extras.rawMouseDelta      = m_Window.GetLastRawMouseDelta();
             extras.tileJobsPending    = m_TerrainTileBuildJobs.size();
-            extras.isolineBuildPending = m_IsolineBuildPending;
+            extras.isolineBuildPending = m_Isolines.segmentBuildPending();
             extras.avgSwapWaitMs      = m_AvgSwapWaitMs;
             extras.paceTargetMs       = m_NextFrameTargetMs - (1000.0 / 60.0);
             extras.paceActualStartMs  = m_FrameStartMs;

@@ -5,6 +5,7 @@
 #include "Assets/ObjImporter.h"
 #include "Core/BackgroundJobQueue.h"
 #include "Core/DiagnosticsState.h"
+#include "Core/IsolineSystem.h"
 #include "Core/PerformanceLogger.h"
 #include "Core/Window.h"
 #include "Game/FPSController.h"
@@ -404,12 +405,13 @@ class Application
     void RebuildAllTerrainProfileSamplesNow();
     bool StartTerrainProfileSampleJob();
     void RebuildAllTerrainProfileSamples();
-    void MarkTerrainIsolinesDirty();
-    void MarkTerrainIsolineSampleGridDirty();
-    void RebuildTerrainIsolineSampleGridIfNeeded();
-    void UpdateTerrainIsolineSampleGridForTile(const TerrainTile& tile);
-    void RebuildTerrainIsolines();
-    void RebuildTerrainIsolinesIfNeeded();
+    // Terrain-coupled: rebuilds the isoline sample grid by sampling the active
+    // terrain datasets, then hands it to m_Isolines.  No-op unless the grid is
+    // marked dirty.
+    void RebuildIsolineSampleGridIfNeeded();
+    // Per-frame orchestration: refresh the sample grid (if dirty) then let the
+    // IsolineSystem harvest/submit the async segment build.
+    void RefreshIsolinesIfNeeded();
     bool ExportTerrainProfileFile(const std::string& path);
     bool ImportTerrainProfileFile(const std::string& path);
     [[nodiscard]] size_t CountSceneTriangles() const;
@@ -458,9 +460,7 @@ class Application
     std::unique_ptr<Shader> m_SkyShader;
     std::unique_ptr<Mesh>   m_SkyboxMesh;
     TerrainHeightGrid m_TerrainHeightGrid;
-    TerrainIsolineSettings m_IsolineSettings {};
-    TerrainIsolineSampleGrid m_TerrainIsolineSampleGrid;
-    std::vector<TerrainIsolineSegment> m_TerrainIsolines;
+    IsolineSystem m_Isolines;
     std::vector<TerrainDataset> m_TerrainDatasets;
     std::vector<ImportedAsset> m_ImportedAssets;
     std::vector<TerrainProfile> m_TerrainProfiles;
@@ -489,12 +489,8 @@ class Application
     // above the ground) can see: green = visible, red = hidden behind terrain.
     bool  m_LineOfSightEnabled {false};
     float m_ObserverEyeHeightMeters {2.0f};
-    bool m_TerrainIsolinesDirty {true};
-    bool m_TerrainIsolineSampleGridDirty {true};
     bool m_ProfileMapViewInitialized {false};
     bool m_ProfileMapIsPanning {false};
-    bool m_UseGpuIsolineGeneration {true};
-    bool m_TerrainIsolinesUsedGpu {false};
     int m_ActiveTerrainIndex {0};
     int m_ActiveImportedAssetIndex {0};
     int m_ActiveTerrainProfileIndex {0};
@@ -590,12 +586,6 @@ class Application
     float m_AvgSwapWaitMs  {5.0f};   // seed with a reasonable 5ms to avoid starving frame 1
     float m_AvgChunkUploadMs {0.5f}; // EMA of a single Mesh() constructor call
 
-    // ── Async isoline pipeline ───────────────────────────────────────────────
-    // Isoline segment generation is dispatched to a background worker (CPU path
-    // only — Metal cannot be called from a non-main thread).  Previous isolines
-    // stay visible until the result is harvested so there is zero visual gap.
-    std::future<std::vector<TerrainIsolineSegment>> m_IsolineBuildFuture {};
-    bool m_IsolineBuildPending {false};
     unsigned int m_ProfileLineVao {0};
     unsigned int m_ProfileLineVbo {0};
     std::string m_StatusMessage;
