@@ -1016,15 +1016,15 @@ void Application::RenderTerrainProfilesWindow()
         return;
     }
 
-    if (m_TerrainProfiles.empty())
+    if (m_Profiles.profiles().empty())
     {
         TerrainProfile profile;
         profile.name = "Profile 1";
-        m_TerrainProfiles.push_back(profile);
-        m_ActiveTerrainProfileIndex = 0;
+        m_Profiles.profiles().push_back(profile);
+        m_Profiles.setActiveIndex(0);
     }
 
-    m_ActiveTerrainProfileIndex = std::clamp(m_ActiveTerrainProfileIndex, 0, static_cast<int>(m_TerrainProfiles.size()) - 1);
+    m_Profiles.setActiveIndex(std::clamp(m_Profiles.activeIndex(), 0, static_cast<int>(m_Profiles.profiles().size()) - 1));
 
     ImGui::SetNextWindowSize(ImVec2(1180.0f, 760.0f), ImGuiCond_FirstUseEver);
     if (!ImGui::Begin("Terrain Profiles", &m_ShowTerrainProfilesWindow))
@@ -1033,7 +1033,7 @@ void Application::RenderTerrainProfilesWindow()
         return;
     }
 
-    TerrainProfile& activeProfile = m_TerrainProfiles[static_cast<size_t>(m_ActiveTerrainProfileIndex)];
+    TerrainProfile& activeProfile = m_Profiles.profiles()[static_cast<size_t>(m_Profiles.activeIndex())];
     EnsureTerrainProfileHasTerrainSelection(activeProfile);
     const float availableWidth = ImGui::GetContentRegionAvail().x;
     const float maxDetailWidth = std::max(280.0f, availableWidth * 0.62f);
@@ -1110,7 +1110,7 @@ void Application::RenderWorldTerrainProfiles()
 
     std::vector<glm::vec3> lineVertices;
     std::vector<glm::vec3> ribbonVertices;
-    for (const TerrainProfile& profile : m_TerrainProfiles)
+    for (const TerrainProfile& profile : m_Profiles.profiles())
     {
         if (!profile.visible || !profile.showInWorld || profile.vertices.size() < 2)
         {
@@ -1236,16 +1236,16 @@ void Application::RenderTerrainProfileDetails(TerrainProfile& activeProfile)
     if (ImGui::CollapsingHeader("Profiles", ImGuiTreeNodeFlags_DefaultOpen))
     {
         ImGui::Text("Profiles");
-    for (int index = 0; index < static_cast<int>(m_TerrainProfiles.size()); ++index)
+    for (int index = 0; index < static_cast<int>(m_Profiles.profiles().size()); ++index)
     {
-        TerrainProfile& profile = m_TerrainProfiles[static_cast<size_t>(index)];
+        TerrainProfile& profile = m_Profiles.profiles()[static_cast<size_t>(index)];
         ImGui::PushID(index);
         ImGui::Checkbox("##profile_visible", &profile.visible);
         ImGui::SameLine();
-        const bool selected = index == m_ActiveTerrainProfileIndex;
+        const bool selected = index == m_Profiles.activeIndex();
         if (ImGui::Selectable(profile.name.c_str(), selected))
         {
-            m_ActiveTerrainProfileIndex = index;
+            m_Profiles.setActiveIndex(index);
             m_SelectedProfileVertexIndex = -1;
             m_SelectedProfileSampleIndex = -1;
             m_HoveredProfileSampleIndex = -1;
@@ -1256,19 +1256,19 @@ void Application::RenderTerrainProfileDetails(TerrainProfile& activeProfile)
         if (ImGui::Button("New Profile"))
         {
             TerrainProfile profile;
-            profile.name = "Profile " + std::to_string(m_TerrainProfiles.size() + 1);
-            m_TerrainProfiles.push_back(std::move(profile));
-            m_ActiveTerrainProfileIndex = static_cast<int>(m_TerrainProfiles.size()) - 1;
+            profile.name = "Profile " + std::to_string(m_Profiles.profiles().size() + 1);
+            m_Profiles.profiles().push_back(std::move(profile));
+            m_Profiles.setActiveIndex(static_cast<int>(m_Profiles.profiles().size()) - 1);
             m_SelectedProfileVertexIndex = -1;
             m_SelectedProfileSampleIndex = -1;
             m_HoveredProfileSampleIndex = -1;
             return;
         }
         ImGui::SameLine();
-        if (ImGui::Button("Delete Profile") && m_TerrainProfiles.size() > 1)
+        if (ImGui::Button("Delete Profile") && m_Profiles.profiles().size() > 1)
         {
-            m_TerrainProfiles.erase(m_TerrainProfiles.begin() + m_ActiveTerrainProfileIndex);
-            m_ActiveTerrainProfileIndex = std::clamp(m_ActiveTerrainProfileIndex, 0, static_cast<int>(m_TerrainProfiles.size()) - 1);
+            m_Profiles.profiles().erase(m_Profiles.profiles().begin() + m_Profiles.activeIndex());
+            m_Profiles.setActiveIndex(std::clamp(m_Profiles.activeIndex(), 0, static_cast<int>(m_Profiles.profiles().size()) - 1));
             m_SelectedProfileVertexIndex = -1;
             m_SelectedProfileSampleIndex = -1;
             m_HoveredProfileSampleIndex = -1;
@@ -1399,7 +1399,7 @@ void Application::RenderTerrainProfileDetails(TerrainProfile& activeProfile)
         if (ImGui::Button("Send Visible Profiles To World"))
         {
             int sentCount = 0;
-            for (TerrainProfile& profile : m_TerrainProfiles)
+            for (TerrainProfile& profile : m_Profiles.profiles())
             {
                 if (!profile.visible || profile.vertices.size() < 2)
                 {
@@ -1717,9 +1717,9 @@ void Application::RenderTerrainProfileToolbar(TerrainProfile& activeProfile)
     if (ImGui::Button("New Profile"))
     {
         TerrainProfile profile;
-        profile.name = "Profile " + std::to_string(m_TerrainProfiles.size() + 1);
-        m_TerrainProfiles.push_back(std::move(profile));
-        m_ActiveTerrainProfileIndex = static_cast<int>(m_TerrainProfiles.size()) - 1;
+        profile.name = "Profile " + std::to_string(m_Profiles.profiles().size() + 1);
+        m_Profiles.profiles().push_back(std::move(profile));
+        m_Profiles.setActiveIndex(static_cast<int>(m_Profiles.profiles().size()) - 1);
         m_SelectedProfileVertexIndex = -1;
         m_SelectedProfileSampleIndex = -1;
         m_HoveredProfileSampleIndex = -1;
@@ -1945,7 +1945,7 @@ void Application::RenderTerrainProfileMap(TerrainProfile& activeProfile)
         }
     }
 
-    for (const TerrainProfile& profile : m_TerrainProfiles)
+    for (const TerrainProfile& profile : m_Profiles.profiles())
     {
         if (!profile.visible || profile.vertices.size() < 2)
         {
@@ -3560,28 +3560,28 @@ void Application::RenderEditor()
     }
     else if (m_ActiveWorkspaceSection == WorkspaceSection::Profiles)
     {
-        ImGui::Text("Profiles: %zu", m_TerrainProfiles.size());
-        if (m_TerrainProfiles.empty() && ImGui::Button("Create First Profile", ImVec2(180.0f, 34.0f)))
+        ImGui::Text("Profiles: %zu", m_Profiles.profiles().size());
+        if (m_Profiles.profiles().empty() && ImGui::Button("Create First Profile", ImVec2(180.0f, 34.0f)))
         {
             TerrainProfile profile;
             profile.name = "Profile 1";
-            m_TerrainProfiles.push_back(profile);
-            m_ActiveTerrainProfileIndex = 0;
+            m_Profiles.profiles().push_back(profile);
+            m_Profiles.setActiveIndex(0);
         }
-        if (!m_TerrainProfiles.empty())
+        if (!m_Profiles.profiles().empty())
         {
-            m_ActiveTerrainProfileIndex = std::clamp(m_ActiveTerrainProfileIndex, 0, static_cast<int>(m_TerrainProfiles.size()) - 1);
-            TerrainProfile& profile = m_TerrainProfiles[static_cast<size_t>(m_ActiveTerrainProfileIndex)];
+            m_Profiles.setActiveIndex(std::clamp(m_Profiles.activeIndex(), 0, static_cast<int>(m_Profiles.profiles().size()) - 1));
+            TerrainProfile& profile = m_Profiles.profiles()[static_cast<size_t>(m_Profiles.activeIndex())];
             EnsureTerrainProfileHasTerrainSelection(profile);
 
             if (ImGui::BeginCombo("Active Profile", profile.name.c_str()))
             {
-                for (int index = 0; index < static_cast<int>(m_TerrainProfiles.size()); ++index)
+                for (int index = 0; index < static_cast<int>(m_Profiles.profiles().size()); ++index)
                 {
-                    const bool selected = index == m_ActiveTerrainProfileIndex;
-                    if (ImGui::Selectable(m_TerrainProfiles[static_cast<size_t>(index)].name.c_str(), selected))
+                    const bool selected = index == m_Profiles.activeIndex();
+                    if (ImGui::Selectable(m_Profiles.profiles()[static_cast<size_t>(index)].name.c_str(), selected))
                     {
-                        m_ActiveTerrainProfileIndex = index;
+                        m_Profiles.setActiveIndex(index);
                     }
                     if (selected)
                     {

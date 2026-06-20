@@ -1621,8 +1621,8 @@ void Application::InitializeProject()
 
     TerrainProfile profile;
     profile.name = "Profile 1";
-    m_TerrainProfiles.push_back(profile);
-    m_ActiveTerrainProfileIndex = 0;
+    m_Profiles.profiles().push_back(profile);
+    m_Profiles.setActiveIndex(0);
 
     m_StatusMessage = "Project initialized.";
 }

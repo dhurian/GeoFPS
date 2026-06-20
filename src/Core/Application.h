@@ -13,6 +13,7 @@
 #include "Core/PerformanceLogger.h"
 #include "Core/TerrainDataset.h"
 #include "Core/TerrainJobs.h"
+#include "Core/ProfileSystem.h"
 #include "Core/TerrainSystem.h"
 #include "Core/Window.h"
 #include "Game/FPSController.h"
@@ -313,7 +314,9 @@ class Application
     // offset, load jobs).  Owned by AssetSystem; Application still drives the
     // load/place/render/persist orchestration.
     AssetSystem m_Assets;
-    std::vector<TerrainProfile> m_TerrainProfiles;
+    // Terrain-profile data store (the profiles + which one is active).  Owned by
+    // ProfileSystem; Application still drives the draw/edit/view/persist logic.
+    ProfileSystem m_Profiles;
     std::vector<TerrainPoint> m_TerrainPoints;
     GeoReference m_GeoReference {};
     TerrainBuildSettings m_TerrainSettings {};
@@ -341,7 +344,6 @@ class Application
     float m_ObserverEyeHeightMeters {2.0f};
     bool m_ProfileMapViewInitialized {false};
     bool m_ProfileMapIsPanning {false};
-    int m_ActiveTerrainProfileIndex {0};
     int m_SelectedProfileVertexIndex {-1};
     int m_SelectedProfileSampleIndex {-1};
     int m_HoveredProfileSampleIndex {-1};

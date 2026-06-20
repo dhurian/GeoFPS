@@ -903,12 +903,12 @@ void Application::ProcessBackgroundJobs()
             for (const auto& p : result.profiles) totalSamples += p.samples.size();
             std::cout << "[GeoFPS] Profile samples rebuilt: " << result.profiles.size()
                       << " profiles, " << totalSamples << " total samples\n";
-            m_TerrainProfiles = std::move(result.profiles);
-            m_ActiveTerrainProfileIndex = m_TerrainProfiles.empty() ?
-                                              -1 :
-                                              std::clamp(m_ActiveTerrainProfileIndex,
-                                                         0,
-                                                         static_cast<int>(m_TerrainProfiles.size()) - 1);
+            m_Profiles.profiles() = std::move(result.profiles);
+            m_Profiles.setActiveIndex(m_Profiles.profiles().empty() ?
+                                          -1 :
+                                          std::clamp(m_Profiles.activeIndex(),
+                                                     0,
+                                                     static_cast<int>(m_Profiles.profiles().size()) - 1));
         }
         m_StatusMessage = result.statusMessage;
         iterator = m_ProfileSampleBuildJobs.erase(iterator);
@@ -1502,7 +1502,7 @@ std::vector<TerrainProfileSample> Application::BuildTerrainProfileSamplesForData
 
 void Application::RebuildAllTerrainProfileSamplesNow()
 {
-    for (TerrainProfile& profile : m_TerrainProfiles)
+    for (TerrainProfile& profile : m_Profiles.profiles())
     {
         RebuildTerrainProfileSamples(profile);
     }
@@ -1535,7 +1535,7 @@ bool Application::StartTerrainProfileSampleJob()
     }
 
     ProfileSampleBuildJob job;
-    job.future = m_BackgroundJobs->Enqueue([profiles = m_TerrainProfiles,
+    job.future = m_BackgroundJobs->Enqueue([profiles = m_Profiles.profiles(),
                                             terrains = std::move(terrainSnapshots),
                                             activeTerrainIndex = m_Terrain.activeIndex()]() mutable {
         return BuildProfileSamplesOnWorker(std::move(profiles), std::move(terrains), activeTerrainIndex);
@@ -2115,13 +2115,13 @@ void Application::RenderAssetLabels()
 // ─────────────────────────────────────────────────────────────────────────────
 bool Application::ExportActiveProfileAsCsv(const std::string& path)
 {
-    if (m_ActiveTerrainProfileIndex < 0 ||
-        m_ActiveTerrainProfileIndex >= static_cast<int>(m_TerrainProfiles.size()))
+    if (m_Profiles.activeIndex() < 0 ||
+        m_Profiles.activeIndex() >= static_cast<int>(m_Profiles.profiles().size()))
     {
         m_StatusMessage = "No active profile to export.";
         return false;
     }
-    const TerrainProfile& profile = m_TerrainProfiles[static_cast<size_t>(m_ActiveTerrainProfileIndex)];
+    const TerrainProfile& profile = m_Profiles.profiles()[static_cast<size_t>(m_Profiles.activeIndex())];
     if (profile.samples.empty())
     {
         m_StatusMessage = "Profile has no samples — rebuild it first.";
@@ -2142,13 +2142,13 @@ bool Application::ExportActiveProfileAsCsv(const std::string& path)
 
 bool Application::ExportActiveProfileAsKml(const std::string& path)
 {
-    if (m_ActiveTerrainProfileIndex < 0 ||
-        m_ActiveTerrainProfileIndex >= static_cast<int>(m_TerrainProfiles.size()))
+    if (m_Profiles.activeIndex() < 0 ||
+        m_Profiles.activeIndex() >= static_cast<int>(m_Profiles.profiles().size()))
     {
         m_StatusMessage = "No active profile to export.";
         return false;
     }
-    const TerrainProfile& profile = m_TerrainProfiles[static_cast<size_t>(m_ActiveTerrainProfileIndex)];
+    const TerrainProfile& profile = m_Profiles.profiles()[static_cast<size_t>(m_Profiles.activeIndex())];
     if (profile.samples.empty())
     {
         m_StatusMessage = "Profile has no samples — rebuild it first.";

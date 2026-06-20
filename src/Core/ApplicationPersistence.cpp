@@ -333,7 +333,7 @@ bool Application::SaveWorldToFile(const std::string& path)
         file << "[/asset]\n\n";
     }
 
-    for (const TerrainProfile& profile : m_TerrainProfiles)
+    for (const TerrainProfile& profile : m_Profiles.profiles())
     {
         file << "[terrain_profile]\n";
         file << "name=" << profile.name << '\n';
@@ -483,7 +483,7 @@ bool Application::LoadWorldFromFile(const std::string& path)
     m_Assets.assets() = std::move(assets);
     if (!profiles.empty())
     {
-        m_TerrainProfiles = std::move(profiles);
+        m_Profiles.profiles() = std::move(profiles);
     }
 
     m_Terrain.setActiveIndex(std::clamp(activeTerrainIndex, 0, static_cast<int>(m_Terrain.datasets().size()) - 1));
@@ -669,7 +669,7 @@ bool Application::WriteCurrentWorldReadout(const std::string& path) const
     file << "World File: " << m_WorldFilePath << "\n";
     file << "Terrain Dataset Count: " << m_Terrain.datasets().size() << "\n";
     file << "Imported Asset Count: " << m_Assets.assets().size() << "\n";
-    file << "Terrain Profile Count: " << m_TerrainProfiles.size() << "\n";
+    file << "Terrain Profile Count: " << m_Profiles.profiles().size() << "\n";
     file << "Active Terrain Index: " << m_Terrain.activeIndex() << "\n";
     file << "Active Asset Index: " << m_Assets.activeIndex() << "\n\n";
 
@@ -725,9 +725,9 @@ bool Application::WriteCurrentWorldReadout(const std::string& path) const
     }
 
     file << "\nTerrain Profiles\n";
-    for (size_t profileIndex = 0; profileIndex < m_TerrainProfiles.size(); ++profileIndex)
+    for (size_t profileIndex = 0; profileIndex < m_Profiles.profiles().size(); ++profileIndex)
     {
-        const TerrainProfile& profile = m_TerrainProfiles[profileIndex];
+        const TerrainProfile& profile = m_Profiles.profiles()[profileIndex];
         file << "- Profile " << profileIndex << ": " << profile.name << "\n";
         file << "  Vertices: " << profile.vertices.size() << "\n";
         file << "  Samples: " << profile.samples.size() << "\n";
@@ -747,8 +747,8 @@ bool Application::ExportTerrainProfileFile(const std::string& path)
         return false;
     }
 
-    std::cout << "[GeoFPS] Exporting " << m_TerrainProfiles.size() << " terrain profile(s) to " << targetPath << '\n';
-    if (!ExportTerrainProfiles(targetPath, m_TerrainProfiles))
+    std::cout << "[GeoFPS] Exporting " << m_Profiles.profiles().size() << " terrain profile(s) to " << targetPath << '\n';
+    if (!ExportTerrainProfiles(targetPath, m_Profiles.profiles()))
     {
         m_StatusMessage = "Failed to export terrain profiles: " + targetPath;
         std::cout << "[GeoFPS] Terrain profile export failed: " << targetPath << '\n';
@@ -780,14 +780,14 @@ bool Application::ImportTerrainProfileFile(const std::string& path)
         return false;
     }
 
-    m_TerrainProfiles = std::move(importedProfiles);
+    m_Profiles.profiles() = std::move(importedProfiles);
     RebuildAllTerrainProfileSamples();
-    m_ActiveTerrainProfileIndex = std::clamp(m_ActiveTerrainProfileIndex, 0, static_cast<int>(m_TerrainProfiles.size()) - 1);
+    m_Profiles.setActiveIndex(std::clamp(m_Profiles.activeIndex(), 0, static_cast<int>(m_Profiles.profiles().size()) - 1));
     m_SelectedProfileVertexIndex = -1;
     m_SelectedProfileSampleIndex = -1;
     m_TerrainProfileFilePath = sourcePath;
     m_StatusMessage = "Imported terrain profiles: " + sourcePath;
-    std::cout << "[GeoFPS] Terrain profile import complete: " << m_TerrainProfiles.size() << " profile(s)\n";
+    std::cout << "[GeoFPS] Terrain profile import complete: " << m_Profiles.profiles().size() << " profile(s)\n";
     return true;
 }
 
