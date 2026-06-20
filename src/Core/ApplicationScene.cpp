@@ -286,9 +286,9 @@ TerrainTileBuildResult BuildTerrainTileOnWorker(int terrainIndex,
     return result;
 }
 
-Application::AssetLoadResult LoadAssetOnWorker(std::string path)
+AssetLoadResult LoadAssetOnWorker(std::string path)
 {
-    Application::AssetLoadResult result;
+    AssetLoadResult result;
     if (path.empty())
     {
         result.statusMessage = "Asset path is empty.";

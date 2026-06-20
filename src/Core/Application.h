@@ -3,6 +3,8 @@
 #include "Assets/AnimationData.h"
 #include "Assets/GltfImporter.h"
 #include "Assets/ObjImporter.h"
+#include "Core/AssetJobs.h"
+#include "Core/AssetModel.h"
 #include "Core/BackgroundJobQueue.h"
 #include "Core/DiagnosticsState.h"
 #include "Core/FramePacer.h"
@@ -35,44 +37,9 @@ struct GLFWwindow;
 
 namespace GeoFPS
 {
-struct ImportedAsset
-{
-    std::string name {"Asset 1"};
-    std::string path;
-    ImportedAssetData assetData;
-    bool selected {false};
-    bool useGeographicPlacement {false};
-    double latitude {0.0};
-    double longitude {0.0};
-    double height {0.0};
-    glm::vec3 position {0.0f, 0.0f, 0.0f};
-    glm::vec3 rotationDegrees {0.0f, 0.0f, 0.0f};
-    glm::vec3 scale {1.0f, 1.0f, 1.0f};
-    glm::vec3 tint {1.0f, 1.0f, 1.0f};
-    bool showLabel {true};
-    bool loaded {false};
-    AnimationState     animState     {};
-    NodeAnimationState nodeAnimState {};
-    // Axis-aligned bounding box in object-local space (computed at load time, not persisted).
-    glm::vec3 aabbMin {0.0f};
-    glm::vec3 aabbMax {0.0f};
-    bool      aabbValid {false};
-};
-
-struct AssetClipboardEntry
-{
-    std::string name;
-    std::string path;
-    bool useGeographicPlacement {false};
-    double latitude {0.0};
-    double longitude {0.0};
-    double height {0.0};
-    glm::vec3 position {0.0f, 0.0f, 0.0f};
-    float rotationZDegrees {0.0f};
-    glm::vec3 scale {1.0f, 1.0f, 1.0f};
-    glm::vec3 tint {1.0f, 1.0f, 1.0f};
-    bool showLabel {true};
-};
+// ImportedAsset and AssetClipboardEntry live in Core/AssetModel.h; AssetLoadJob
+// types in Core/AssetJobs.h (lifted there so AssetSystem can own the store and
+// job vector).
 
 struct SunSettings
 {
@@ -183,22 +150,9 @@ class Application
     void Run();
     void Shutdown();
 
-    // Terrain-build job/result types live in Core/TerrainJobs.h (lifted there so
-    // TerrainSystem can own the job vectors).  Asset- and profile-sampling job
-    // types stay nested here until their own systems are extracted.
-    struct AssetLoadResult
-    {
-        bool success {false};
-        std::string statusMessage;
-        ImportedAssetData assetData;
-    };
-
-    struct AssetLoadJob
-    {
-        int assetIndex {-1};
-        std::future<AssetLoadResult> future;
-    };
-
+    // Terrain-build job types live in Core/TerrainJobs.h, asset-load job types in
+    // Core/AssetJobs.h (lifted so their systems can own the job vectors).  The
+    // profile-sampling job types stay nested here until that system is extracted.
     struct ProfileSampleBuildResult
     {
         bool success {false};
