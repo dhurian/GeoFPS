@@ -2,13 +2,30 @@
 
 #include "Core/AssetJobs.h"
 #include "Core/AssetModel.h"
+#include "Core/DiagnosticsState.h"
 
 #include <glm/glm.hpp>
 
+#include <string>
 #include <vector>
 
 namespace GeoFPS
 {
+// Upload a primitive's CPU-side texture pixels to the GPU and release the
+// pixel buffers.  Pure asset-domain helper, shared by the async load path
+// (AssetSystem::ProcessLoadJobs) and the synchronous LoadImportedAsset.
+void UploadImportedPrimitiveTextures(ImportedPrimitiveData& primitive);
+
+// Everything ProcessLoadJobs needs from outside the asset store: the diagnostics
+// sink it accumulates mesh-upload counters into, and the status string it sets.
+// No orchestration callbacks and no upload budget — uploading a ready asset's
+// primitives is unconditional, so this stays tiny.
+struct AssetJobContext
+{
+    DiagnosticsState& diagnostics;
+    std::string&      statusMessage;
+};
+
 // Owns the imported-asset store: the placed assets, which one is active, the
 // copy/paste clipboard and its offset, and the in-flight async load jobs.
 // First step of lifting assets out of the Application god-class.
@@ -34,6 +51,12 @@ class AssetSystem
 
     [[nodiscard]] std::vector<AssetLoadJob>& loadJobs() { return m_LoadJobs; }
     [[nodiscard]] const std::vector<AssetLoadJob>& loadJobs() const { return m_LoadJobs; }
+
+    // Harvest finished async asset loads: resolve ready futures, upload each
+    // asset's meshes/skins/textures, compute its picking AABB, and mark it
+    // loaded.  Everything it needs from Application arrives through ctx.  Called
+    // once per frame from Application::ProcessBackgroundJobs.
+    void ProcessLoadJobs(AssetJobContext& ctx);
 
   private:
     std::vector<ImportedAsset> m_Assets;
