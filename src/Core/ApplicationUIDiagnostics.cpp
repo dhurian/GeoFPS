@@ -27,7 +27,7 @@ void Application::RenderDiagnosticsOverlay()
         for (const TerrainTile& t : ds.tiles)
             loadedTiles += t.loaded ? 1u : 0u;
     }
-    size_t pendingJobs = m_Terrain.terrainBuildJobs().size() + m_Terrain.terrainTileBuildJobs().size() + m_AssetLoadJobs.size();
+    size_t pendingJobs = m_Terrain.terrainBuildJobs().size() + m_Terrain.terrainTileBuildJobs().size() + m_Assets.loadJobs().size();
 
     constexpr float PAD = 14.0f;
     const ImGuiWindowFlags flags =
@@ -85,7 +85,7 @@ void Application::RenderDiagnosticsOverlay()
         // ── Scene row ────────────────────────────────────────────────────────
         ImGui::Text("Tiles %zu/%zu  |  Assets %zu  |  Tris %zu",
             loadedTiles, totalTiles,
-            m_ImportedAssets.size(),
+            m_Assets.assets().size(),
             CountSceneTriangles());
         ImGui::Text("Draws %zu  Visible chunks %zu  Uploads %zu",
                     m_Diagnostics.totalDrawCalls,
@@ -202,7 +202,7 @@ void Application::RenderDiagnosticsPanel()
     // ── Assets ────────────────────────────────────────────────────────────────
     ImGui::TextColored(ImVec4(0.55f, 0.90f, 0.65f, 1.0f), "Assets");
     size_t loadedAssets = 0, meshMemKB = 0;
-    for (const ImportedAsset& a : m_ImportedAssets)
+    for (const ImportedAsset& a : m_Assets.assets())
     {
         if (!a.loaded) continue;
         ++loadedAssets;
@@ -212,7 +212,7 @@ void Application::RenderDiagnosticsPanel()
             meshMemKB += p.meshData.indices.size()  * sizeof(unsigned int) / 1024u;
         }
     }
-    ImGui::Text("Assets loaded: %zu / %zu", loadedAssets, m_ImportedAssets.size());
+    ImGui::Text("Assets loaded: %zu / %zu", loadedAssets, m_Assets.assets().size());
     ImGui::Text("Mesh memory est: %zu KB", meshMemKB);
     ImGui::Text("Scene triangles: %zu", CountSceneTriangles());
 
@@ -313,7 +313,7 @@ void Application::RenderDiagnosticsPanel()
     ImGui::Text("Terrain build: %zu   Tile load: %zu   Asset load: %zu",
                 m_Terrain.terrainBuildJobs().size(),
                 m_Terrain.terrainTileBuildJobs().size(),
-                m_AssetLoadJobs.size());
+                m_Assets.loadJobs().size());
 
     ImGui::Separator();
 

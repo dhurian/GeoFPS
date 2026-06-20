@@ -5,6 +5,7 @@
 #include "Assets/ObjImporter.h"
 #include "Core/AssetJobs.h"
 #include "Core/AssetModel.h"
+#include "Core/AssetSystem.h"
 #include "Core/BackgroundJobQueue.h"
 #include "Core/DiagnosticsState.h"
 #include "Core/FramePacer.h"
@@ -296,7 +297,6 @@ class Application
     Camera m_Camera;
     FPSController m_FPSController;
     std::unique_ptr<BackgroundJobQueue> m_BackgroundJobs;
-    std::vector<AssetLoadJob> m_AssetLoadJobs;
     std::vector<ProfileSampleBuildJob> m_ProfileSampleBuildJobs;
     std::unique_ptr<Shader> m_TerrainShader;
     std::unique_ptr<Shader> m_AssetShader;
@@ -309,7 +309,10 @@ class Application
     // by TerrainSystem; Application still drives loading/activation orchestration
     // and owns the active scene frame (m_GeoReference).
     TerrainSystem m_Terrain;
-    std::vector<ImportedAsset> m_ImportedAssets;
+    // Imported-asset store (placed assets, active index, clipboard + paste
+    // offset, load jobs).  Owned by AssetSystem; Application still drives the
+    // load/place/render/persist orchestration.
+    AssetSystem m_Assets;
     std::vector<TerrainProfile> m_TerrainProfiles;
     std::vector<TerrainPoint> m_TerrainPoints;
     GeoReference m_GeoReference {};
@@ -338,7 +341,6 @@ class Application
     float m_ObserverEyeHeightMeters {2.0f};
     bool m_ProfileMapViewInitialized {false};
     bool m_ProfileMapIsPanning {false};
-    int m_ActiveImportedAssetIndex {0};
     int m_ActiveTerrainProfileIndex {0};
     int m_SelectedProfileVertexIndex {-1};
     int m_SelectedProfileSampleIndex {-1};
@@ -391,8 +393,6 @@ class Application
     std::string m_BlenderAssetsFilePath {"assets/worlds/blender_assets_template.txt"};
     std::string m_WorldReadoutFilePath {"assets/worlds/current_world_readout.txt"};
     std::string m_TerrainProfileFilePath {"assets/worlds/terrain_profiles.geofpsprofile"};
-    std::vector<AssetClipboardEntry> m_AssetClipboard;
-    glm::vec3 m_AssetPasteOffset {2.0f, 0.0f, 2.0f};
 
     // ── Live "Go to coordinates" navigation input ────────────────────────────
     // Three editable fields in the Diagnostics → Camera section.  When no

@@ -55,7 +55,7 @@ void Application::RenderAssetPlacementPanel()
         }
 
         // Deselect all existing
-        for (ImportedAsset& a : m_ImportedAssets) a.selected = false;
+        for (ImportedAsset& a : m_Assets.assets()) a.selected = false;
 
         const glm::vec3 origin = source->position + glm::vec3(s_StartOffset[0], s_StartOffset[1], s_StartOffset[2]);
 
@@ -115,10 +115,10 @@ void Application::RenderAssetPlacementPanel()
             if (!asset.path.empty())
                 LoadImportedAsset(asset);
 
-            m_ImportedAssets.push_back(std::move(asset));
+            m_Assets.assets().push_back(std::move(asset));
         }
 
-        m_ActiveImportedAssetIndex = static_cast<int>(m_ImportedAssets.size()) - 1;
+        m_Assets.setActiveIndex(static_cast<int>(m_Assets.assets().size()) - 1);
         m_StatusMessage = "Placed " + std::to_string(positions.size()) + " asset(s).";
     }
 }

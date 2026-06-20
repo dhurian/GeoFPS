@@ -375,7 +375,7 @@ void Application::Shutdown()
 {
     m_Terrain.terrainBuildJobs().clear();
     m_Terrain.terrainTileBuildJobs().clear();
-    m_AssetLoadJobs.clear();
+    m_Assets.loadJobs().clear();
     m_ProfileSampleBuildJobs.clear();
     m_BackgroundJobs.reset();
     ShutdownImGui();
@@ -409,7 +409,7 @@ void Application::Shutdown()
             overlay.texture.Reset();
         }
     }
-    for (ImportedAsset& asset : m_ImportedAssets)
+    for (ImportedAsset& asset : m_Assets.assets())
     {
         for (ImportedPrimitiveData& primitive : asset.assetData.primitives)
         {
@@ -838,7 +838,7 @@ void Application::Update(float deltaTime)
     m_Camera.SetAspectRatio(static_cast<float>(m_Window.GetWidth()) / static_cast<float>(m_Window.GetHeight()));
 
     // Advance skeletal animation playback for every skinned asset.
-    for (ImportedAsset& asset : m_ImportedAssets)
+    for (ImportedAsset& asset : m_Assets.assets())
     {
         if (!asset.loaded)
             continue;
@@ -1357,7 +1357,7 @@ void Application::Render(float deltaTime)
         m_AssetShader->SetInt("uNormalTexture", 2);
         m_AssetShader->SetInt("uEmissiveTexture", 3);
 
-        for (const ImportedAsset& asset : m_ImportedAssets)
+        for (const ImportedAsset& asset : m_Assets.assets())
         {
             if (!asset.loaded)
             {
@@ -1521,7 +1521,7 @@ void Application::Render(float deltaTime)
                                         m_Diagnostics.skyTrianglesDrawn;
 
     ImDrawList* foregroundDrawList = ImGui::GetForegroundDrawList();
-    for (const ImportedAsset& asset : m_ImportedAssets)
+    for (const ImportedAsset& asset : m_Assets.assets())
     {
         if (!asset.showLabel)
         {
@@ -1616,8 +1616,8 @@ void Application::InitializeProject()
 
     ImportedAsset asset;
     asset.name = "Asset 1";
-    m_ImportedAssets.push_back(std::move(asset));
-    m_ActiveImportedAssetIndex = 0;
+    m_Assets.assets().push_back(std::move(asset));
+    m_Assets.setActiveIndex(0);
 
     TerrainProfile profile;
     profile.name = "Profile 1";

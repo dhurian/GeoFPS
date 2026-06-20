@@ -497,35 +497,35 @@ const OverlayEntry* Application::GetActiveOverlayEntry() const
 
 ImportedAsset* Application::GetActiveImportedAsset()
 {
-    if (m_ActiveImportedAssetIndex < 0 || m_ActiveImportedAssetIndex >= static_cast<int>(m_ImportedAssets.size()))
+    if (m_Assets.activeIndex() < 0 || m_Assets.activeIndex() >= static_cast<int>(m_Assets.assets().size()))
     {
         return nullptr;
     }
 
-    return &m_ImportedAssets[static_cast<size_t>(m_ActiveImportedAssetIndex)];
+    return &m_Assets.assets()[static_cast<size_t>(m_Assets.activeIndex())];
 }
 
 const ImportedAsset* Application::GetActiveImportedAsset() const
 {
-    if (m_ActiveImportedAssetIndex < 0 || m_ActiveImportedAssetIndex >= static_cast<int>(m_ImportedAssets.size()))
+    if (m_Assets.activeIndex() < 0 || m_Assets.activeIndex() >= static_cast<int>(m_Assets.assets().size()))
     {
         return nullptr;
     }
 
-    return &m_ImportedAssets[static_cast<size_t>(m_ActiveImportedAssetIndex)];
+    return &m_Assets.assets()[static_cast<size_t>(m_Assets.activeIndex())];
 }
 
 size_t Application::GetSelectedImportedAssetCount() const
 {
-    return static_cast<size_t>(std::count_if(m_ImportedAssets.begin(), m_ImportedAssets.end(), [](const ImportedAsset& asset) {
+    return static_cast<size_t>(std::count_if(m_Assets.assets().begin(), m_Assets.assets().end(), [](const ImportedAsset& asset) {
         return asset.selected;
     }));
 }
 
 void Application::CopySelectedImportedAssets()
 {
-    m_AssetClipboard.clear();
-    for (const ImportedAsset& asset : m_ImportedAssets)
+    m_Assets.clipboard().clear();
+    for (const ImportedAsset& asset : m_Assets.assets())
     {
         if (!asset.selected)
         {
@@ -544,29 +544,29 @@ void Application::CopySelectedImportedAssets()
         entry.scale = asset.scale;
         entry.tint = asset.tint;
         entry.showLabel = asset.showLabel;
-        m_AssetClipboard.push_back(entry);
+        m_Assets.clipboard().push_back(entry);
     }
 
-    m_StatusMessage = m_AssetClipboard.empty() ? "No selected assets to copy." :
-                                               "Copied " + std::to_string(m_AssetClipboard.size()) + " asset(s).";
+    m_StatusMessage = m_Assets.clipboard().empty() ? "No selected assets to copy." :
+                                               "Copied " + std::to_string(m_Assets.clipboard().size()) + " asset(s).";
 }
 
 void Application::PasteCopiedImportedAssets()
 {
-    if (m_AssetClipboard.empty())
+    if (m_Assets.clipboard().empty())
     {
         m_StatusMessage = "Clipboard has no copied assets.";
         return;
     }
 
-    for (ImportedAsset& asset : m_ImportedAssets)
+    for (ImportedAsset& asset : m_Assets.assets())
     {
         asset.selected = false;
     }
 
-    for (size_t index = 0; index < m_AssetClipboard.size(); ++index)
+    for (size_t index = 0; index < m_Assets.clipboard().size(); ++index)
     {
-        const AssetClipboardEntry& entry = m_AssetClipboard[index];
+        const AssetClipboardEntry& entry = m_Assets.clipboard()[index];
         ImportedAsset asset;
         asset.name = entry.name + " Copy";
         asset.path = entry.path;
@@ -580,7 +580,7 @@ void Application::PasteCopiedImportedAssets()
         asset.tint = entry.tint;
         asset.showLabel = entry.showLabel;
         asset.selected = true;
-        const glm::vec3 offset = m_AssetPasteOffset * static_cast<float>(index + 1);
+        const glm::vec3 offset = m_Assets.pasteOffset() * static_cast<float>(index + 1);
         if (asset.useGeographicPlacement)
         {
             GeoConverter converter(m_GeoReference);
@@ -600,11 +600,11 @@ void Application::PasteCopiedImportedAssets()
         {
             LoadImportedAsset(asset);
         }
-        m_ImportedAssets.push_back(std::move(asset));
+        m_Assets.assets().push_back(std::move(asset));
     }
 
-    m_ActiveImportedAssetIndex = static_cast<int>(m_ImportedAssets.size()) - 1;
-    m_StatusMessage = "Pasted " + std::to_string(m_AssetClipboard.size()) + " asset(s).";
+    m_Assets.setActiveIndex(static_cast<int>(m_Assets.assets().size()) - 1);
+    m_StatusMessage = "Pasted " + std::to_string(m_Assets.clipboard().size()) + " asset(s).";
 }
 
 bool Application::LoadTerrainDataset(TerrainDataset& dataset)
@@ -915,7 +915,7 @@ void Application::ProcessBackgroundJobs()
     };
     m_Terrain.ProcessBuildJobs(terrainCtx);
 
-    for (auto iterator = m_AssetLoadJobs.begin(); iterator != m_AssetLoadJobs.end();)
+    for (auto iterator = m_Assets.loadJobs().begin(); iterator != m_Assets.loadJobs().end();)
     {
         if (iterator->future.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
         {
@@ -933,9 +933,9 @@ void Application::ProcessBackgroundJobs()
             result.statusMessage = std::string("Background asset load failed: ") + exception.what();
         }
 
-        if (iterator->assetIndex >= 0 && iterator->assetIndex < static_cast<int>(m_ImportedAssets.size()))
+        if (iterator->assetIndex >= 0 && iterator->assetIndex < static_cast<int>(m_Assets.assets().size()))
         {
-            ImportedAsset& asset = m_ImportedAssets[static_cast<size_t>(iterator->assetIndex)];
+            ImportedAsset& asset = m_Assets.assets()[static_cast<size_t>(iterator->assetIndex)];
             if (result.success)
             {
                 asset.assetData = std::move(result.assetData);
@@ -1005,7 +1005,7 @@ void Application::ProcessBackgroundJobs()
                                                              result.statusMessage;
         }
 
-        iterator = m_AssetLoadJobs.erase(iterator);
+        iterator = m_Assets.loadJobs().erase(iterator);
     }
 
     for (auto iterator = m_ProfileSampleBuildJobs.begin(); iterator != m_ProfileSampleBuildJobs.end();)
@@ -1260,21 +1260,21 @@ bool Application::LoadImportedAsset(ImportedAsset& asset)
 
 bool Application::StartImportedAssetLoadJob(int assetIndex)
 {
-    if (assetIndex < 0 || assetIndex >= static_cast<int>(m_ImportedAssets.size()) || !m_BackgroundJobs)
+    if (assetIndex < 0 || assetIndex >= static_cast<int>(m_Assets.assets().size()) || !m_BackgroundJobs)
     {
         return false;
     }
 
-    for (const AssetLoadJob& job : m_AssetLoadJobs)
+    for (const AssetLoadJob& job : m_Assets.loadJobs())
     {
         if (job.assetIndex == assetIndex)
         {
-            m_StatusMessage = "Asset import already running: " + m_ImportedAssets[static_cast<size_t>(assetIndex)].name;
+            m_StatusMessage = "Asset import already running: " + m_Assets.assets()[static_cast<size_t>(assetIndex)].name;
             return false;
         }
     }
 
-    ImportedAsset& asset = m_ImportedAssets[static_cast<size_t>(assetIndex)];
+    ImportedAsset& asset = m_Assets.assets()[static_cast<size_t>(assetIndex)];
     const std::string path = asset.path;
     asset.loaded = false;
     asset.assetData.primitives.clear();
@@ -1282,22 +1282,22 @@ bool Application::StartImportedAssetLoadJob(int assetIndex)
     AssetLoadJob job;
     job.assetIndex = assetIndex;
     job.future = m_BackgroundJobs->Enqueue([path]() { return LoadAssetOnWorker(path); });
-    m_AssetLoadJobs.push_back(std::move(job));
+    m_Assets.loadJobs().push_back(std::move(job));
     m_StatusMessage = "Queued background asset import: " + asset.name;
     return true;
 }
 
 bool Application::DeleteImportedAsset(int index)
 {
-    if (index < 0 || index >= static_cast<int>(m_ImportedAssets.size()) || m_ImportedAssets.size() <= 1)
+    if (index < 0 || index >= static_cast<int>(m_Assets.assets().size()) || m_Assets.assets().size() <= 1)
     {
         return false;
     }
 
-    m_ImportedAssets.erase(m_ImportedAssets.begin() + index);
-    if (m_ActiveImportedAssetIndex >= static_cast<int>(m_ImportedAssets.size()))
+    m_Assets.assets().erase(m_Assets.assets().begin() + index);
+    if (m_Assets.activeIndex() >= static_cast<int>(m_Assets.assets().size()))
     {
-        m_ActiveImportedAssetIndex = static_cast<int>(m_ImportedAssets.size()) - 1;
+        m_Assets.setActiveIndex(static_cast<int>(m_Assets.assets().size()) - 1);
     }
 
     m_StatusMessage = "Deleted imported asset.";
@@ -1306,28 +1306,28 @@ bool Application::DeleteImportedAsset(int index)
 
 size_t Application::DeleteSelectedImportedAssets()
 {
-    if (m_ImportedAssets.size() <= 1)
+    if (m_Assets.assets().size() <= 1)
     {
         m_StatusMessage = "At least one asset slot must remain.";
         return 0;
     }
 
-    const size_t originalCount = m_ImportedAssets.size();
-    m_ImportedAssets.erase(std::remove_if(m_ImportedAssets.begin(),
-                                          m_ImportedAssets.end(),
+    const size_t originalCount = m_Assets.assets().size();
+    m_Assets.assets().erase(std::remove_if(m_Assets.assets().begin(),
+                                          m_Assets.assets().end(),
                                           [](const ImportedAsset& asset) { return asset.selected; }),
-                           m_ImportedAssets.end());
+                           m_Assets.assets().end());
 
-    if (m_ImportedAssets.empty())
+    if (m_Assets.assets().empty())
     {
         ImportedAsset asset;
         asset.name = "Asset 1";
-        m_ImportedAssets.push_back(std::move(asset));
+        m_Assets.assets().push_back(std::move(asset));
     }
 
-    const size_t deletedCount = originalCount - m_ImportedAssets.size();
-    m_ActiveImportedAssetIndex =
-        std::clamp(m_ActiveImportedAssetIndex, 0, static_cast<int>(m_ImportedAssets.size()) - 1);
+    const size_t deletedCount = originalCount - m_Assets.assets().size();
+    m_Assets.setActiveIndex(
+        std::clamp(m_Assets.activeIndex(), 0, static_cast<int>(m_Assets.assets().size()) - 1));
     m_StatusMessage = deletedCount == 0 ? "No selected assets to delete." :
                                           "Deleted " + std::to_string(deletedCount) + " selected asset(s).";
     return deletedCount;
@@ -1335,7 +1335,7 @@ size_t Application::DeleteSelectedImportedAssets()
 
 void Application::SelectAllImportedAssets(bool selected)
 {
-    for (ImportedAsset& asset : m_ImportedAssets)
+    for (ImportedAsset& asset : m_Assets.assets())
     {
         asset.selected = selected;
     }
@@ -1345,7 +1345,7 @@ void Application::SelectAllImportedAssets(bool selected)
 size_t Application::SnapSelectedImportedAssetsToTerrain()
 {
     size_t snappedCount = 0;
-    for (ImportedAsset& asset : m_ImportedAssets)
+    for (ImportedAsset& asset : m_Assets.assets())
     {
         if (!asset.selected)
         {
@@ -1804,7 +1804,7 @@ size_t Application::CountSceneTriangles() const
         }
     }
 
-    for (const ImportedAsset& asset : m_ImportedAssets)
+    for (const ImportedAsset& asset : m_Assets.assets())
     {
         if (!asset.loaded)
         {
@@ -2167,9 +2167,9 @@ void Application::PickAssetAtScreenPos(float pixelX, float pixelY)
     float bestT   = std::numeric_limits<float>::max();
     int   bestIdx = -1;
 
-    for (int i = 0; i < static_cast<int>(m_ImportedAssets.size()); ++i)
+    for (int i = 0; i < static_cast<int>(m_Assets.assets().size()); ++i)
     {
-        const ImportedAsset& asset = m_ImportedAssets[static_cast<size_t>(i)];
+        const ImportedAsset& asset = m_Assets.assets()[static_cast<size_t>(i)];
         if (!asset.loaded || !asset.aabbValid) continue;
 
         // Transform AABB to world space (scale already baked; just add position)
@@ -2194,10 +2194,10 @@ void Application::PickAssetAtScreenPos(float pixelX, float pixelY)
 
     if (bestIdx >= 0)
     {
-        for (ImportedAsset& a : m_ImportedAssets) a.selected = false;
-        m_ImportedAssets[static_cast<size_t>(bestIdx)].selected = true;
-        m_ActiveImportedAssetIndex = bestIdx;
-        m_StatusMessage = "Selected: " + m_ImportedAssets[static_cast<size_t>(bestIdx)].name;
+        for (ImportedAsset& a : m_Assets.assets()) a.selected = false;
+        m_Assets.assets()[static_cast<size_t>(bestIdx)].selected = true;
+        m_Assets.setActiveIndex(bestIdx);
+        m_StatusMessage = "Selected: " + m_Assets.assets()[static_cast<size_t>(bestIdx)].name;
     }
 }
 
@@ -2207,14 +2207,14 @@ void Application::PickAssetAtScreenPos(float pixelX, float pixelY)
 void Application::RenderAssetLabels()
 {
     if (!m_AssetLabelSettings.visible) return;
-    if (m_ImportedAssets.empty()) return;
+    if (m_Assets.assets().empty()) return;
 
     const glm::mat4 vp      = GetRenderViewProjectionMatrix();
     const float W = static_cast<float>(m_Window.GetWidth());
     const float H = static_cast<float>(m_Window.GetHeight());
     ImDrawList* dl = ImGui::GetBackgroundDrawList();
 
-    for (const ImportedAsset& asset : m_ImportedAssets)
+    for (const ImportedAsset& asset : m_Assets.assets())
     {
         if (!asset.loaded || !asset.showLabel || asset.name.empty()) continue;
 

@@ -3649,18 +3649,18 @@ void Application::RenderEditor()
     }
     else if (m_ActiveWorkspaceSection == WorkspaceSection::Assets)
     {
-        ImGui::Text("Imported assets: %zu", m_ImportedAssets.size());
+        ImGui::Text("Imported assets: %zu", m_Assets.assets().size());
         if (activeAsset != nullptr)
         {
-            for (int i = 0; i < static_cast<int>(m_ImportedAssets.size()); ++i)
+            for (int i = 0; i < static_cast<int>(m_Assets.assets().size()); ++i)
             {
-                ImportedAsset& asset = m_ImportedAssets[static_cast<size_t>(i)];
+                ImportedAsset& asset = m_Assets.assets()[static_cast<size_t>(i)];
                 ImGui::PushID(i);
                 ImGui::Checkbox("##workspace_asset_selected", &asset.selected);
                 ImGui::SameLine();
-                if (ImGui::Selectable(asset.name.c_str(), i == m_ActiveImportedAssetIndex))
+                if (ImGui::Selectable(asset.name.c_str(), i == m_Assets.activeIndex()))
                 {
-                    m_ActiveImportedAssetIndex = i;
+                    m_Assets.setActiveIndex(i);
                     activeAsset = GetActiveImportedAsset();
                 }
                 ImGui::SameLine();
@@ -3693,21 +3693,21 @@ void Application::RenderEditor()
 
             if (ImGui::Button("Queue Asset Import", ImVec2(160.0f, 34.0f)))
             {
-                StartImportedAssetLoadJob(m_ActiveImportedAssetIndex);
+                StartImportedAssetLoadJob(m_Assets.activeIndex());
             }
             ImGui::SameLine();
             if (ImGui::Button("Add Asset", ImVec2(120.0f, 34.0f)))
             {
                 ImportedAsset asset;
-                asset.name = "Asset " + std::to_string(m_ImportedAssets.size() + 1);
-                m_ImportedAssets.push_back(std::move(asset));
-                m_ActiveImportedAssetIndex = static_cast<int>(m_ImportedAssets.size()) - 1;
+                asset.name = "Asset " + std::to_string(m_Assets.assets().size() + 1);
+                m_Assets.assets().push_back(std::move(asset));
+                m_Assets.setActiveIndex(static_cast<int>(m_Assets.assets().size()) - 1);
                 activeAsset = GetActiveImportedAsset();
             }
             ImGui::SameLine();
             if (ImGui::Button("Delete Asset", ImVec2(120.0f, 34.0f)))
             {
-                DeleteImportedAsset(m_ActiveImportedAssetIndex);
+                DeleteImportedAsset(m_Assets.activeIndex());
                 activeAsset = GetActiveImportedAsset();
             }
 

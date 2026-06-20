@@ -61,12 +61,12 @@ void Application::RenderBlenderAssetsWindow()
     // ── Asset list ────────────────────────────────────────────────────────────
     {
         const int loadedCount = static_cast<int>(
-            std::count_if(m_ImportedAssets.begin(), m_ImportedAssets.end(),
+            std::count_if(m_Assets.assets().begin(), m_Assets.assets().end(),
                           [](const ImportedAsset& a){ return a.loaded; }));
         char listHeader[64];
         std::snprintf(listHeader, sizeof(listHeader),
                       "Assets   %d / %d loaded###AssetList",
-                      loadedCount, static_cast<int>(m_ImportedAssets.size()));
+                      loadedCount, static_cast<int>(m_Assets.assets().size()));
 
         if (ImGui::CollapsingHeader(listHeader, ImGuiTreeNodeFlags_DefaultOpen))
         {
@@ -74,17 +74,17 @@ void Application::RenderBlenderAssetsWindow()
             if (ImGui::Button("+ Add"))
             {
                 ImportedAsset asset;
-                asset.name = "Asset " + std::to_string(m_ImportedAssets.size() + 1);
-                m_ImportedAssets.push_back(std::move(asset));
-                m_ActiveImportedAssetIndex = static_cast<int>(m_ImportedAssets.size()) - 1;
+                asset.name = "Asset " + std::to_string(m_Assets.assets().size() + 1);
+                m_Assets.assets().push_back(std::move(asset));
+                m_Assets.setActiveIndex(static_cast<int>(m_Assets.assets().size()) - 1);
                 activeAsset = GetActiveImportedAsset();
                 m_StatusMessage = "Added asset slot.";
             }
             ImGui::SameLine();
-            ImGui::BeginDisabled(m_ImportedAssets.empty());
+            ImGui::BeginDisabled(m_Assets.assets().empty());
             if (ImGui::Button("Delete"))
             {
-                DeleteImportedAsset(m_ActiveImportedAssetIndex);
+                DeleteImportedAsset(m_Assets.activeIndex());
                 activeAsset = GetActiveImportedAsset();
             }
             ImGui::EndDisabled();
@@ -113,7 +113,7 @@ void Application::RenderBlenderAssetsWindow()
             constexpr float kRowH    = 24.0f;
             constexpr float kMaxRows = 8.0f;
             const float listHeight = std::min(
-                static_cast<float>(m_ImportedAssets.size()) * kRowH + 6.0f,
+                static_cast<float>(m_Assets.assets().size()) * kRowH + 6.0f,
                 kMaxRows * kRowH + 6.0f);
 
             constexpr ImGuiTableFlags kTableFlags =
@@ -122,7 +122,7 @@ void Application::RenderBlenderAssetsWindow()
                 ImGuiTableFlags_ScrollY        |
                 ImGuiTableFlags_SizingStretchProp;
 
-            if (m_ImportedAssets.empty())
+            if (m_Assets.assets().empty())
             {
                 ImGui::TextDisabled("  No assets — press '+ Add' to create one.");
             }
@@ -134,10 +134,10 @@ void Application::RenderBlenderAssetsWindow()
                 ImGui::TableSetupColumn("##nm",   ImGuiTableColumnFlags_WidthStretch, 1.0f);
                 ImGui::TableSetupColumn("##ext",  ImGuiTableColumnFlags_WidthFixed,   38.0f);
 
-                for (int i = 0; i < static_cast<int>(m_ImportedAssets.size()); ++i)
+                for (int i = 0; i < static_cast<int>(m_Assets.assets().size()); ++i)
                 {
-                    ImportedAsset& asset = m_ImportedAssets[static_cast<size_t>(i)];
-                    const bool isActive = (i == m_ActiveImportedAssetIndex);
+                    ImportedAsset& asset = m_Assets.assets()[static_cast<size_t>(i)];
+                    const bool isActive = (i == m_Assets.activeIndex());
                     ImGui::PushID(i);
                     ImGui::TableNextRow(ImGuiTableRowFlags_None, kRowH);
 
@@ -167,7 +167,7 @@ void Application::RenderBlenderAssetsWindow()
                                           ImGuiSelectableFlags_SpanAllColumns,
                                           ImVec2(0.0f, kRowH - 6.0f)))
                     {
-                        m_ActiveImportedAssetIndex = i;
+                        m_Assets.setActiveIndex(i);
                         activeAsset = GetActiveImportedAsset();
                     }
 
@@ -202,7 +202,7 @@ void Application::RenderBlenderAssetsWindow()
             ImGui::DragFloat3("##bulk_local", glm::value_ptr(bulkLocalPosition), 0.1f, 0.0f, 0.0f, "Local XYZ %.1f");
             if (ImGui::Button("Apply Local Position"))
             {
-                for (ImportedAsset& a : m_ImportedAssets)
+                for (ImportedAsset& a : m_Assets.assets())
                 {
                     if (!a.selected) continue;
                     a.useGeographicPlacement = false;
@@ -217,7 +217,7 @@ void Application::RenderBlenderAssetsWindow()
             ImGui::InputDouble("##bulk_hgt",  &bulkHeight,    0.0, 0.0, "Alt %.3f m");
             if (ImGui::Button("Apply Geographic Position"))
             {
-                for (ImportedAsset& a : m_ImportedAssets)
+                for (ImportedAsset& a : m_Assets.assets())
                 {
                     if (!a.selected) continue;
                     a.useGeographicPlacement = true;
@@ -234,7 +234,7 @@ void Application::RenderBlenderAssetsWindow()
             ImGui::DragFloat3("##bulk_scale", glm::value_ptr(bulkScale), 0.05f, 0.01f, 1000.0f, "Scale %.2f");
             if (ImGui::Button("Apply Scale"))
             {
-                for (ImportedAsset& a : m_ImportedAssets)
+                for (ImportedAsset& a : m_Assets.assets())
                 {
                     if (!a.selected) continue;
                     a.scale = bulkScale;
@@ -244,7 +244,7 @@ void Application::RenderBlenderAssetsWindow()
             ImGui::DragFloat("##bulk_rz", &bulkRotationZ, 0.5f, 0.0f, 0.0f, "Rot Z %.1f°");
             if (ImGui::Button("Apply Rotation Z"))
             {
-                for (ImportedAsset& a : m_ImportedAssets)
+                for (ImportedAsset& a : m_Assets.assets())
                 {
                     if (!a.selected) continue;
                     a.rotationDegrees.z = bulkRotationZ;
@@ -259,7 +259,7 @@ void Application::RenderBlenderAssetsWindow()
             if (ImGui::Button("Copy Selected"))         { CopySelectedImportedAssets(); }
             ImGui::SameLine();
             if (ImGui::Button("Paste"))                 { PasteCopiedImportedAssets(); activeAsset = GetActiveImportedAsset(); }
-            ImGui::DragFloat3("Paste Offset##bulk_paste", glm::value_ptr(m_AssetPasteOffset),
+            ImGui::DragFloat3("Paste Offset##bulk_paste", glm::value_ptr(m_Assets.pasteOffset()),
                               0.25f, -1000.0f, 1000.0f);
         }
     }
@@ -322,7 +322,7 @@ void Application::RenderBlenderAssetsWindow()
 
             ImGui::Spacing();
             if (ImGui::Button("Load Asset", ImVec2(-1.0f, 0.0f)))
-                StartImportedAssetLoadJob(m_ActiveImportedAssetIndex);
+                StartImportedAssetLoadJob(m_Assets.activeIndex());
         }
 
         // ── Navigation ────────────────────────────────────────────────────────

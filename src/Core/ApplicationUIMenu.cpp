@@ -242,22 +242,22 @@ void Application::RenderMainMenuBar()
         if (ImGui::MenuItem("Add Asset Slot"))
         {
             ImportedAsset asset;
-            asset.name = "Asset " + std::to_string(m_ImportedAssets.size() + 1);
-            m_ImportedAssets.push_back(std::move(asset));
-            m_ActiveImportedAssetIndex = static_cast<int>(m_ImportedAssets.size()) - 1;
+            asset.name = "Asset " + std::to_string(m_Assets.assets().size() + 1);
+            m_Assets.assets().push_back(std::move(asset));
+            m_Assets.setActiveIndex(static_cast<int>(m_Assets.assets().size()) - 1);
             m_StatusMessage = "Added asset slot.";
         }
 
-        if (ImGui::MenuItem("Delete Active Asset", nullptr, false, m_ImportedAssets.size() > 1))
+        if (ImGui::MenuItem("Delete Active Asset", nullptr, false, m_Assets.assets().size() > 1))
         {
-            DeleteImportedAsset(m_ActiveImportedAssetIndex);
+            DeleteImportedAsset(m_Assets.activeIndex());
         }
 
         if (ImGui::MenuItem("Reload Active Asset"))
         {
             if (GetActiveImportedAsset() != nullptr)
             {
-                StartImportedAssetLoadJob(m_ActiveImportedAssetIndex);
+                StartImportedAssetLoadJob(m_Assets.activeIndex());
             }
         }
 

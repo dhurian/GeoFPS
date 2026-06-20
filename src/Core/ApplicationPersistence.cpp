@@ -183,7 +183,7 @@ bool Application::SaveWorldToFile(const std::string& path)
     file << std::fixed << std::setprecision(8);
     file << "world_name=" << m_WorldName << '\n';
     file << "active_terrain_index=" << m_Terrain.activeIndex() << '\n';
-    file << "active_asset_index=" << m_ActiveImportedAssetIndex << '\n';
+    file << "active_asset_index=" << m_Assets.activeIndex() << '\n';
     file << "sun.use_geographic=" << (m_SunSettings.useGeographicSun ? 1 : 0) << '\n';
     file << "sun.year=" << m_SunSettings.year << '\n';
     file << "sun.month=" << m_SunSettings.month << '\n';
@@ -278,7 +278,7 @@ bool Application::SaveWorldToFile(const std::string& path)
         file << "[/terrain]\n\n";
     }
 
-    for (const ImportedAsset& asset : m_ImportedAssets)
+    for (const ImportedAsset& asset : m_Assets.assets())
     {
         // Skip placeholder rows that the user added to the UI but never
         // pointed at a file.  Writing path= blank made the parser hard-error
@@ -480,7 +480,7 @@ bool Application::LoadWorldFromFile(const std::string& path)
     m_SunSettings = loadedSun;
     m_SkySettings = loadedSky;
     m_Terrain.datasets() = std::move(terrains);
-    m_ImportedAssets = std::move(assets);
+    m_Assets.assets() = std::move(assets);
     if (!profiles.empty())
     {
         m_TerrainProfiles = std::move(profiles);
@@ -520,9 +520,9 @@ bool Application::LoadWorldFromFile(const std::string& path)
         }
     }
 
-    for (size_t ai = 0; ai < m_ImportedAssets.size(); ++ai)
+    for (size_t ai = 0; ai < m_Assets.assets().size(); ++ai)
     {
-        ImportedAsset& asset = m_ImportedAssets[ai];
+        ImportedAsset& asset = m_Assets.assets()[ai];
         std::cout << "[GeoFPS] Loading asset '" << asset.name << "' from " << asset.path << '\n';
         if (asset.useGeographicPlacement)
         {
@@ -539,20 +539,20 @@ bool Application::LoadWorldFromFile(const std::string& path)
         }
     }
 
-    if (m_ImportedAssets.empty())
+    if (m_Assets.assets().empty())
     {
         ImportedAsset asset;
         asset.name = "Asset 1";
-        m_ImportedAssets.push_back(std::move(asset));
+        m_Assets.assets().push_back(std::move(asset));
     }
 
-    m_ActiveImportedAssetIndex = std::clamp(activeAssetIndex, 0, static_cast<int>(m_ImportedAssets.size()) - 1);
+    m_Assets.setActiveIndex(std::clamp(activeAssetIndex, 0, static_cast<int>(m_Assets.assets().size()) - 1));
     RebuildAllTerrainProfileSamples();
     m_MouseCaptured = true;
     m_Window.SetCursorCaptured(true);
     m_FPSController.ResetMouseState();
     m_FPSController.SetEnabled(true);
-    std::cout << "[GeoFPS] World load complete. Active asset index " << m_ActiveImportedAssetIndex << '\n';
+    std::cout << "[GeoFPS] World load complete. Active asset index " << m_Assets.activeIndex() << '\n';
     m_StatusMessage = "Loaded world file: " + sourcePathString;
     return true;
 }
@@ -626,7 +626,7 @@ bool Application::LoadBlenderAssetsFromFile(const std::string& path)
 
     std::cout << "[GeoFPS] Parsed " << loadedAssets.size() << " blender asset definition(s)\n";
 
-    for (ImportedAsset& asset : m_ImportedAssets)
+    for (ImportedAsset& asset : m_Assets.assets())
     {
         asset.selected = false;
     }
@@ -634,12 +634,12 @@ bool Application::LoadBlenderAssetsFromFile(const std::string& path)
     for (ImportedAsset& asset : loadedAssets)
     {
         asset.selected = true;
-        m_ImportedAssets.push_back(std::move(asset));
+        m_Assets.assets().push_back(std::move(asset));
     }
 
-    m_ActiveImportedAssetIndex = static_cast<int>(m_ImportedAssets.size()) - 1;
+    m_Assets.setActiveIndex(static_cast<int>(m_Assets.assets().size()) - 1);
     m_BlenderAssetsFilePath = path;
-    std::cout << "[GeoFPS] Blender asset import complete. Active asset index " << m_ActiveImportedAssetIndex << '\n';
+    std::cout << "[GeoFPS] Blender asset import complete. Active asset index " << m_Assets.activeIndex() << '\n';
     m_StatusMessage = "Loaded blender assets file: " + path;
     return true;
 }
@@ -668,10 +668,10 @@ bool Application::WriteCurrentWorldReadout(const std::string& path) const
     file << "World Name: " << m_WorldName << "\n";
     file << "World File: " << m_WorldFilePath << "\n";
     file << "Terrain Dataset Count: " << m_Terrain.datasets().size() << "\n";
-    file << "Imported Asset Count: " << m_ImportedAssets.size() << "\n";
+    file << "Imported Asset Count: " << m_Assets.assets().size() << "\n";
     file << "Terrain Profile Count: " << m_TerrainProfiles.size() << "\n";
     file << "Active Terrain Index: " << m_Terrain.activeIndex() << "\n";
-    file << "Active Asset Index: " << m_ActiveImportedAssetIndex << "\n\n";
+    file << "Active Asset Index: " << m_Assets.activeIndex() << "\n\n";
 
     file << "Sun Settings\n";
     file << "  Geographic Sun: " << (m_SunSettings.useGeographicSun ? "true" : "false") << "\n";
@@ -707,9 +707,9 @@ bool Application::WriteCurrentWorldReadout(const std::string& path) const
     }
 
     file << "\nImported Assets\n";
-    for (size_t assetIndex = 0; assetIndex < m_ImportedAssets.size(); ++assetIndex)
+    for (size_t assetIndex = 0; assetIndex < m_Assets.assets().size(); ++assetIndex)
     {
-        const ImportedAsset& asset = m_ImportedAssets[assetIndex];
+        const ImportedAsset& asset = m_Assets.assets()[assetIndex];
         file << "- Asset " << assetIndex << ": " << asset.name << "\n";
         file << "  Path: " << asset.path << "\n";
         file << "  Placement Mode: " << (asset.useGeographicPlacement ? "geographic" : "local") << "\n";
