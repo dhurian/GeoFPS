@@ -369,12 +369,12 @@ const ProfileSamplingTerrainSnapshot* PrimaryTerrainForProfileSnapshot(
     return nullptr;
 }
 
-Application::ProfileSampleBuildResult BuildProfileSamplesOnWorker(
+ProfileSampleBuildResult BuildProfileSamplesOnWorker(
     std::vector<TerrainProfile> profiles,
     std::vector<ProfileSamplingTerrainSnapshot> terrains,
     int activeTerrainIndex)
 {
-    Application::ProfileSampleBuildResult result;
+    ProfileSampleBuildResult result;
     result.profiles = std::move(profiles);
     if (result.profiles.empty())
     {
@@ -879,40 +879,10 @@ void Application::ProcessBackgroundJobs()
     AssetJobContext assetCtx { m_Diagnostics, m_StatusMessage };
     m_Assets.ProcessLoadJobs(assetCtx);
 
-    for (auto iterator = m_ProfileSampleBuildJobs.begin(); iterator != m_ProfileSampleBuildJobs.end();)
-    {
-        if (iterator->future.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
-        {
-            ++iterator;
-            continue;
-        }
-
-        ProfileSampleBuildResult result;
-        try
-        {
-            result = iterator->future.get();
-        }
-        catch (const std::exception& exception)
-        {
-            result.statusMessage = std::string("Background profile sampling failed: ") + exception.what();
-        }
-
-        if (result.success)
-        {
-            size_t totalSamples = 0;
-            for (const auto& p : result.profiles) totalSamples += p.samples.size();
-            std::cout << "[GeoFPS] Profile samples rebuilt: " << result.profiles.size()
-                      << " profiles, " << totalSamples << " total samples\n";
-            m_Profiles.profiles() = std::move(result.profiles);
-            m_Profiles.setActiveIndex(m_Profiles.profiles().empty() ?
-                                          -1 :
-                                          std::clamp(m_Profiles.activeIndex(),
-                                                     0,
-                                                     static_cast<int>(m_Profiles.profiles().size()) - 1));
-        }
-        m_StatusMessage = result.statusMessage;
-        iterator = m_ProfileSampleBuildJobs.erase(iterator);
-    }
+    // Profile-sample draining lives in ProfileSystem now; its context is just the
+    // status string (it owns the profiles, active index, and job vector).
+    ProfileJobContext profileCtx { m_StatusMessage };
+    m_Profiles.ProcessSampleJobs(profileCtx);
 }
 
 bool Application::ActivateTerrainDataset(int index)
@@ -1515,7 +1485,7 @@ bool Application::StartTerrainProfileSampleJob()
         return false;
     }
 
-    if (!m_ProfileSampleBuildJobs.empty())
+    if (!m_Profiles.sampleBuildJobs().empty())
     {
         m_StatusMessage = "Terrain profile sampling already running.";
         return false;
@@ -1540,14 +1510,14 @@ bool Application::StartTerrainProfileSampleJob()
                                             activeTerrainIndex = m_Terrain.activeIndex()]() mutable {
         return BuildProfileSamplesOnWorker(std::move(profiles), std::move(terrains), activeTerrainIndex);
     });
-    m_ProfileSampleBuildJobs.push_back(std::move(job));
+    m_Profiles.sampleBuildJobs().push_back(std::move(job));
     m_StatusMessage = "Queued background terrain profile sampling.";
     return true;
 }
 
 void Application::RebuildAllTerrainProfileSamples()
 {
-    if (!m_ProfileSampleBuildJobs.empty())
+    if (!m_Profiles.sampleBuildJobs().empty())
     {
         m_StatusMessage = "Terrain profile sampling already running.";
         return;

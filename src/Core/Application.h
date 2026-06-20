@@ -152,20 +152,9 @@ class Application
     void Run();
     void Shutdown();
 
-    // Terrain-build job types live in Core/TerrainJobs.h, asset-load job types in
-    // Core/AssetJobs.h (lifted so their systems can own the job vectors).  The
-    // profile-sampling job types stay nested here until that system is extracted.
-    struct ProfileSampleBuildResult
-    {
-        bool success {false};
-        std::string statusMessage;
-        std::vector<TerrainProfile> profiles;
-    };
-
-    struct ProfileSampleBuildJob
-    {
-        std::future<ProfileSampleBuildResult> future;
-    };
+    // All async job/result types now live with their systems: terrain in
+    // Core/TerrainJobs.h, assets in Core/AssetJobs.h, profile sampling in
+    // Core/ProfileJobs.h.
 
   private:
     void ProcessInput(float deltaTime);
@@ -298,7 +287,6 @@ class Application
     Camera m_Camera;
     FPSController m_FPSController;
     std::unique_ptr<BackgroundJobQueue> m_BackgroundJobs;
-    std::vector<ProfileSampleBuildJob> m_ProfileSampleBuildJobs;
     std::unique_ptr<Shader> m_TerrainShader;
     std::unique_ptr<Shader> m_AssetShader;
     std::unique_ptr<Shader> m_LineShader;

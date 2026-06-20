@@ -376,7 +376,7 @@ void Application::Shutdown()
     m_Terrain.terrainBuildJobs().clear();
     m_Terrain.terrainTileBuildJobs().clear();
     m_Assets.loadJobs().clear();
-    m_ProfileSampleBuildJobs.clear();
+    m_Profiles.sampleBuildJobs().clear();
     m_BackgroundJobs.reset();
     ShutdownImGui();
     if (m_ProfileLineVbo != 0)
