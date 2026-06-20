@@ -357,7 +357,7 @@ void Application::Run()
             extras.cameraPitch        = m_Camera.GetPitch();
             extras.cameraPosition     = m_Camera.GetPosition();
             extras.rawMouseDelta      = m_Window.GetLastRawMouseDelta();
-            extras.tileJobsPending    = m_TerrainTileBuildJobs.size();
+            extras.tileJobsPending    = m_Terrain.terrainTileBuildJobs().size();
             extras.isolineBuildPending = m_Isolines.segmentBuildPending();
             extras.avgSwapWaitMs      = m_AvgSwapWaitMs;
             extras.paceTargetMs       = m_FramePacer.nextTargetMs() - (1000.0 / 60.0);
@@ -373,8 +373,8 @@ void Application::Run()
 
 void Application::Shutdown()
 {
-    m_TerrainBuildJobs.clear();
-    m_TerrainTileBuildJobs.clear();
+    m_Terrain.terrainBuildJobs().clear();
+    m_Terrain.terrainTileBuildJobs().clear();
     m_AssetLoadJobs.clear();
     m_ProfileSampleBuildJobs.clear();
     m_BackgroundJobs.reset();
@@ -791,7 +791,7 @@ void Application::Update(float deltaTime)
     if (m_TileLODSettings.enabled)
     {
         const glm::vec3 camPos = m_Camera.GetPosition();
-        const int activeLoads  = static_cast<int>(m_TerrainTileBuildJobs.size());
+        const int activeLoads  = static_cast<int>(m_Terrain.terrainTileBuildJobs().size());
         // Collect load/unload decisions
         struct TileRef { int terrainIdx; int tileIdx; float dist; };
         std::vector<TileRef> toLoad;

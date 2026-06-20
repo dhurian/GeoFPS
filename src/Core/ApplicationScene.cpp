@@ -814,7 +814,7 @@ bool Application::StartTerrainTileLoadJob(int terrainIndex, int tileIndex)
         return true;
     }
 
-    for (const TerrainTileBuildJob& job : m_TerrainTileBuildJobs)
+    for (const TerrainTileBuildJob& job : m_Terrain.terrainTileBuildJobs())
     {
         if (job.terrainIndex == terrainIndex && job.tileIndex == tileIndex)
         {
@@ -833,7 +833,7 @@ bool Application::StartTerrainTileLoadJob(int terrainIndex, int tileIndex)
     job.future = m_BackgroundJobs->Enqueue([terrainIndex, tileIndex, path, geoReference, settings]() {
         return BuildTerrainTileOnWorker(terrainIndex, tileIndex, path, geoReference, settings);
     });
-    m_TerrainTileBuildJobs.push_back(std::move(job));
+    m_Terrain.terrainTileBuildJobs().push_back(std::move(job));
     return true;
 }
 
@@ -844,7 +844,7 @@ bool Application::StartTerrainBuildJob(int terrainIndex)
         return false;
     }
 
-    for (const TerrainBuildJob& job : m_TerrainBuildJobs)
+    for (const TerrainBuildJob& job : m_Terrain.terrainBuildJobs())
     {
         if (job.terrainIndex == terrainIndex)
         {
@@ -873,7 +873,7 @@ bool Application::StartTerrainBuildJob(int terrainIndex)
     job.future = m_BackgroundJobs->Enqueue([path, geoReference, settings]() {
         return BuildTerrainOnWorker(path, geoReference, settings);
     });
-    m_TerrainBuildJobs.push_back(std::move(job));
+    m_Terrain.terrainBuildJobs().push_back(std::move(job));
     m_StatusMessage = "Queued background terrain load: " + dataset.name;
     return true;
 }
@@ -936,21 +936,21 @@ void Application::ProcessBackgroundJobs()
         ++m_Diagnostics.tileChunkUploadsThisFrame;
     };
 
-    for (auto iterator = m_TerrainTileBuildJobs.begin(); iterator != m_TerrainTileBuildJobs.end();)
+    for (auto iterator = m_Terrain.terrainTileBuildJobs().begin(); iterator != m_Terrain.terrainTileBuildJobs().end();)
     {
         if (iterator->uploadStarted)
         {
             TerrainTileBuildResult& result = iterator->result;
             if (result.terrainIndex < 0 || result.terrainIndex >= static_cast<int>(m_Terrain.datasets().size()))
             {
-                iterator = m_TerrainTileBuildJobs.erase(iterator);
+                iterator = m_Terrain.terrainTileBuildJobs().erase(iterator);
                 continue;
             }
 
             TerrainDataset& dataset = m_Terrain.datasets()[static_cast<size_t>(result.terrainIndex)];
             if (result.tileIndex < 0 || result.tileIndex >= static_cast<int>(dataset.tiles.size()))
             {
-                iterator = m_TerrainTileBuildJobs.erase(iterator);
+                iterator = m_Terrain.terrainTileBuildJobs().erase(iterator);
                 continue;
             }
 
@@ -960,7 +960,7 @@ void Application::ProcessBackgroundJobs()
                 tile.loading = false;
                 std::cerr << "[GeoFPS] Terrain tile FAILED: " << result.statusMessage << '\n';
                 m_StatusMessage = result.statusMessage;
-                iterator = m_TerrainTileBuildJobs.erase(iterator);
+                iterator = m_Terrain.terrainTileBuildJobs().erase(iterator);
                 continue;
             }
 
@@ -1017,7 +1017,7 @@ void Application::ProcessBackgroundJobs()
                                                   tile.bounds.maxLongitude);
             }
 
-            iterator = m_TerrainTileBuildJobs.erase(iterator);
+            iterator = m_Terrain.terrainTileBuildJobs().erase(iterator);
             continue;
         }
 
@@ -1064,13 +1064,13 @@ void Application::ProcessBackgroundJobs()
             }
         }
 
-        iterator = m_TerrainTileBuildJobs.erase(iterator);
+        iterator = m_Terrain.terrainTileBuildJobs().erase(iterator);
     }
 
     // Two-phase loop: Phase 1 resolves the future and uploads the main mesh;
     // Phase 2 drains render chunks (shared adaptive time-budget with the tile
     // path above) to prevent a large terrain dataset from stalling the frame.
-    for (auto iterator = m_TerrainBuildJobs.begin(); iterator != m_TerrainBuildJobs.end();)
+    for (auto iterator = m_Terrain.terrainBuildJobs().begin(); iterator != m_Terrain.terrainBuildJobs().end();)
     {
         // ── Phase 2: drain chunks within budget ───────────────────────────────
         if (iterator->uploadStarted)
@@ -1136,7 +1136,7 @@ void Application::ProcessBackgroundJobs()
                 }
                 m_StatusMessage = iterator->statusMessage;
             }
-            iterator = m_TerrainBuildJobs.erase(iterator);
+            iterator = m_Terrain.terrainBuildJobs().erase(iterator);
             continue;
         }
 
@@ -1204,7 +1204,7 @@ void Application::ProcessBackgroundJobs()
                 : result.statusMessage;
         }
 
-        iterator = m_TerrainBuildJobs.erase(iterator);
+        iterator = m_Terrain.terrainBuildJobs().erase(iterator);
     }
 
     for (auto iterator = m_AssetLoadJobs.begin(); iterator != m_AssetLoadJobs.end();)

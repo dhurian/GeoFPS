@@ -342,8 +342,6 @@ class Application
     Camera m_Camera;
     FPSController m_FPSController;
     std::unique_ptr<BackgroundJobQueue> m_BackgroundJobs;
-    std::vector<TerrainBuildJob> m_TerrainBuildJobs;
-    std::vector<TerrainTileBuildJob> m_TerrainTileBuildJobs;
     std::vector<AssetLoadJob> m_AssetLoadJobs;
     std::vector<ProfileSampleBuildJob> m_ProfileSampleBuildJobs;
     std::unique_ptr<Shader> m_TerrainShader;

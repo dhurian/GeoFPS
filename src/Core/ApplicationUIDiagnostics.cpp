@@ -27,7 +27,7 @@ void Application::RenderDiagnosticsOverlay()
         for (const TerrainTile& t : ds.tiles)
             loadedTiles += t.loaded ? 1u : 0u;
     }
-    size_t pendingJobs = m_TerrainBuildJobs.size() + m_TerrainTileBuildJobs.size() + m_AssetLoadJobs.size();
+    size_t pendingJobs = m_Terrain.terrainBuildJobs().size() + m_Terrain.terrainTileBuildJobs().size() + m_AssetLoadJobs.size();
 
     constexpr float PAD = 14.0f;
     const ImGuiWindowFlags flags =
@@ -311,8 +311,8 @@ void Application::RenderDiagnosticsPanel()
     // ── Background jobs ───────────────────────────────────────────────────────
     ImGui::TextColored(ImVec4(0.55f, 0.90f, 0.65f, 1.0f), "Background Jobs");
     ImGui::Text("Terrain build: %zu   Tile load: %zu   Asset load: %zu",
-                m_TerrainBuildJobs.size(),
-                m_TerrainTileBuildJobs.size(),
+                m_Terrain.terrainBuildJobs().size(),
+                m_Terrain.terrainTileBuildJobs().size(),
                 m_AssetLoadJobs.size());
 
     ImGui::Separator();

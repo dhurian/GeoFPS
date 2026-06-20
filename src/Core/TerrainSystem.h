@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/TerrainDataset.h"
+#include "Core/TerrainJobs.h"
 
 #include <vector>
 
@@ -25,8 +26,18 @@ class TerrainSystem
     [[nodiscard]] int activeIndex() const { return m_ActiveIndex; }
     void setActiveIndex(int index) { m_ActiveIndex = index; }
 
+    // In-flight async build jobs.  Application drives the upload loop
+    // (ProcessBackgroundJobs) and mutates these directly for now; the storage
+    // lives here so all terrain async state has one owner.
+    [[nodiscard]] std::vector<TerrainBuildJob>& terrainBuildJobs() { return m_TerrainBuildJobs; }
+    [[nodiscard]] const std::vector<TerrainBuildJob>& terrainBuildJobs() const { return m_TerrainBuildJobs; }
+    [[nodiscard]] std::vector<TerrainTileBuildJob>& terrainTileBuildJobs() { return m_TerrainTileBuildJobs; }
+    [[nodiscard]] const std::vector<TerrainTileBuildJob>& terrainTileBuildJobs() const { return m_TerrainTileBuildJobs; }
+
   private:
     std::vector<TerrainDataset> m_Datasets;
     int m_ActiveIndex {0};
+    std::vector<TerrainBuildJob> m_TerrainBuildJobs;
+    std::vector<TerrainTileBuildJob> m_TerrainTileBuildJobs;
 };
 } // namespace GeoFPS
