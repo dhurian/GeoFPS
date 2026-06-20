@@ -170,11 +170,11 @@ TerrainProfileVertex ProfileVertexToDatasetCoordinate(const TerrainProfile& prof
     return converted;
 }
 
-Application::TerrainBuildResult BuildTerrainOnWorker(std::string path,
-                                                      GeoReference geoReference,
-                                                      TerrainBuildSettings settings)
+TerrainBuildResult BuildTerrainOnWorker(std::string path,
+                                        GeoReference geoReference,
+                                        TerrainBuildSettings settings)
 {
-    Application::TerrainBuildResult result;
+    TerrainBuildResult result;
     result.geoReference = geoReference;
     result.settings = settings;
 
@@ -237,13 +237,13 @@ Application::TerrainBuildResult BuildTerrainOnWorker(std::string path,
     return result;
 }
 
-Application::TerrainTileBuildResult BuildTerrainTileOnWorker(int terrainIndex,
-                                                             int tileIndex,
-                                                             std::string path,
-                                                             GeoReference geoReference,
-                                                             TerrainBuildSettings settings)
+TerrainTileBuildResult BuildTerrainTileOnWorker(int terrainIndex,
+                                                int tileIndex,
+                                                std::string path,
+                                                GeoReference geoReference,
+                                                TerrainBuildSettings settings)
 {
-    Application::TerrainTileBuildResult result;
+    TerrainTileBuildResult result;
     result.terrainIndex = terrainIndex;
     result.tileIndex = tileIndex;
     result.path = path;

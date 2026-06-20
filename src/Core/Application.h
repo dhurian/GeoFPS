@@ -9,6 +9,7 @@
 #include "Core/IsolineSystem.h"
 #include "Core/PerformanceLogger.h"
 #include "Core/TerrainDataset.h"
+#include "Core/TerrainJobs.h"
 #include "Core/TerrainSystem.h"
 #include "Core/Window.h"
 #include "Game/FPSController.h"
@@ -182,54 +183,9 @@ class Application
     void Run();
     void Shutdown();
 
-    struct TerrainBuildResult
-    {
-        bool success {false};
-        std::string statusMessage;
-        std::vector<TerrainPoint> points;
-        GeoReference geoReference {};
-        TerrainBuildSettings settings {};
-        TerrainHeightGrid heightGrid;
-        MeshData meshData;
-        std::vector<TerrainMeshChunkData> chunks;
-        TerrainDatasetBounds bounds;
-    };
-
-    struct TerrainBuildJob
-    {
-        int terrainIndex {-1};
-        std::future<TerrainBuildResult> future;
-        // Chunk-draining state (mirrors TerrainTileBuildJob).
-        // Populated when the future resolves; chunks are uploaded one per frame.
-        std::vector<TerrainMeshChunkData> pendingChunks;
-        size_t nextChunkIndex {0};
-        bool uploadStarted {false};
-        std::string statusMessage;
-    };
-
-    struct TerrainTileBuildResult
-    {
-        bool success {false};
-        std::string statusMessage;
-        int terrainIndex {-1};
-        int tileIndex {-1};
-        std::string path;
-        std::vector<TerrainPoint> points;
-        TerrainHeightGrid heightGrid;
-        MeshData meshData;
-        std::vector<TerrainMeshChunkData> chunks;
-    };
-
-    struct TerrainTileBuildJob
-    {
-        int terrainIndex {-1};
-        int tileIndex {-1};
-        std::future<TerrainTileBuildResult> future;
-        TerrainTileBuildResult result;
-        size_t nextChunkUploadIndex {0};
-        bool uploadStarted {false};
-    };
-
+    // Terrain-build job/result types live in Core/TerrainJobs.h (lifted there so
+    // TerrainSystem can own the job vectors).  Asset- and profile-sampling job
+    // types stay nested here until their own systems are extracted.
     struct AssetLoadResult
     {
         bool success {false};
