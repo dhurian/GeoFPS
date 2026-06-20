@@ -21,7 +21,7 @@ void Application::RenderDiagnosticsOverlay()
 
     // Collect a few live values
     size_t loadedTiles = 0, totalTiles = 0;
-    for (const TerrainDataset& ds : m_TerrainDatasets)
+    for (const TerrainDataset& ds : m_Terrain.datasets())
     {
         totalTiles += ds.tiles.size();
         for (const TerrainTile& t : ds.tiles)
@@ -160,14 +160,14 @@ void Application::RenderDiagnosticsPanel()
     // ── Terrain ───────────────────────────────────────────────────────────────
     ImGui::TextColored(ImVec4(0.55f, 0.90f, 0.65f, 1.0f), "Terrain");
     size_t loadedTiles = 0, totalTiles = 0;
-    for (const TerrainDataset& ds : m_TerrainDatasets)
+    for (const TerrainDataset& ds : m_Terrain.datasets())
     {
         totalTiles += ds.tiles.size();
         for (const TerrainTile& t : ds.tiles)
             loadedTiles += t.loaded ? 1u : 0u;
     }
     ImGui::Text("Datasets: %zu   Tiles loaded: %zu / %zu",
-                m_TerrainDatasets.size(), loadedTiles, totalTiles);
+                m_Terrain.datasets().size(), loadedTiles, totalTiles);
     ImGui::Text("Render origin distance: %.0f m   Float step there: %.3f m",
                 m_Diagnostics.renderOriginDistanceMeters,
                 m_Diagnostics.renderOriginFloatStepMeters);

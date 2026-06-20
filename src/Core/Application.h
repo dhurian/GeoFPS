@@ -9,6 +9,7 @@
 #include "Core/IsolineSystem.h"
 #include "Core/PerformanceLogger.h"
 #include "Core/TerrainDataset.h"
+#include "Core/TerrainSystem.h"
 #include "Core/Window.h"
 #include "Game/FPSController.h"
 #include "Mapping/GeoImage.h"
@@ -396,7 +397,10 @@ class Application
     std::unique_ptr<Mesh>   m_SkyboxMesh;
     TerrainHeightGrid m_TerrainHeightGrid;
     IsolineSystem m_Isolines;
-    std::vector<TerrainDataset> m_TerrainDatasets;
+    // Terrain dataset store (the loaded datasets + which one is active).  Owned
+    // by TerrainSystem; Application still drives loading/activation orchestration
+    // and owns the active scene frame (m_GeoReference).
+    TerrainSystem m_Terrain;
     std::vector<ImportedAsset> m_ImportedAssets;
     std::vector<TerrainProfile> m_TerrainProfiles;
     std::vector<TerrainPoint> m_TerrainPoints;
@@ -426,7 +430,6 @@ class Application
     float m_ObserverEyeHeightMeters {2.0f};
     bool m_ProfileMapViewInitialized {false};
     bool m_ProfileMapIsPanning {false};
-    int m_ActiveTerrainIndex {0};
     int m_ActiveImportedAssetIndex {0};
     int m_ActiveTerrainProfileIndex {0};
     int m_SelectedProfileVertexIndex {-1};

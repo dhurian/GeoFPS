@@ -99,7 +99,7 @@ void Application::RenderMainMenuBar()
         {
             if (GetActiveTerrainDataset() != nullptr)
             {
-                StartTerrainBuildJob(m_ActiveTerrainIndex);
+                StartTerrainBuildJob(m_Terrain.activeIndex());
             }
         }
 
@@ -135,23 +135,23 @@ void Application::RenderMainMenuBar()
         if (ImGui::MenuItem("Add Terrain Dataset"))
         {
             TerrainDataset dataset;
-            dataset.name = "Terrain " + std::to_string(m_TerrainDatasets.size() + 1);
+            dataset.name = "Terrain " + std::to_string(m_Terrain.datasets().size() + 1);
             dataset.path = "assets/data/sample_terrain.csv";
             OverlayEntry overlay;
             overlay.name = "Overlay 1";
             dataset.overlays.push_back(std::move(overlay));
-            m_TerrainDatasets.push_back(std::move(dataset));
-            ActivateTerrainDataset(static_cast<int>(m_TerrainDatasets.size()) - 1);
+            m_Terrain.datasets().push_back(std::move(dataset));
+            ActivateTerrainDataset(static_cast<int>(m_Terrain.datasets().size()) - 1);
         }
 
-        if (ImGui::MenuItem("Delete Active Terrain", nullptr, false, m_TerrainDatasets.size() > 1))
+        if (ImGui::MenuItem("Delete Active Terrain", nullptr, false, m_Terrain.datasets().size() > 1))
         {
-            DeleteTerrainDataset(m_ActiveTerrainIndex);
+            DeleteTerrainDataset(m_Terrain.activeIndex());
         }
 
-        if (ImGui::MenuItem("Next Terrain", nullptr, false, m_TerrainDatasets.size() > 1))
+        if (ImGui::MenuItem("Next Terrain", nullptr, false, m_Terrain.datasets().size() > 1))
         {
-            const int nextIndex = (m_ActiveTerrainIndex + 1) % static_cast<int>(m_TerrainDatasets.size());
+            const int nextIndex = (m_Terrain.activeIndex() + 1) % static_cast<int>(m_Terrain.datasets().size());
             ActivateTerrainDataset(nextIndex);
         }
         ImGui::EndMenu();

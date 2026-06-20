@@ -453,22 +453,22 @@ void UploadImportedPrimitiveTextures(ImportedPrimitiveData& primitive)
 
 TerrainDataset* Application::GetActiveTerrainDataset()
 {
-    if (m_ActiveTerrainIndex < 0 || m_ActiveTerrainIndex >= static_cast<int>(m_TerrainDatasets.size()))
+    if (m_Terrain.activeIndex() < 0 || m_Terrain.activeIndex() >= static_cast<int>(m_Terrain.datasets().size()))
     {
         return nullptr;
     }
 
-    return &m_TerrainDatasets[static_cast<size_t>(m_ActiveTerrainIndex)];
+    return &m_Terrain.datasets()[static_cast<size_t>(m_Terrain.activeIndex())];
 }
 
 const TerrainDataset* Application::GetActiveTerrainDataset() const
 {
-    if (m_ActiveTerrainIndex < 0 || m_ActiveTerrainIndex >= static_cast<int>(m_TerrainDatasets.size()))
+    if (m_Terrain.activeIndex() < 0 || m_Terrain.activeIndex() >= static_cast<int>(m_Terrain.datasets().size()))
     {
         return nullptr;
     }
 
-    return &m_TerrainDatasets[static_cast<size_t>(m_ActiveTerrainIndex)];
+    return &m_Terrain.datasets()[static_cast<size_t>(m_Terrain.activeIndex())];
 }
 
 OverlayEntry* Application::GetActiveOverlayEntry()
@@ -797,12 +797,12 @@ bool Application::LoadTerrainTile(TerrainDataset& dataset, TerrainTile& tile)
 
 bool Application::StartTerrainTileLoadJob(int terrainIndex, int tileIndex)
 {
-    if (!m_BackgroundJobs || terrainIndex < 0 || terrainIndex >= static_cast<int>(m_TerrainDatasets.size()))
+    if (!m_BackgroundJobs || terrainIndex < 0 || terrainIndex >= static_cast<int>(m_Terrain.datasets().size()))
     {
         return false;
     }
 
-    TerrainDataset& dataset = m_TerrainDatasets[static_cast<size_t>(terrainIndex)];
+    TerrainDataset& dataset = m_Terrain.datasets()[static_cast<size_t>(terrainIndex)];
     if (tileIndex < 0 || tileIndex >= static_cast<int>(dataset.tiles.size()))
     {
         return false;
@@ -839,7 +839,7 @@ bool Application::StartTerrainTileLoadJob(int terrainIndex, int tileIndex)
 
 bool Application::StartTerrainBuildJob(int terrainIndex)
 {
-    if (terrainIndex < 0 || terrainIndex >= static_cast<int>(m_TerrainDatasets.size()) || !m_BackgroundJobs)
+    if (terrainIndex < 0 || terrainIndex >= static_cast<int>(m_Terrain.datasets().size()) || !m_BackgroundJobs)
     {
         return false;
     }
@@ -848,16 +848,16 @@ bool Application::StartTerrainBuildJob(int terrainIndex)
     {
         if (job.terrainIndex == terrainIndex)
         {
-            m_StatusMessage = "Terrain build already running: " + m_TerrainDatasets[static_cast<size_t>(terrainIndex)].name;
+            m_StatusMessage = "Terrain build already running: " + m_Terrain.datasets()[static_cast<size_t>(terrainIndex)].name;
             return false;
         }
     }
 
-    TerrainDataset& dataset = m_TerrainDatasets[static_cast<size_t>(terrainIndex)];
+    TerrainDataset& dataset = m_Terrain.datasets()[static_cast<size_t>(terrainIndex)];
     if (dataset.hasTileManifest)
     {
         const bool loaded = LoadTerrainDataset(dataset);
-        if (loaded && terrainIndex == m_ActiveTerrainIndex)
+        if (loaded && terrainIndex == m_Terrain.activeIndex())
         {
             LoadActiveTerrainIntoScene();
         }
@@ -941,13 +941,13 @@ void Application::ProcessBackgroundJobs()
         if (iterator->uploadStarted)
         {
             TerrainTileBuildResult& result = iterator->result;
-            if (result.terrainIndex < 0 || result.terrainIndex >= static_cast<int>(m_TerrainDatasets.size()))
+            if (result.terrainIndex < 0 || result.terrainIndex >= static_cast<int>(m_Terrain.datasets().size()))
             {
                 iterator = m_TerrainTileBuildJobs.erase(iterator);
                 continue;
             }
 
-            TerrainDataset& dataset = m_TerrainDatasets[static_cast<size_t>(result.terrainIndex)];
+            TerrainDataset& dataset = m_Terrain.datasets()[static_cast<size_t>(result.terrainIndex)];
             if (result.tileIndex < 0 || result.tileIndex >= static_cast<int>(dataset.tiles.size()))
             {
                 iterator = m_TerrainTileBuildJobs.erase(iterator);
@@ -1004,7 +1004,7 @@ void Application::ProcessBackgroundJobs()
                 std::cout << "[GeoFPS] Terrain tile loaded (row=" << tile.row
                           << " col=" << tile.col << "): " << tile.path << '\n';
             }
-            if (result.terrainIndex == m_ActiveTerrainIndex)
+            if (result.terrainIndex == m_Terrain.activeIndex())
             {
                 // Patch only this tile's grid cells instead of rebuilding the
                 // entire sample grid — the heightmap stays correct in real time.
@@ -1037,9 +1037,9 @@ void Application::ProcessBackgroundJobs()
             result.statusMessage = std::string("Background terrain tile load failed: ") + exception.what();
         }
 
-        if (result.terrainIndex >= 0 && result.terrainIndex < static_cast<int>(m_TerrainDatasets.size()))
+        if (result.terrainIndex >= 0 && result.terrainIndex < static_cast<int>(m_Terrain.datasets().size()))
         {
-            TerrainDataset& dataset = m_TerrainDatasets[static_cast<size_t>(result.terrainIndex)];
+            TerrainDataset& dataset = m_Terrain.datasets()[static_cast<size_t>(result.terrainIndex)];
             if (result.tileIndex >= 0 && result.tileIndex < static_cast<int>(dataset.tiles.size()))
             {
                 TerrainTile& tile = dataset.tiles[static_cast<size_t>(result.tileIndex)];
@@ -1082,10 +1082,10 @@ void Application::ProcessBackgroundJobs()
                     break;
                 }
                 if (iterator->terrainIndex >= 0 &&
-                    iterator->terrainIndex < static_cast<int>(m_TerrainDatasets.size()))
+                    iterator->terrainIndex < static_cast<int>(m_Terrain.datasets().size()))
                 {
                     TerrainDataset& dataset =
-                        m_TerrainDatasets[static_cast<size_t>(iterator->terrainIndex)];
+                        m_Terrain.datasets()[static_cast<size_t>(iterator->terrainIndex)];
                     TerrainMeshChunkData& chunkData =
                         iterator->pendingChunks[iterator->nextChunkIndex];
                     TerrainMeshChunk chunk;
@@ -1110,10 +1110,10 @@ void Application::ProcessBackgroundJobs()
 
             // All chunks uploaded — mark loaded and run post-upload callbacks.
             if (iterator->terrainIndex >= 0 &&
-                iterator->terrainIndex < static_cast<int>(m_TerrainDatasets.size()))
+                iterator->terrainIndex < static_cast<int>(m_Terrain.datasets().size()))
             {
                 TerrainDataset& dataset =
-                    m_TerrainDatasets[static_cast<size_t>(iterator->terrainIndex)];
+                    m_Terrain.datasets()[static_cast<size_t>(iterator->terrainIndex)];
                 dataset.loaded = true;
                 for (OverlayEntry& overlay : dataset.overlays)
                 {
@@ -1126,7 +1126,7 @@ void Application::ProcessBackgroundJobs()
                         LoadOverlayImage(overlay);
                     }
                 }
-                if (iterator->terrainIndex == m_ActiveTerrainIndex)
+                if (iterator->terrainIndex == m_Terrain.activeIndex())
                 {
                     LoadActiveTerrainIntoScene();
                 }
@@ -1157,9 +1157,9 @@ void Application::ProcessBackgroundJobs()
             result.statusMessage = std::string("Background terrain load failed: ") + exception.what();
         }
 
-        if (iterator->terrainIndex >= 0 && iterator->terrainIndex < static_cast<int>(m_TerrainDatasets.size()))
+        if (iterator->terrainIndex >= 0 && iterator->terrainIndex < static_cast<int>(m_Terrain.datasets().size()))
         {
-            TerrainDataset& dataset = m_TerrainDatasets[static_cast<size_t>(iterator->terrainIndex)];
+            TerrainDataset& dataset = m_Terrain.datasets()[static_cast<size_t>(iterator->terrainIndex)];
             if (result.success)
             {
                 std::cout << "[GeoFPS] Terrain '" << dataset.name << "' loaded: "
@@ -1338,13 +1338,13 @@ void Application::ProcessBackgroundJobs()
 
 bool Application::ActivateTerrainDataset(int index)
 {
-    if (index < 0 || index >= static_cast<int>(m_TerrainDatasets.size()))
+    if (index < 0 || index >= static_cast<int>(m_Terrain.datasets().size()))
     {
         return false;
     }
 
-    m_ActiveTerrainIndex = index;
-    TerrainDataset& dataset = m_TerrainDatasets[static_cast<size_t>(index)];
+    m_Terrain.setActiveIndex(index);
+    TerrainDataset& dataset = m_Terrain.datasets()[static_cast<size_t>(index)];
     if (!dataset.loaded && !LoadTerrainDataset(dataset))
     {
         return false;
@@ -1411,19 +1411,19 @@ bool Application::LoadActiveOverlayImage()
 
 bool Application::DeleteTerrainDataset(int index)
 {
-    if (index < 0 || index >= static_cast<int>(m_TerrainDatasets.size()) || m_TerrainDatasets.size() <= 1)
+    if (index < 0 || index >= static_cast<int>(m_Terrain.datasets().size()) || m_Terrain.datasets().size() <= 1)
     {
         return false;
     }
 
-    m_TerrainDatasets.erase(m_TerrainDatasets.begin() + index);
-    if (m_ActiveTerrainIndex >= static_cast<int>(m_TerrainDatasets.size()))
+    m_Terrain.datasets().erase(m_Terrain.datasets().begin() + index);
+    if (m_Terrain.activeIndex() >= static_cast<int>(m_Terrain.datasets().size()))
     {
-        m_ActiveTerrainIndex = static_cast<int>(m_TerrainDatasets.size()) - 1;
+        m_Terrain.setActiveIndex(static_cast<int>(m_Terrain.datasets().size()) - 1);
     }
 
     m_StatusMessage = "Deleted terrain dataset.";
-    return ActivateTerrainDataset(m_ActiveTerrainIndex);
+    return ActivateTerrainDataset(m_Terrain.activeIndex());
 }
 
 bool Application::DeleteActiveOverlay()
@@ -1943,8 +1943,8 @@ bool Application::StartTerrainProfileSampleJob()
     }
 
     std::vector<ProfileSamplingTerrainSnapshot> terrainSnapshots;
-    terrainSnapshots.reserve(m_TerrainDatasets.size());
-    for (const TerrainDataset& dataset : m_TerrainDatasets)
+    terrainSnapshots.reserve(m_Terrain.datasets().size());
+    for (const TerrainDataset& dataset : m_Terrain.datasets())
     {
         ProfileSamplingTerrainSnapshot snapshot;
         snapshot.name = dataset.name;
@@ -1958,7 +1958,7 @@ bool Application::StartTerrainProfileSampleJob()
     ProfileSampleBuildJob job;
     job.future = m_BackgroundJobs->Enqueue([profiles = m_TerrainProfiles,
                                             terrains = std::move(terrainSnapshots),
-                                            activeTerrainIndex = m_ActiveTerrainIndex]() mutable {
+                                            activeTerrainIndex = m_Terrain.activeIndex()]() mutable {
         return BuildProfileSamplesOnWorker(std::move(profiles), std::move(terrains), activeTerrainIndex);
     });
     m_ProfileSampleBuildJobs.push_back(std::move(job));
@@ -1974,7 +1974,7 @@ void Application::RebuildAllTerrainProfileSamples()
         return;
     }
 
-    const bool hasTiledTerrain = std::any_of(m_TerrainDatasets.begin(), m_TerrainDatasets.end(), [](const TerrainDataset& dataset) {
+    const bool hasTiledTerrain = std::any_of(m_Terrain.datasets().begin(), m_Terrain.datasets().end(), [](const TerrainDataset& dataset) {
         return dataset.loaded && dataset.hasTileManifest;
     });
     if (hasTiledTerrain)
@@ -2003,8 +2003,8 @@ void Application::RebuildIsolineSampleGridIfNeeded()
     // of all visible terrains) so isolines are no longer cut off at the
     // active terrain's boundary when a second terrain is loaded next to it.
     std::vector<const TerrainDataset*> contributingDatasets;
-    contributingDatasets.reserve(m_TerrainDatasets.size());
-    for (const TerrainDataset& dataset : m_TerrainDatasets)
+    contributingDatasets.reserve(m_Terrain.datasets().size());
+    for (const TerrainDataset& dataset : m_Terrain.datasets())
     {
         if (!dataset.visible || !dataset.loaded || !dataset.bounds.valid)
         {
@@ -2071,7 +2071,7 @@ void Application::RefreshIsolinesIfNeeded()
 size_t Application::CountSceneTriangles() const
 {
     size_t triangleCount = 0;
-    for (const TerrainDataset& dataset : m_TerrainDatasets)
+    for (const TerrainDataset& dataset : m_Terrain.datasets())
     {
         if (!dataset.visible || !dataset.loaded)
         {
@@ -2247,7 +2247,7 @@ void Application::EnsureTerrainProfileHasTerrainSelection(TerrainProfile& profil
         return;
     }
 
-    for (const TerrainDataset& dataset : m_TerrainDatasets)
+    for (const TerrainDataset& dataset : m_Terrain.datasets())
     {
         if (dataset.visible)
         {
@@ -2267,7 +2267,7 @@ void Application::EnsureTerrainProfileHasTerrainSelection(TerrainProfile& profil
 
 const TerrainDataset* Application::GetPrimaryTerrainForProfile(const TerrainProfile& profile) const
 {
-    for (const TerrainDataset& dataset : m_TerrainDatasets)
+    for (const TerrainDataset& dataset : m_Terrain.datasets())
     {
         if (dataset.loaded && TerrainProfileIncludesTerrain(profile, dataset))
         {
@@ -2359,15 +2359,15 @@ void Application::JumpCameraToProfileSample(const TerrainProfile& profile, const
     if (primary != nullptr)
     {
         int primaryIndex = -1;
-        for (size_t i = 0; i < m_TerrainDatasets.size(); ++i)
+        for (size_t i = 0; i < m_Terrain.datasets().size(); ++i)
         {
-            if (&m_TerrainDatasets[i] == primary)
+            if (&m_Terrain.datasets()[i] == primary)
             {
                 primaryIndex = static_cast<int>(i);
                 break;
             }
         }
-        if (primaryIndex >= 0 && primaryIndex != m_ActiveTerrainIndex)
+        if (primaryIndex >= 0 && primaryIndex != m_Terrain.activeIndex())
         {
             ActivateTerrainDataset(primaryIndex);
         }

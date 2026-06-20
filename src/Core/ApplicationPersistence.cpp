@@ -182,7 +182,7 @@ bool Application::SaveWorldToFile(const std::string& path)
     file << "# GeoFPS world file\n";
     file << std::fixed << std::setprecision(8);
     file << "world_name=" << m_WorldName << '\n';
-    file << "active_terrain_index=" << m_ActiveTerrainIndex << '\n';
+    file << "active_terrain_index=" << m_Terrain.activeIndex() << '\n';
     file << "active_asset_index=" << m_ActiveImportedAssetIndex << '\n';
     file << "sun.use_geographic=" << (m_SunSettings.useGeographicSun ? 1 : 0) << '\n';
     file << "sun.year=" << m_SunSettings.year << '\n';
@@ -219,7 +219,7 @@ bool Application::SaveWorldToFile(const std::string& path)
     file << "sky.cloud_color_g="     << m_SkySettings.cloudColor.g       << '\n';
     file << "sky.cloud_color_b="     << m_SkySettings.cloudColor.b       << "\n\n";
 
-    for (const TerrainDataset& terrain : m_TerrainDatasets)
+    for (const TerrainDataset& terrain : m_Terrain.datasets())
     {
         file << "[terrain]\n";
         file << "name=" << terrain.name << '\n';
@@ -479,27 +479,27 @@ bool Application::LoadWorldFromFile(const std::string& path)
     m_WorldFilePath = sourcePathString;
     m_SunSettings = loadedSun;
     m_SkySettings = loadedSky;
-    m_TerrainDatasets = std::move(terrains);
+    m_Terrain.datasets() = std::move(terrains);
     m_ImportedAssets = std::move(assets);
     if (!profiles.empty())
     {
         m_TerrainProfiles = std::move(profiles);
     }
 
-    m_ActiveTerrainIndex = std::clamp(activeTerrainIndex, 0, static_cast<int>(m_TerrainDatasets.size()) - 1);
-    std::cout << "[GeoFPS] Activating terrain index " << m_ActiveTerrainIndex << '\n';
-    if (!ActivateTerrainDataset(m_ActiveTerrainIndex))
+    m_Terrain.setActiveIndex(std::clamp(activeTerrainIndex, 0, static_cast<int>(m_Terrain.datasets().size()) - 1));
+    std::cout << "[GeoFPS] Activating terrain index " << m_Terrain.activeIndex() << '\n';
+    if (!ActivateTerrainDataset(m_Terrain.activeIndex()))
     {
-        std::cout << "[GeoFPS] Failed to activate terrain index " << m_ActiveTerrainIndex << '\n';
+        std::cout << "[GeoFPS] Failed to activate terrain index " << m_Terrain.activeIndex() << '\n';
         return false;
     }
-    for (int terrainIndex = 0; terrainIndex < static_cast<int>(m_TerrainDatasets.size()); ++terrainIndex)
+    for (int terrainIndex = 0; terrainIndex < static_cast<int>(m_Terrain.datasets().size()); ++terrainIndex)
     {
-        if (terrainIndex == m_ActiveTerrainIndex)
+        if (terrainIndex == m_Terrain.activeIndex())
         {
             continue;
         }
-        TerrainDataset& terrain = m_TerrainDatasets[static_cast<size_t>(terrainIndex)];
+        TerrainDataset& terrain = m_Terrain.datasets()[static_cast<size_t>(terrainIndex)];
         if (!terrain.visible)
         {
             continue;
@@ -509,7 +509,7 @@ bool Application::LoadWorldFromFile(const std::string& path)
             RebuildTerrainMesh(terrain);
         }
     }
-    for (TerrainDataset& terrain : m_TerrainDatasets)
+    for (TerrainDataset& terrain : m_Terrain.datasets())
     {
         for (OverlayEntry& overlay : terrain.overlays)
         {
@@ -667,10 +667,10 @@ bool Application::WriteCurrentWorldReadout(const std::string& path) const
     file << "GeoFPS Current World Readout\n";
     file << "World Name: " << m_WorldName << "\n";
     file << "World File: " << m_WorldFilePath << "\n";
-    file << "Terrain Dataset Count: " << m_TerrainDatasets.size() << "\n";
+    file << "Terrain Dataset Count: " << m_Terrain.datasets().size() << "\n";
     file << "Imported Asset Count: " << m_ImportedAssets.size() << "\n";
     file << "Terrain Profile Count: " << m_TerrainProfiles.size() << "\n";
-    file << "Active Terrain Index: " << m_ActiveTerrainIndex << "\n";
+    file << "Active Terrain Index: " << m_Terrain.activeIndex() << "\n";
     file << "Active Asset Index: " << m_ActiveImportedAssetIndex << "\n\n";
 
     file << "Sun Settings\n";
@@ -683,9 +683,9 @@ bool Application::WriteCurrentWorldReadout(const std::string& path) const
     file << "  Sky Brightness: " << m_SunSettings.skyBrightness << "\n\n";
 
     file << "Terrain Datasets\n";
-    for (size_t terrainIndex = 0; terrainIndex < m_TerrainDatasets.size(); ++terrainIndex)
+    for (size_t terrainIndex = 0; terrainIndex < m_Terrain.datasets().size(); ++terrainIndex)
     {
-        const TerrainDataset& terrain = m_TerrainDatasets[terrainIndex];
+        const TerrainDataset& terrain = m_Terrain.datasets()[terrainIndex];
         file << "- Terrain " << terrainIndex << ": " << terrain.name << "\n";
         file << "  Path: " << terrain.path << "\n";
         if (terrain.hasTileManifest && !terrain.tileManifestPath.empty())

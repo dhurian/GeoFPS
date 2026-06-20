@@ -313,7 +313,7 @@ bool Application::Initialize()
     m_Window.SetCursorCaptured(true);
 
     InitializeProject();
-    if (!ActivateTerrainDataset(m_ActiveTerrainIndex))
+    if (!ActivateTerrainDataset(m_Terrain.activeIndex()))
     {
         return false;
     }
@@ -390,7 +390,7 @@ void Application::Shutdown()
         m_ProfileLineVao = 0;
     }
     m_GpuFrameTimer.Shutdown();
-    for (TerrainDataset& dataset : m_TerrainDatasets)
+    for (TerrainDataset& dataset : m_Terrain.datasets())
     {
         dataset.mesh.reset();
         for (TerrainMeshChunk& chunk : dataset.chunks)
@@ -796,9 +796,9 @@ void Application::Update(float deltaTime)
         struct TileRef { int terrainIdx; int tileIdx; float dist; };
         std::vector<TileRef> toLoad;
         std::vector<TileRef> toUnload;
-        for (int ti = 0; ti < static_cast<int>(m_TerrainDatasets.size()); ++ti)
+        for (int ti = 0; ti < static_cast<int>(m_Terrain.datasets().size()); ++ti)
         {
-            const TerrainDataset& ds = m_TerrainDatasets[static_cast<size_t>(ti)];
+            const TerrainDataset& ds = m_Terrain.datasets()[static_cast<size_t>(ti)];
             if (!ds.hasTileManifest) continue;
             for (int tidx = 0; tidx < static_cast<int>(ds.tiles.size()); ++tidx)
             {
@@ -825,7 +825,7 @@ void Application::Update(float deltaTime)
         }
         for (const TileRef& ref : toUnload)
         {
-            TerrainTile& tile = m_TerrainDatasets[static_cast<size_t>(ref.terrainIdx)].tiles[static_cast<size_t>(ref.tileIdx)];
+            TerrainTile& tile = m_Terrain.datasets()[static_cast<size_t>(ref.terrainIdx)].tiles[static_cast<size_t>(ref.tileIdx)];
             tile.chunks.clear();
             tile.meshLoaded = false;
             tile.loaded     = false;
@@ -1205,7 +1205,7 @@ void Application::Render(float deltaTime)
         m_TerrainShader->SetVec3("uCameraPos", glm::vec3(0.0f));
         ApplySunUniforms(*m_TerrainShader, sun);
 
-        for (TerrainDataset& dataset : m_TerrainDatasets)
+        for (TerrainDataset& dataset : m_Terrain.datasets())
         {
             if (!dataset.visible || !dataset.loaded)
             {
@@ -1252,7 +1252,7 @@ void Application::Render(float deltaTime)
                         if (!tile.loading &&
                             IsTerrainTileVisible(dataset, tile, cameraFrustum, terrainTranslation))
                         {
-                            StartTerrainTileLoadJob(static_cast<int>(&dataset - m_TerrainDatasets.data()),
+                            StartTerrainTileLoadJob(static_cast<int>(&dataset - m_Terrain.datasets().data()),
                                                     static_cast<int>(&tile - dataset.tiles.data()));
                         }
                         continue;
@@ -1611,8 +1611,8 @@ void Application::InitializeProject()
     overlay.image.opacity = 0.85f;
     dataset.overlays.push_back(std::move(overlay));
 
-    m_TerrainDatasets.push_back(std::move(dataset));
-    m_ActiveTerrainIndex = 0;
+    m_Terrain.datasets().push_back(std::move(dataset));
+    m_Terrain.setActiveIndex(0);
 
     ImportedAsset asset;
     asset.name = "Asset 1";

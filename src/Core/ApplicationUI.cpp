@@ -121,8 +121,8 @@ void Application::RenderMiniMap()
 {
     TerrainBounds bounds;
     std::vector<std::pair<const TerrainDataset*, TerrainBounds>> atlasTerrains;
-    atlasTerrains.reserve(m_TerrainDatasets.size());
-    for (const TerrainDataset& dataset : m_TerrainDatasets)
+    atlasTerrains.reserve(m_Terrain.datasets().size());
+    for (const TerrainDataset& dataset : m_Terrain.datasets())
     {
         if (!TerrainDatasetHasCoverage(dataset))
         {
@@ -332,15 +332,15 @@ void Application::RenderMiniMap()
             if (targetTerrain != nullptr)
             {
                 int targetIndex = -1;
-                for (size_t i = 0; i < m_TerrainDatasets.size(); ++i)
+                for (size_t i = 0; i < m_Terrain.datasets().size(); ++i)
                 {
-                    if (&m_TerrainDatasets[i] == targetTerrain)
+                    if (&m_Terrain.datasets()[i] == targetTerrain)
                     {
                         targetIndex = static_cast<int>(i);
                         break;
                     }
                 }
-                if (targetIndex >= 0 && targetIndex != m_ActiveTerrainIndex)
+                if (targetIndex >= 0 && targetIndex != m_Terrain.activeIndex())
                 {
                     ActivateTerrainDataset(targetIndex);
                     // m_GeoReference is now == targetTerrain->geoReference.
@@ -617,10 +617,10 @@ void Application::RenderTerrainDatasetWindow()
         return;
     }
 
-    for (int i = 0; i < static_cast<int>(m_TerrainDatasets.size()); ++i)
+    for (int i = 0; i < static_cast<int>(m_Terrain.datasets().size()); ++i)
     {
-        TerrainDataset& dataset = m_TerrainDatasets[static_cast<size_t>(i)];
-        const bool selected = i == m_ActiveTerrainIndex;
+        TerrainDataset& dataset = m_Terrain.datasets()[static_cast<size_t>(i)];
+        const bool selected = i == m_Terrain.activeIndex();
         ImGui::PushID(i);
         ImGui::Checkbox("##terrain_visible", &dataset.visible);
         ImGui::SameLine();
@@ -699,24 +699,24 @@ void Application::RenderTerrainDatasetWindow()
 
     if (ImGui::Button("Load Active Terrain"))
     {
-        StartTerrainBuildJob(m_ActiveTerrainIndex);
+        StartTerrainBuildJob(m_Terrain.activeIndex());
     }
     ImGui::SameLine();
     if (ImGui::Button("Add Terrain Dataset"))
     {
         TerrainDataset dataset;
-        dataset.name = "Terrain " + std::to_string(m_TerrainDatasets.size() + 1);
+        dataset.name = "Terrain " + std::to_string(m_Terrain.datasets().size() + 1);
         dataset.path = activeTerrain->path;
         dataset.settings = activeTerrain->settings;
         dataset.overlays.push_back(OverlayEntry {});
-        m_TerrainDatasets.push_back(std::move(dataset));
-        ActivateTerrainDataset(static_cast<int>(m_TerrainDatasets.size()) - 1);
+        m_Terrain.datasets().push_back(std::move(dataset));
+        ActivateTerrainDataset(static_cast<int>(m_Terrain.datasets().size()) - 1);
         activeTerrain = GetActiveTerrainDataset();
     }
     ImGui::SameLine();
     if (ImGui::Button("Delete Active Terrain"))
     {
-        DeleteTerrainDataset(m_ActiveTerrainIndex);
+        DeleteTerrainDataset(m_Terrain.activeIndex());
         activeTerrain = GetActiveTerrainDataset();
     }
 
@@ -800,7 +800,7 @@ void Application::RenderTerrainDatasetWindow()
 
     if (ImGui::Button("Reload Terrain"))
     {
-        StartTerrainBuildJob(m_ActiveTerrainIndex);
+        StartTerrainBuildJob(m_Terrain.activeIndex());
     }
     ImGui::SameLine();
     if (ImGui::Button("Rebuild Mesh"))
@@ -814,7 +814,7 @@ void Application::RenderTerrainDatasetWindow()
     {
         int loadedCount = 0;
         int overlayCount = 0;
-        for (TerrainDataset& dataset : m_TerrainDatasets)
+        for (TerrainDataset& dataset : m_Terrain.datasets())
         {
             if (!dataset.visible)
             {
@@ -831,7 +831,7 @@ void Application::RenderTerrainDatasetWindow()
                     }
                 }
             }
-            else if (StartTerrainBuildJob(static_cast<int>(&dataset - m_TerrainDatasets.data())))
+            else if (StartTerrainBuildJob(static_cast<int>(&dataset - m_Terrain.datasets().data())))
             {
                 ++loadedCount;
             }
@@ -1128,8 +1128,8 @@ void Application::RenderWorldTerrainProfiles()
         // gives a single, contiguous line that drapes correctly across
         // every included terrain it crosses.
         std::vector<const TerrainDataset*> coveringDatasets;
-        coveringDatasets.reserve(m_TerrainDatasets.size());
-        for (const TerrainDataset& dataset : m_TerrainDatasets)
+        coveringDatasets.reserve(m_Terrain.datasets().size());
+        for (const TerrainDataset& dataset : m_Terrain.datasets())
         {
             if (!TerrainDatasetHasCoverage(dataset) || !TerrainProfileIncludesTerrain(profile, dataset))
             {
@@ -1329,7 +1329,7 @@ void Application::RenderTerrainProfileDetails(TerrainProfile& activeProfile)
     if (ImGui::CollapsingHeader("Terrains And World", ImGuiTreeNodeFlags_DefaultOpen))
     {
         ImGui::Text("Use Profile On Terrains");
-        for (TerrainDataset& dataset : m_TerrainDatasets)
+        for (TerrainDataset& dataset : m_Terrain.datasets())
         {
             ImGui::PushID(dataset.name.c_str());
             bool included = TerrainProfileIncludesTerrain(activeProfile, dataset);
@@ -1345,7 +1345,7 @@ void Application::RenderTerrainProfileDetails(TerrainProfile& activeProfile)
         if (ImGui::Button("Include Visible Terrains"))
         {
             activeProfile.includedTerrainNames.clear();
-            for (const TerrainDataset& dataset : m_TerrainDatasets)
+            for (const TerrainDataset& dataset : m_Terrain.datasets())
             {
                 if (dataset.visible)
                 {
@@ -1784,7 +1784,7 @@ void Application::RenderTerrainProfileMap(TerrainProfile& activeProfile)
     const TerrainDataset* profileTerrain = GetPrimaryTerrainForProfile(activeProfile);
     TerrainBounds bounds;
     bool hasProfileBounds = false;
-    for (const TerrainDataset& dataset : m_TerrainDatasets)
+    for (const TerrainDataset& dataset : m_Terrain.datasets())
     {
         if (!TerrainDatasetHasCoverage(dataset) || !TerrainProfileIncludesTerrain(activeProfile, dataset))
         {
@@ -3310,13 +3310,13 @@ void Application::RenderEditor()
         }
         else
         {
-            for (int i = 0; i < static_cast<int>(m_TerrainDatasets.size()); ++i)
+            for (int i = 0; i < static_cast<int>(m_Terrain.datasets().size()); ++i)
             {
-                TerrainDataset& dataset = m_TerrainDatasets[static_cast<size_t>(i)];
+                TerrainDataset& dataset = m_Terrain.datasets()[static_cast<size_t>(i)];
                 ImGui::PushID(i);
                 ImGui::Checkbox("##workspace_terrain_visible", &dataset.visible);
                 ImGui::SameLine();
-                if (ImGui::Selectable(dataset.name.c_str(), i == m_ActiveTerrainIndex))
+                if (ImGui::Selectable(dataset.name.c_str(), i == m_Terrain.activeIndex()))
                 {
                     ActivateTerrainDataset(i);
                     activeTerrain = GetActiveTerrainDataset();
@@ -3465,25 +3465,25 @@ void Application::RenderEditor()
 
             if (ImGui::Button("Queue Active Terrain Build", ImVec2(210.0f, 34.0f)))
             {
-                StartTerrainBuildJob(m_ActiveTerrainIndex);
+                StartTerrainBuildJob(m_Terrain.activeIndex());
             }
             ImGui::SameLine();
             if (ImGui::Button("Add Dataset", ImVec2(120.0f, 34.0f)))
             {
                 TerrainDataset dataset;
-                dataset.name = "Terrain " + std::to_string(m_TerrainDatasets.size() + 1);
+                dataset.name = "Terrain " + std::to_string(m_Terrain.datasets().size() + 1);
                 dataset.path = activeTerrain->path;
                 dataset.settings = activeTerrain->settings;
                 dataset.geoReference = activeTerrain->geoReference;
                 dataset.overlays.push_back(OverlayEntry {});
-                m_TerrainDatasets.push_back(std::move(dataset));
-                ActivateTerrainDataset(static_cast<int>(m_TerrainDatasets.size()) - 1);
+                m_Terrain.datasets().push_back(std::move(dataset));
+                ActivateTerrainDataset(static_cast<int>(m_Terrain.datasets().size()) - 1);
                 activeTerrain = GetActiveTerrainDataset();
             }
             ImGui::SameLine();
             if (ImGui::Button("Delete Dataset", ImVec2(130.0f, 34.0f)))
             {
-                DeleteTerrainDataset(m_ActiveTerrainIndex);
+                DeleteTerrainDataset(m_Terrain.activeIndex());
                 activeTerrain = GetActiveTerrainDataset();
             }
 
@@ -3537,9 +3537,9 @@ void Application::RenderEditor()
         if (ImGui::Button("Load Visible Terrains", ImVec2(180.0f, 34.0f)))
         {
             int loadedCount = 0;
-            for (TerrainDataset& dataset : m_TerrainDatasets)
+            for (TerrainDataset& dataset : m_Terrain.datasets())
             {
-                if (dataset.visible && (dataset.loaded || StartTerrainBuildJob(static_cast<int>(&dataset - m_TerrainDatasets.data()))))
+                if (dataset.visible && (dataset.loaded || StartTerrainBuildJob(static_cast<int>(&dataset - m_Terrain.datasets().data()))))
                 {
                     ++loadedCount;
                 }
