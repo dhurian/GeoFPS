@@ -783,8 +783,8 @@ bool Application::ImportTerrainProfileFile(const std::string& path)
     m_Profiles.profiles() = std::move(importedProfiles);
     RebuildAllTerrainProfileSamples();
     m_Profiles.setActiveIndex(std::clamp(m_Profiles.activeIndex(), 0, static_cast<int>(m_Profiles.profiles().size()) - 1));
-    m_SelectedProfileVertexIndex = -1;
-    m_SelectedProfileSampleIndex = -1;
+    m_ProfileView.selectedProfileVertexIndex = -1;
+    m_ProfileView.selectedProfileSampleIndex = -1;
     m_TerrainProfileFilePath = sourcePath;
     m_StatusMessage = "Imported terrain profiles: " + sourcePath;
     std::cout << "[GeoFPS] Terrain profile import complete: " << m_Profiles.profiles().size() << " profile(s)\n";

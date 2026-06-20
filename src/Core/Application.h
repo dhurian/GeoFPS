@@ -14,6 +14,7 @@
 #include "Core/TerrainDataset.h"
 #include "Core/TerrainJobs.h"
 #include "Core/ProfileSystem.h"
+#include "Core/ProfileViewState.h"
 #include "Core/TerrainSystem.h"
 #include "Core/Window.h"
 #include "Game/FPSController.h"
@@ -80,23 +81,7 @@ struct SkySettings
     glm::vec3 cloudColor        {1.0f, 1.0f, 1.0f}; // manual colour when cloudAutoColor = false
 };
 
-enum class ProfileElevationScaleMode
-{
-    Auto,
-    OneX,
-    TwoX,
-    FiveX,
-    TenX,
-    Fixed
-};
-
-enum class ProfileMapSizeMode
-{
-    Small,
-    Medium,
-    Large,
-    Fill
-};
+// ProfileElevationScaleMode and ProfileMapSizeMode live in Core/ProfileViewState.h.
 
 enum class WorkspaceSection
 {
@@ -316,43 +301,11 @@ class Application
     bool m_ShowBlenderAssetsWindow {false};
     bool m_ShowTerrainProfilesWindow {false};
     bool m_ShowWorkspaceWindow {false};
-    bool m_ProfileDrawMode {false};
-    bool m_ProfileEditMode {true};
-    bool m_ShowProfileHeightLabels {true};
-    bool m_ShowProfileAerialImage {true};
-    bool m_ShowProfileSamples {false};
-    bool m_ProfileAuxiliaryDrawMode {false};
-    bool m_ProfileGraphAuxiliaryInsertMode {false};
-    bool m_ProfileGraphHoverActive {false};
-    // ── Line of sight (Tier 1) ───────────────────────────────────────────────
-    // When enabled, the elevation graph colours its line by what an observer
-    // standing at the profile's first vertex (eye m_ObserverEyeHeightMeters
-    // above the ground) can see: green = visible, red = hidden behind terrain.
-    bool  m_LineOfSightEnabled {false};
-    float m_ObserverEyeHeightMeters {2.0f};
-    bool m_ProfileMapViewInitialized {false};
-    bool m_ProfileMapIsPanning {false};
-    int m_SelectedProfileVertexIndex {-1};
-    int m_SelectedProfileSampleIndex {-1};
-    int m_HoveredProfileSampleIndex {-1};
-    TerrainProfileSample m_ProfileGraphHoverSample {};
-    // Sample captured when the elevation graph's right-click context menu was
-    // opened, so the menu acts on the point under the cursor at open time.
-    TerrainProfileSample m_ProfileGraphContextSample {};
-    ProfileElevationScaleMode m_ProfileScaleMode {ProfileElevationScaleMode::Auto};
-    ProfileMapSizeMode m_ProfileMapSizeMode {ProfileMapSizeMode::Large};
+    // Terrain-profile UI presentation state — the map view, the elevation graph,
+    // draw/edit modes, and the current selection/hover.  Plain aggregate; see
+    // Core/ProfileViewState.h.
+    ProfileViewState m_ProfileView;
     WorkspaceSection m_ActiveWorkspaceSection {WorkspaceSection::World};
-    float m_ProfileDetailsWidth {360.0f};
-    float m_ProfileFixedMinHeight {0.0f};
-    float m_ProfileFixedMaxHeight {100.0f};
-    double m_ProfileMapMinLatitude {0.0};
-    double m_ProfileMapMaxLatitude {0.0};
-    double m_ProfileMapMinLongitude {0.0};
-    double m_ProfileMapMaxLongitude {0.0};
-    float m_ProfileMapLastWidth {720.0f};
-    glm::vec2 m_ProfileMapLastPanMouse {0.0f};
-    double    m_ProfileGraphZoomMinDist {0.0};   // metres along path — left edge of graph view
-    double    m_ProfileGraphZoomMaxDist {-1.0};  // right edge; negative = show full profile
     bool      m_ShowOrientationGizmo   {true};   // XYZ orientation gizmo in 3D viewport
     // ── On-screen overlays (toggleable via the Panels menu and via a
     //    dedicated "On-Screen Overlays" panel) ─────────────────────────────
@@ -419,8 +372,6 @@ class Application
     float m_AvgSwapWaitMs  {5.0f};   // seed with a reasonable 5ms to avoid starving frame 1
     float m_AvgChunkUploadMs {0.5f}; // EMA of a single Mesh() constructor call
 
-    unsigned int m_ProfileLineVao {0};
-    unsigned int m_ProfileLineVbo {0};
     std::string m_StatusMessage;
     GpuFrameTimer m_GpuFrameTimer;
 };

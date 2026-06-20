@@ -379,15 +379,15 @@ void Application::Shutdown()
     m_Profiles.sampleBuildJobs().clear();
     m_BackgroundJobs.reset();
     ShutdownImGui();
-    if (m_ProfileLineVbo != 0)
+    if (m_ProfileView.profileLineVbo != 0)
     {
-        glDeleteBuffers(1, &m_ProfileLineVbo);
-        m_ProfileLineVbo = 0;
+        glDeleteBuffers(1, &m_ProfileView.profileLineVbo);
+        m_ProfileView.profileLineVbo = 0;
     }
-    if (m_ProfileLineVao != 0)
+    if (m_ProfileView.profileLineVao != 0)
     {
-        glDeleteVertexArrays(1, &m_ProfileLineVao);
-        m_ProfileLineVao = 0;
+        glDeleteVertexArrays(1, &m_ProfileView.profileLineVao);
+        m_ProfileView.profileLineVao = 0;
     }
     m_GpuFrameTimer.Shutdown();
     for (TerrainDataset& dataset : m_Terrain.datasets())

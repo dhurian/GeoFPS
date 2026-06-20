@@ -1363,7 +1363,7 @@ void Application::LoadActiveTerrainIntoScene()
         dataset->heightGrid.Build(dataset->points);
     }
     m_TerrainHeightGrid = dataset->heightGrid;
-    m_ProfileMapViewInitialized = false;
+    m_ProfileView.profileMapViewInitialized = false;
     m_Isolines.MarkSampleGridDirty();
     RebuildAllTerrainProfileSamples();
     // NOTE: we deliberately do NOT translate the camera into the new frame

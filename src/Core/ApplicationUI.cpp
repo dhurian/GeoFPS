@@ -1037,7 +1037,7 @@ void Application::RenderTerrainProfilesWindow()
     EnsureTerrainProfileHasTerrainSelection(activeProfile);
     const float availableWidth = ImGui::GetContentRegionAvail().x;
     const float maxDetailWidth = std::max(280.0f, availableWidth * 0.62f);
-    const float detailWidth = availableWidth > 760.0f ? std::clamp(m_ProfileDetailsWidth, 280.0f, maxDetailWidth) : 0.0f;
+    const float detailWidth = availableWidth > 760.0f ? std::clamp(m_ProfileView.profileDetailsWidth, 280.0f, maxDetailWidth) : 0.0f;
     const float mapPaneWidth = detailWidth > 0.0f ? availableWidth - detailWidth - ImGui::GetStyle().ItemSpacing.x : availableWidth;
 
     if (detailWidth > 0.0f)
@@ -1053,7 +1053,7 @@ void Application::RenderTerrainProfilesWindow()
         ImGui::Button("##profile_details_splitter", ImVec2(6.0f, ImGui::GetContentRegionAvail().y));
         if (ImGui::IsItemActive())
         {
-            m_ProfileDetailsWidth = std::clamp(m_ProfileDetailsWidth - ImGui::GetIO().MouseDelta.x, 280.0f, maxDetailWidth);
+            m_ProfileView.profileDetailsWidth = std::clamp(m_ProfileView.profileDetailsWidth - ImGui::GetIO().MouseDelta.x, 280.0f, maxDetailWidth);
         }
         ImGui::SameLine();
         ImGui::BeginChild("##profile_details",
@@ -1089,19 +1089,19 @@ void Application::RenderWorldTerrainProfiles()
     m_LineShader->SetMat4("uView", GetRenderViewMatrix());
     m_LineShader->SetMat4("uProjection", m_Camera.GetProjectionMatrix());
 
-    if (m_ProfileLineVao == 0)
+    if (m_ProfileView.profileLineVao == 0)
     {
-        glGenVertexArrays(1, &m_ProfileLineVao);
-        glGenBuffers(1, &m_ProfileLineVbo);
-        glBindVertexArray(m_ProfileLineVao);
-        glBindBuffer(GL_ARRAY_BUFFER, m_ProfileLineVbo);
+        glGenVertexArrays(1, &m_ProfileView.profileLineVao);
+        glGenBuffers(1, &m_ProfileView.profileLineVbo);
+        glBindVertexArray(m_ProfileView.profileLineVao);
+        glBindBuffer(GL_ARRAY_BUFFER, m_ProfileView.profileLineVbo);
         glEnableVertexAttribArray(0);
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), nullptr);
     }
     else
     {
-        glBindVertexArray(m_ProfileLineVao);
-        glBindBuffer(GL_ARRAY_BUFFER, m_ProfileLineVbo);
+        glBindVertexArray(m_ProfileView.profileLineVao);
+        glBindBuffer(GL_ARRAY_BUFFER, m_ProfileView.profileLineVbo);
     }
 
     glEnable(GL_BLEND);
@@ -1231,7 +1231,7 @@ void Application::RenderWorldTerrainProfiles()
 
 void Application::RenderTerrainProfileDetails(TerrainProfile& activeProfile)
 {
-    ImGui::SliderFloat("Options Width", &m_ProfileDetailsWidth, 280.0f, 720.0f, "%.0f px");
+    ImGui::SliderFloat("Options Width", &m_ProfileView.profileDetailsWidth, 280.0f, 720.0f, "%.0f px");
 
     if (ImGui::CollapsingHeader("Profiles", ImGuiTreeNodeFlags_DefaultOpen))
     {
@@ -1246,9 +1246,9 @@ void Application::RenderTerrainProfileDetails(TerrainProfile& activeProfile)
         if (ImGui::Selectable(profile.name.c_str(), selected))
         {
             m_Profiles.setActiveIndex(index);
-            m_SelectedProfileVertexIndex = -1;
-            m_SelectedProfileSampleIndex = -1;
-            m_HoveredProfileSampleIndex = -1;
+            m_ProfileView.selectedProfileVertexIndex = -1;
+            m_ProfileView.selectedProfileSampleIndex = -1;
+            m_ProfileView.hoveredProfileSampleIndex = -1;
         }
         ImGui::PopID();
     }
@@ -1259,9 +1259,9 @@ void Application::RenderTerrainProfileDetails(TerrainProfile& activeProfile)
             profile.name = "Profile " + std::to_string(m_Profiles.profiles().size() + 1);
             m_Profiles.profiles().push_back(std::move(profile));
             m_Profiles.setActiveIndex(static_cast<int>(m_Profiles.profiles().size()) - 1);
-            m_SelectedProfileVertexIndex = -1;
-            m_SelectedProfileSampleIndex = -1;
-            m_HoveredProfileSampleIndex = -1;
+            m_ProfileView.selectedProfileVertexIndex = -1;
+            m_ProfileView.selectedProfileSampleIndex = -1;
+            m_ProfileView.hoveredProfileSampleIndex = -1;
             return;
         }
         ImGui::SameLine();
@@ -1269,9 +1269,9 @@ void Application::RenderTerrainProfileDetails(TerrainProfile& activeProfile)
         {
             m_Profiles.profiles().erase(m_Profiles.profiles().begin() + m_Profiles.activeIndex());
             m_Profiles.setActiveIndex(std::clamp(m_Profiles.activeIndex(), 0, static_cast<int>(m_Profiles.profiles().size()) - 1));
-            m_SelectedProfileVertexIndex = -1;
-            m_SelectedProfileSampleIndex = -1;
-            m_HoveredProfileSampleIndex = -1;
+            m_ProfileView.selectedProfileVertexIndex = -1;
+            m_ProfileView.selectedProfileSampleIndex = -1;
+            m_ProfileView.hoveredProfileSampleIndex = -1;
             return;
         }
 
@@ -1322,8 +1322,8 @@ void Application::RenderTerrainProfileDetails(TerrainProfile& activeProfile)
         ImGui::SliderFloat("Line Thickness", &activeProfile.thickness, 1.0f, 12.0f, "%.1f px");
         ImGui::SliderFloat("3D World Thickness (m)", &activeProfile.worldThicknessMeters, 1.0f, 250.0f, "%.1f m");
         ImGui::SliderFloat("3D Height Above Terrain (m)", &activeProfile.worldGroundOffsetMeters, 0.0f, 500.0f, "%.1f m");
-        ImGui::Checkbox("Show Height Labels", &m_ShowProfileHeightLabels);
-        ImGui::Checkbox("Show Sample Points", &m_ShowProfileSamples);
+        ImGui::Checkbox("Show Height Labels", &m_ProfileView.showProfileHeightLabels);
+        ImGui::Checkbox("Show Sample Points", &m_ProfileView.showProfileSamples);
     }
 
     if (ImGui::CollapsingHeader("Terrains And World", ImGuiTreeNodeFlags_DefaultOpen))
@@ -1422,15 +1422,15 @@ void Application::RenderTerrainProfileDetails(TerrainProfile& activeProfile)
 
     if (ImGui::CollapsingHeader("Map And Isolines", ImGuiTreeNodeFlags_DefaultOpen))
     {
-        if (ImGui::BeginCombo("Map Size", ProfileMapSizeModeLabel(m_ProfileMapSizeMode)))
+        if (ImGui::BeginCombo("Map Size", ProfileMapSizeModeLabel(m_ProfileView.profileMapSizeMode)))
         {
             const ProfileMapSizeMode modes[] = {ProfileMapSizeMode::Small, ProfileMapSizeMode::Medium, ProfileMapSizeMode::Large, ProfileMapSizeMode::Fill};
             for (ProfileMapSizeMode mode : modes)
             {
-                const bool selected = mode == m_ProfileMapSizeMode;
+                const bool selected = mode == m_ProfileView.profileMapSizeMode;
                 if (ImGui::Selectable(ProfileMapSizeModeLabel(mode), selected))
                 {
-                    m_ProfileMapSizeMode = mode;
+                    m_ProfileView.profileMapSizeMode = mode;
                 }
                 if (selected)
                 {
@@ -1517,7 +1517,7 @@ void Application::RenderTerrainProfileDetails(TerrainProfile& activeProfile)
             activeProfile.sampleSpacingMeters = std::max(activeProfile.sampleSpacingMeters, 0.1f);
             RebuildTerrainProfileSamples(activeProfile);
         }
-        const char* currentScaleLabel = ProfileScaleModeLabel(m_ProfileScaleMode);
+        const char* currentScaleLabel = ProfileScaleModeLabel(m_ProfileView.profileScaleMode);
         if (ImGui::BeginCombo("Elevation Scale", currentScaleLabel))
         {
             const ProfileElevationScaleMode modes[] = {ProfileElevationScaleMode::Auto,
@@ -1528,10 +1528,10 @@ void Application::RenderTerrainProfileDetails(TerrainProfile& activeProfile)
                                                        ProfileElevationScaleMode::Fixed};
             for (ProfileElevationScaleMode mode : modes)
             {
-                const bool selected = mode == m_ProfileScaleMode;
+                const bool selected = mode == m_ProfileView.profileScaleMode;
                 if (ImGui::Selectable(ProfileScaleModeLabel(mode), selected))
                 {
-                    m_ProfileScaleMode = mode;
+                    m_ProfileView.profileScaleMode = mode;
                 }
                 if (selected)
                 {
@@ -1540,13 +1540,13 @@ void Application::RenderTerrainProfileDetails(TerrainProfile& activeProfile)
             }
             ImGui::EndCombo();
         }
-        if (m_ProfileScaleMode == ProfileElevationScaleMode::Fixed)
+        if (m_ProfileView.profileScaleMode == ProfileElevationScaleMode::Fixed)
         {
-            ImGui::InputFloat("Fixed Min Height", &m_ProfileFixedMinHeight, 1.0f, 10.0f, "%.2f");
-            ImGui::InputFloat("Fixed Max Height", &m_ProfileFixedMaxHeight, 1.0f, 10.0f, "%.2f");
-            if (m_ProfileFixedMaxHeight <= m_ProfileFixedMinHeight)
+            ImGui::InputFloat("Fixed Min Height", &m_ProfileView.profileFixedMinHeight, 1.0f, 10.0f, "%.2f");
+            ImGui::InputFloat("Fixed Max Height", &m_ProfileView.profileFixedMaxHeight, 1.0f, 10.0f, "%.2f");
+            if (m_ProfileView.profileFixedMaxHeight <= m_ProfileView.profileFixedMinHeight)
             {
-                m_ProfileFixedMaxHeight = m_ProfileFixedMinHeight + 1.0f;
+                m_ProfileView.profileFixedMaxHeight = m_ProfileView.profileFixedMinHeight + 1.0f;
             }
         }
     }
@@ -1597,14 +1597,14 @@ void Application::RenderTerrainProfileDetails(TerrainProfile& activeProfile)
         }
     }
 
-    const bool hasSelection = (m_SelectedProfileVertexIndex >= 0 && m_SelectedProfileVertexIndex < static_cast<int>(activeProfile.vertices.size())) ||
-                              (m_SelectedProfileSampleIndex >= 0 && m_SelectedProfileSampleIndex < static_cast<int>(activeProfile.samples.size()));
+    const bool hasSelection = (m_ProfileView.selectedProfileVertexIndex >= 0 && m_ProfileView.selectedProfileVertexIndex < static_cast<int>(activeProfile.vertices.size())) ||
+                              (m_ProfileView.selectedProfileSampleIndex >= 0 && m_ProfileView.selectedProfileSampleIndex < static_cast<int>(activeProfile.samples.size()));
     if (ImGui::CollapsingHeader("Selection Details", hasSelection ? ImGuiTreeNodeFlags_DefaultOpen : 0))
     {
         ImGui::Text("Vertices: %zu  Samples: %zu", activeProfile.vertices.size(), activeProfile.samples.size());
-        if (m_SelectedProfileVertexIndex >= 0 && m_SelectedProfileVertexIndex < static_cast<int>(activeProfile.vertices.size()))
+        if (m_ProfileView.selectedProfileVertexIndex >= 0 && m_ProfileView.selectedProfileVertexIndex < static_cast<int>(activeProfile.vertices.size()))
         {
-            const TerrainProfileVertex& vertex = activeProfile.vertices[static_cast<size_t>(m_SelectedProfileVertexIndex)];
+            const TerrainProfileVertex& vertex = activeProfile.vertices[static_cast<size_t>(m_ProfileView.selectedProfileVertexIndex)];
             const TerrainDataset* profileTerrain = GetPrimaryTerrainForProfile(activeProfile);
             GeoConverter converter(profileTerrain != nullptr ? profileTerrain->geoReference : m_GeoReference);
             const TerrainCoordinateMode coordinateMode = profileTerrain != nullptr ?
@@ -1620,7 +1620,7 @@ void Application::RenderTerrainProfileDetails(TerrainProfile& activeProfile)
                                       profileTerrain != nullptr ?
                                                                            TerrainCoordinateToLocal(*profileTerrain, geoVertex.latitude, geoVertex.longitude, height) :
                                                                            converter.ToLocal(geoVertex.latitude, geoVertex.longitude, height);
-            ImGui::Text("Selected vertex: %d", m_SelectedProfileVertexIndex + 1);
+            ImGui::Text("Selected vertex: %d", m_ProfileView.selectedProfileVertexIndex + 1);
             if (coordinateMode == TerrainCoordinateMode::LocalMeters)
             {
                 ImGui::Text("X %.3f  Z %.3f  Height %.2f", geoVertex.latitude, geoVertex.longitude, height);
@@ -1632,7 +1632,7 @@ void Application::RenderTerrainProfileDetails(TerrainProfile& activeProfile)
             if (activeProfile.useLocalCoordinates)
             {
                 ImGui::Text("Profile mode: local XYZ");
-                TerrainProfileVertex& editableVertex = activeProfile.vertices[static_cast<size_t>(m_SelectedProfileVertexIndex)];
+                TerrainProfileVertex& editableVertex = activeProfile.vertices[static_cast<size_t>(m_ProfileView.selectedProfileVertexIndex)];
                 bool changedLocal = false;
                 changedLocal |= ImGui::InputDouble("Local X", &editableVertex.localPosition.x, 0.0, 0.0, "%.3f");
                 changedLocal |= ImGui::InputDouble("Local Y", &editableVertex.localPosition.y, 0.0, 0.0, "%.3f");
@@ -1648,7 +1648,7 @@ void Application::RenderTerrainProfileDetails(TerrainProfile& activeProfile)
             }
             else
             {
-                TerrainProfileVertex& editableVertex = activeProfile.vertices[static_cast<size_t>(m_SelectedProfileVertexIndex)];
+                TerrainProfileVertex& editableVertex = activeProfile.vertices[static_cast<size_t>(m_ProfileView.selectedProfileVertexIndex)];
                 bool changedGeo = false;
                 changedGeo |= ImGui::InputDouble("Vertex Latitude", &editableVertex.latitude, 0.0, 0.0, "%.8f");
                 changedGeo |= ImGui::InputDouble("Vertex Longitude", &editableVertex.longitude, 0.0, 0.0, "%.8f");
@@ -1664,15 +1664,15 @@ void Application::RenderTerrainProfileDetails(TerrainProfile& activeProfile)
             ImGui::Text("Local xyz: %.2f, %.2f, %.2f", local.x, local.y, local.z);
             if (ImGui::Button("Delete Selected Vertex"))
             {
-                activeProfile.vertices.erase(activeProfile.vertices.begin() + m_SelectedProfileVertexIndex);
-                m_SelectedProfileVertexIndex = -1;
+                activeProfile.vertices.erase(activeProfile.vertices.begin() + m_ProfileView.selectedProfileVertexIndex);
+                m_ProfileView.selectedProfileVertexIndex = -1;
                 RebuildTerrainProfileSamples(activeProfile);
-                m_HoveredProfileSampleIndex = -1;
+                m_ProfileView.hoveredProfileSampleIndex = -1;
             }
         }
-        if (m_SelectedProfileSampleIndex >= 0 && m_SelectedProfileSampleIndex < static_cast<int>(activeProfile.samples.size()))
+        if (m_ProfileView.selectedProfileSampleIndex >= 0 && m_ProfileView.selectedProfileSampleIndex < static_cast<int>(activeProfile.samples.size()))
         {
-            const TerrainProfileSample& sample = activeProfile.samples[static_cast<size_t>(m_SelectedProfileSampleIndex)];
+            const TerrainProfileSample& sample = activeProfile.samples[static_cast<size_t>(m_ProfileView.selectedProfileSampleIndex)];
             ImGui::Text("Selected sample: %.2f m", sample.distanceMeters);
             ImGui::Text("Lat %.8f  Lon %.8f  Height %.2f", sample.latitude, sample.longitude, sample.height);
             if (!sample.valid)
@@ -1695,23 +1695,23 @@ void Application::RenderTerrainProfileToolbar(TerrainProfile& activeProfile)
     ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.08f, 0.10f, 0.12f, 0.86f));
     ImGui::BeginChild("##profile_map_toolbar", ImVec2(0.0f, 48.0f), true, ImGuiWindowFlags_NoScrollbar);
 
-    if (ImGui::Button(m_ProfileDrawMode ? "Draw Profile On" : "Draw Profile"))
+    if (ImGui::Button(m_ProfileView.profileDrawMode ? "Draw Profile On" : "Draw Profile"))
     {
-        m_ProfileDrawMode = !m_ProfileDrawMode;
+        m_ProfileView.profileDrawMode = !m_ProfileView.profileDrawMode;
     }
     ImGui::SameLine();
-    if (ImGui::Button(m_ProfileAuxiliaryDrawMode ? "A Vertices On" : "A Vertices"))
+    if (ImGui::Button(m_ProfileView.profileAuxiliaryDrawMode ? "A Vertices On" : "A Vertices"))
     {
-        m_ProfileAuxiliaryDrawMode = !m_ProfileAuxiliaryDrawMode;
-        if (m_ProfileAuxiliaryDrawMode)
+        m_ProfileView.profileAuxiliaryDrawMode = !m_ProfileView.profileAuxiliaryDrawMode;
+        if (m_ProfileView.profileAuxiliaryDrawMode)
         {
-            m_ProfileDrawMode = true;
+            m_ProfileView.profileDrawMode = true;
         }
     }
     ImGui::SameLine();
-    if (ImGui::Button(m_ProfileEditMode ? "Edit Vertices On" : "Edit Vertices"))
+    if (ImGui::Button(m_ProfileView.profileEditMode ? "Edit Vertices On" : "Edit Vertices"))
     {
-        m_ProfileEditMode = !m_ProfileEditMode;
+        m_ProfileView.profileEditMode = !m_ProfileView.profileEditMode;
     }
     ImGui::SameLine();
     if (ImGui::Button("New Profile"))
@@ -1720,32 +1720,32 @@ void Application::RenderTerrainProfileToolbar(TerrainProfile& activeProfile)
         profile.name = "Profile " + std::to_string(m_Profiles.profiles().size() + 1);
         m_Profiles.profiles().push_back(std::move(profile));
         m_Profiles.setActiveIndex(static_cast<int>(m_Profiles.profiles().size()) - 1);
-        m_SelectedProfileVertexIndex = -1;
-        m_SelectedProfileSampleIndex = -1;
-        m_HoveredProfileSampleIndex = -1;
+        m_ProfileView.selectedProfileVertexIndex = -1;
+        m_ProfileView.selectedProfileSampleIndex = -1;
+        m_ProfileView.hoveredProfileSampleIndex = -1;
     }
     ImGui::SameLine();
     if (ImGui::Button("Clear Path"))
     {
         activeProfile.vertices.clear();
         activeProfile.samples.clear();
-        m_SelectedProfileVertexIndex = -1;
-        m_SelectedProfileSampleIndex = -1;
-        m_HoveredProfileSampleIndex = -1;
+        m_ProfileView.selectedProfileVertexIndex = -1;
+        m_ProfileView.selectedProfileSampleIndex = -1;
+        m_ProfileView.hoveredProfileSampleIndex = -1;
     }
     ImGui::SameLine();
-    if (m_SelectedProfileVertexIndex >= 0 && m_SelectedProfileVertexIndex < static_cast<int>(activeProfile.vertices.size()) &&
+    if (m_ProfileView.selectedProfileVertexIndex >= 0 && m_ProfileView.selectedProfileVertexIndex < static_cast<int>(activeProfile.vertices.size()) &&
         ImGui::Button("Delete Vertex"))
     {
-        activeProfile.vertices.erase(activeProfile.vertices.begin() + m_SelectedProfileVertexIndex);
-        m_SelectedProfileVertexIndex = -1;
-        m_HoveredProfileSampleIndex = -1;
+        activeProfile.vertices.erase(activeProfile.vertices.begin() + m_ProfileView.selectedProfileVertexIndex);
+        m_ProfileView.selectedProfileVertexIndex = -1;
+        m_ProfileView.hoveredProfileSampleIndex = -1;
         RebuildTerrainProfileSamples(activeProfile);
     }
     ImGui::SameLine();
-    ImGui::Checkbox("Aerial Map", &m_ShowProfileAerialImage);
+    ImGui::Checkbox("Aerial Map", &m_ProfileView.showProfileAerialImage);
     ImGui::SameLine();
-    ImGui::Checkbox("Samples", &m_ShowProfileSamples);
+    ImGui::Checkbox("Samples", &m_ProfileView.showProfileSamples);
     ImGui::SameLine();
     if (ImGui::Checkbox("Isolines", &m_Isolines.settings().enabled))
     {
@@ -1812,48 +1812,48 @@ void Application::RenderTerrainProfileMap(TerrainProfile& activeProfile)
         return;
     }
 
-    if (!m_ProfileMapViewInitialized)
+    if (!m_ProfileView.profileMapViewInitialized)
     {
-        m_ProfileMapMinLatitude = bounds.minLatitude;
-        m_ProfileMapMaxLatitude = bounds.maxLatitude;
-        m_ProfileMapMinLongitude = bounds.minLongitude;
-        m_ProfileMapMaxLongitude = bounds.maxLongitude;
-        m_ProfileMapViewInitialized = true;
+        m_ProfileView.profileMapMinLatitude = bounds.minLatitude;
+        m_ProfileView.profileMapMaxLatitude = bounds.maxLatitude;
+        m_ProfileView.profileMapMinLongitude = bounds.minLongitude;
+        m_ProfileView.profileMapMaxLongitude = bounds.maxLongitude;
+        m_ProfileView.profileMapViewInitialized = true;
     }
 
     const auto refitMapView = [&]() {
-        m_ProfileMapMinLatitude = bounds.minLatitude;
-        m_ProfileMapMaxLatitude = bounds.maxLatitude;
-        m_ProfileMapMinLongitude = bounds.minLongitude;
-        m_ProfileMapMaxLongitude = bounds.maxLongitude;
+        m_ProfileView.profileMapMinLatitude = bounds.minLatitude;
+        m_ProfileView.profileMapMaxLatitude = bounds.maxLatitude;
+        m_ProfileView.profileMapMinLongitude = bounds.minLongitude;
+        m_ProfileView.profileMapMaxLongitude = bounds.maxLongitude;
     };
 
-    m_ProfileMapMinLatitude = std::clamp(m_ProfileMapMinLatitude, bounds.minLatitude, bounds.maxLatitude);
-    m_ProfileMapMaxLatitude = std::clamp(m_ProfileMapMaxLatitude, bounds.minLatitude, bounds.maxLatitude);
-    m_ProfileMapMinLongitude = std::clamp(m_ProfileMapMinLongitude, bounds.minLongitude, bounds.maxLongitude);
-    m_ProfileMapMaxLongitude = std::clamp(m_ProfileMapMaxLongitude, bounds.minLongitude, bounds.maxLongitude);
-    if (m_ProfileMapMaxLatitude - m_ProfileMapMinLatitude < 1e-9 || m_ProfileMapMaxLongitude - m_ProfileMapMinLongitude < 1e-9)
+    m_ProfileView.profileMapMinLatitude = std::clamp(m_ProfileView.profileMapMinLatitude, bounds.minLatitude, bounds.maxLatitude);
+    m_ProfileView.profileMapMaxLatitude = std::clamp(m_ProfileView.profileMapMaxLatitude, bounds.minLatitude, bounds.maxLatitude);
+    m_ProfileView.profileMapMinLongitude = std::clamp(m_ProfileView.profileMapMinLongitude, bounds.minLongitude, bounds.maxLongitude);
+    m_ProfileView.profileMapMaxLongitude = std::clamp(m_ProfileView.profileMapMaxLongitude, bounds.minLongitude, bounds.maxLongitude);
+    if (m_ProfileView.profileMapMaxLatitude - m_ProfileView.profileMapMinLatitude < 1e-9 || m_ProfileView.profileMapMaxLongitude - m_ProfileView.profileMapMinLongitude < 1e-9)
     {
         refitMapView();
     }
 
-    const double longitudeSpan = std::max(m_ProfileMapMaxLongitude - m_ProfileMapMinLongitude, 1e-9);
-    const double latitudeSpan = std::max(m_ProfileMapMaxLatitude - m_ProfileMapMinLatitude, 1e-9);
+    const double longitudeSpan = std::max(m_ProfileView.profileMapMaxLongitude - m_ProfileView.profileMapMinLongitude, 1e-9);
+    const double latitudeSpan = std::max(m_ProfileView.profileMapMaxLatitude - m_ProfileView.profileMapMinLatitude, 1e-9);
     const float availableWidth = ImGui::GetContentRegionAvail().x;
     RenderTerrainProfileToolbar(activeProfile);
     float mapWidth = std::max(availableWidth, 360.0f);
     float mapHeight = 420.0f;
-    if (m_ProfileMapSizeMode == ProfileMapSizeMode::Small)
+    if (m_ProfileView.profileMapSizeMode == ProfileMapSizeMode::Small)
     {
         mapWidth = std::min(mapWidth, 560.0f);
         mapHeight = 260.0f;
     }
-    else if (m_ProfileMapSizeMode == ProfileMapSizeMode::Medium)
+    else if (m_ProfileView.profileMapSizeMode == ProfileMapSizeMode::Medium)
     {
         mapWidth = std::min(mapWidth, 760.0f);
         mapHeight = 340.0f;
     }
-    else if (m_ProfileMapSizeMode == ProfileMapSizeMode::Large)
+    else if (m_ProfileView.profileMapSizeMode == ProfileMapSizeMode::Large)
     {
         mapWidth = std::min(mapWidth, 1040.0f);
         mapHeight = 420.0f;
@@ -1862,7 +1862,7 @@ void Application::RenderTerrainProfileMap(TerrainProfile& activeProfile)
     {
         mapHeight = std::max(ImGui::GetContentRegionAvail().y - 260.0f, 460.0f);
     }
-    m_ProfileMapLastWidth = mapWidth;
+    m_ProfileView.profileMapLastWidth = mapWidth;
     const ImVec2 mapTopLeft = ImGui::GetCursorScreenPos();
     const ImVec2 mapBottomRight(mapTopLeft.x + mapWidth, mapTopLeft.y + mapHeight);
     ImDrawList* drawList = ImGui::GetWindowDrawList();
@@ -1870,8 +1870,8 @@ void Application::RenderTerrainProfileMap(TerrainProfile& activeProfile)
 
     // Clamped version — keeps lines, circles, and labels on-screen.
     const auto mapPointFromGeo = [&](double latitude, double longitude) {
-        const float v = static_cast<float>((latitude - m_ProfileMapMinLatitude) / latitudeSpan);
-        const float u = static_cast<float>((longitude - m_ProfileMapMinLongitude) / longitudeSpan);
+        const float v = static_cast<float>((latitude - m_ProfileView.profileMapMinLatitude) / latitudeSpan);
+        const float u = static_cast<float>((longitude - m_ProfileView.profileMapMinLongitude) / longitudeSpan);
         return ImVec2(mapTopLeft.x + (std::clamp(u, 0.0f, 1.0f) * mapWidth),
                       mapBottomRight.y - (std::clamp(v, 0.0f, 1.0f) * mapHeight));
     };
@@ -1879,8 +1879,8 @@ void Application::RenderTerrainProfileMap(TerrainProfile& activeProfile)
     // correctly when zoomed in and corners fall outside the visible canvas.
     // The PushClipRect above ensures nothing outside the canvas is actually drawn.
     const auto mapPointFromGeoUnclamped = [&](double latitude, double longitude) {
-        const float v = static_cast<float>((latitude - m_ProfileMapMinLatitude) / latitudeSpan);
-        const float u = static_cast<float>((longitude - m_ProfileMapMinLongitude) / longitudeSpan);
+        const float v = static_cast<float>((latitude - m_ProfileView.profileMapMinLatitude) / latitudeSpan);
+        const float u = static_cast<float>((longitude - m_ProfileView.profileMapMinLongitude) / longitudeSpan);
         return ImVec2(mapTopLeft.x + (u * mapWidth),
                       mapBottomRight.y - (v * mapHeight));
     };
@@ -1893,16 +1893,16 @@ void Application::RenderTerrainProfileMap(TerrainProfile& activeProfile)
         const float u = std::clamp((point.x - mapTopLeft.x) / mapWidth, 0.0f, 1.0f);
         const float v = std::clamp((mapBottomRight.y - point.y) / mapHeight, 0.0f, 1.0f);
         return MakeProfileVertexFromGeographic(activeProfile,
-                                                m_ProfileMapMinLatitude + (static_cast<double>(v) * latitudeSpan),
-                                                m_ProfileMapMinLongitude + (static_cast<double>(u) * longitudeSpan),
-                                                m_ProfileAuxiliaryDrawMode,
+                                                m_ProfileView.profileMapMinLatitude + (static_cast<double>(v) * latitudeSpan),
+                                                m_ProfileView.profileMapMinLongitude + (static_cast<double>(u) * longitudeSpan),
+                                                m_ProfileView.profileAuxiliaryDrawMode,
                                                 profileConverter,
                                                 profileCoordinateMode);
     };
 
     drawList->AddRectFilled(mapTopLeft, mapBottomRight, IM_COL32(34, 44, 56, 255), 4.0f);
     const OverlayEntry* overlay = GetActiveOverlayEntry();
-    const bool overlayReady = m_ShowProfileAerialImage && overlay != nullptr && overlay->image.enabled && overlay->image.loaded && overlay->texture.IsLoaded();
+    const bool overlayReady = m_ProfileView.showProfileAerialImage && overlay != nullptr && overlay->image.enabled && overlay->image.loaded && overlay->texture.IsLoaded();
     if (overlayReady)
     {
         const ImTextureID textureId = static_cast<ImTextureID>(static_cast<uintptr_t>(overlay->texture.GetNativeHandle()));
@@ -1969,7 +1969,7 @@ void Application::RenderTerrainProfileMap(TerrainProfile& activeProfile)
         }
     }
 
-    if (m_ShowProfileSamples)
+    if (m_ProfileView.showProfileSamples)
     {
         for (const TerrainProfileSample& sample : activeProfile.samples)
         {
@@ -1985,14 +1985,14 @@ void Application::RenderTerrainProfileMap(TerrainProfile& activeProfile)
         const TerrainProfileVertex geoVertex =
             ProfileVertexAsGeographic(activeProfile, vertex, profileConverter, profileCoordinateMode);
         const ImVec2 point = mapPointFromGeoUnclamped(geoVertex.latitude, geoVertex.longitude);
-        const bool selected = index == m_SelectedProfileVertexIndex;
+        const bool selected = index == m_ProfileView.selectedProfileVertexIndex;
         const ImU32 vertexColor = vertex.auxiliary ? IM_COL32(90, 230, 255, 255) : ProfileColorU32(activeProfile);
         drawList->AddCircleFilled(point, selected ? 6.0f : 4.5f, selected ? IM_COL32(255, 220, 64, 255) : vertexColor, 18);
         drawList->AddCircle(point, selected ? 7.5f : 6.0f, IM_COL32(20, 24, 28, 230), 18, 1.5f);
         char markerLabel[16];
         std::snprintf(markerLabel, sizeof(markerLabel), "%c%d", vertex.auxiliary ? 'A' : 'V', index + 1);
         drawList->AddText(ImVec2(point.x + 7.0f, point.y + 3.0f), IM_COL32(255, 255, 255, 235), markerLabel);
-        if (m_ShowProfileHeightLabels)
+        if (m_ProfileView.showProfileHeightLabels)
         {
             const bool hasTerrainHeight =
                 profileTerrain != nullptr && TerrainDatasetContainsCoordinate(*profileTerrain, geoVertex.latitude, geoVertex.longitude);
@@ -2010,23 +2010,23 @@ void Application::RenderTerrainProfileMap(TerrainProfile& activeProfile)
     TerrainProfileSample highlightedSample;
     bool hasHighlightedSample = false;
     bool hoveredSample = false;
-    if (m_ProfileGraphHoverActive && m_ProfileGraphHoverSample.valid)
+    if (m_ProfileView.profileGraphHoverActive && m_ProfileView.profileGraphHoverSample.valid)
     {
-        highlightedSample = m_ProfileGraphHoverSample;
+        highlightedSample = m_ProfileView.profileGraphHoverSample;
         hasHighlightedSample = true;
         hoveredSample = true;
     }
     else
     {
         const int highlightedSampleIndex =
-            (m_HoveredProfileSampleIndex >= 0 && m_HoveredProfileSampleIndex < static_cast<int>(activeProfile.samples.size())) ?
-                m_HoveredProfileSampleIndex :
-                m_SelectedProfileSampleIndex;
+            (m_ProfileView.hoveredProfileSampleIndex >= 0 && m_ProfileView.hoveredProfileSampleIndex < static_cast<int>(activeProfile.samples.size())) ?
+                m_ProfileView.hoveredProfileSampleIndex :
+                m_ProfileView.selectedProfileSampleIndex;
         if (highlightedSampleIndex >= 0 && highlightedSampleIndex < static_cast<int>(activeProfile.samples.size()))
         {
             highlightedSample = activeProfile.samples[static_cast<size_t>(highlightedSampleIndex)];
             hasHighlightedSample = true;
-            hoveredSample = highlightedSampleIndex == m_HoveredProfileSampleIndex;
+            hoveredSample = highlightedSampleIndex == m_ProfileView.hoveredProfileSampleIndex;
         }
     }
     if (hasHighlightedSample)
@@ -2100,33 +2100,33 @@ void Application::RenderTerrainProfileMap(TerrainProfile& activeProfile)
         if (io.MouseWheel != 0.0f)
         {
             const double zoomFactor = io.MouseWheel > 0.0f ? 0.82 : 1.22;
-            const double cursorLatitudeT = std::clamp((hoveredVertex.latitude - m_ProfileMapMinLatitude) / latitudeSpan, 0.0, 1.0);
-            const double cursorLongitudeT = std::clamp((hoveredVertex.longitude - m_ProfileMapMinLongitude) / longitudeSpan, 0.0, 1.0);
+            const double cursorLatitudeT = std::clamp((hoveredVertex.latitude - m_ProfileView.profileMapMinLatitude) / latitudeSpan, 0.0, 1.0);
+            const double cursorLongitudeT = std::clamp((hoveredVertex.longitude - m_ProfileView.profileMapMinLongitude) / longitudeSpan, 0.0, 1.0);
             const double newLatitudeSpan = std::clamp(latitudeSpan * zoomFactor, (bounds.maxLatitude - bounds.minLatitude) * 0.002, bounds.maxLatitude - bounds.minLatitude);
             const double newLongitudeSpan = std::clamp(longitudeSpan * zoomFactor, (bounds.maxLongitude - bounds.minLongitude) * 0.002, bounds.maxLongitude - bounds.minLongitude);
-            m_ProfileMapMinLatitude = hoveredVertex.latitude - (newLatitudeSpan * cursorLatitudeT);
-            m_ProfileMapMaxLatitude = m_ProfileMapMinLatitude + newLatitudeSpan;
-            m_ProfileMapMinLongitude = hoveredVertex.longitude - (newLongitudeSpan * cursorLongitudeT);
-            m_ProfileMapMaxLongitude = m_ProfileMapMinLongitude + newLongitudeSpan;
-            if (m_ProfileMapMinLatitude < bounds.minLatitude)
+            m_ProfileView.profileMapMinLatitude = hoveredVertex.latitude - (newLatitudeSpan * cursorLatitudeT);
+            m_ProfileView.profileMapMaxLatitude = m_ProfileView.profileMapMinLatitude + newLatitudeSpan;
+            m_ProfileView.profileMapMinLongitude = hoveredVertex.longitude - (newLongitudeSpan * cursorLongitudeT);
+            m_ProfileView.profileMapMaxLongitude = m_ProfileView.profileMapMinLongitude + newLongitudeSpan;
+            if (m_ProfileView.profileMapMinLatitude < bounds.minLatitude)
             {
-                m_ProfileMapMaxLatitude += bounds.minLatitude - m_ProfileMapMinLatitude;
-                m_ProfileMapMinLatitude = bounds.minLatitude;
+                m_ProfileView.profileMapMaxLatitude += bounds.minLatitude - m_ProfileView.profileMapMinLatitude;
+                m_ProfileView.profileMapMinLatitude = bounds.minLatitude;
             }
-            if (m_ProfileMapMaxLatitude > bounds.maxLatitude)
+            if (m_ProfileView.profileMapMaxLatitude > bounds.maxLatitude)
             {
-                m_ProfileMapMinLatitude -= m_ProfileMapMaxLatitude - bounds.maxLatitude;
-                m_ProfileMapMaxLatitude = bounds.maxLatitude;
+                m_ProfileView.profileMapMinLatitude -= m_ProfileView.profileMapMaxLatitude - bounds.maxLatitude;
+                m_ProfileView.profileMapMaxLatitude = bounds.maxLatitude;
             }
-            if (m_ProfileMapMinLongitude < bounds.minLongitude)
+            if (m_ProfileView.profileMapMinLongitude < bounds.minLongitude)
             {
-                m_ProfileMapMaxLongitude += bounds.minLongitude - m_ProfileMapMinLongitude;
-                m_ProfileMapMinLongitude = bounds.minLongitude;
+                m_ProfileView.profileMapMaxLongitude += bounds.minLongitude - m_ProfileView.profileMapMinLongitude;
+                m_ProfileView.profileMapMinLongitude = bounds.minLongitude;
             }
-            if (m_ProfileMapMaxLongitude > bounds.maxLongitude)
+            if (m_ProfileView.profileMapMaxLongitude > bounds.maxLongitude)
             {
-                m_ProfileMapMinLongitude -= m_ProfileMapMaxLongitude - bounds.maxLongitude;
-                m_ProfileMapMaxLongitude = bounds.maxLongitude;
+                m_ProfileView.profileMapMinLongitude -= m_ProfileView.profileMapMaxLongitude - bounds.maxLongitude;
+                m_ProfileView.profileMapMaxLongitude = bounds.maxLongitude;
             }
         }
 
@@ -2138,43 +2138,43 @@ void Application::RenderTerrainProfileMap(TerrainProfile& activeProfile)
         const bool shiftPanning = io.KeyShift && ImGui::IsMouseDown(ImGuiMouseButton_Left);
         if (shiftPanning && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
         {
-            m_ProfileMapIsPanning = true;
-            m_ProfileMapLastPanMouse = {mousePosition.x, mousePosition.y};
+            m_ProfileView.profileMapIsPanning = true;
+            m_ProfileView.profileMapLastPanMouse = {mousePosition.x, mousePosition.y};
         }
         if (!ImGui::IsMouseDown(ImGuiMouseButton_Left))
         {
-            m_ProfileMapIsPanning = false;
+            m_ProfileView.profileMapIsPanning = false;
         }
-        if (m_ProfileMapIsPanning && ImGui::IsMouseDragging(ImGuiMouseButton_Left))
+        if (m_ProfileView.profileMapIsPanning && ImGui::IsMouseDragging(ImGuiMouseButton_Left))
         {
             const glm::vec2 currentMouse(mousePosition.x, mousePosition.y);
-            const glm::vec2 delta = currentMouse - m_ProfileMapLastPanMouse;
-            m_ProfileMapLastPanMouse = currentMouse;
+            const glm::vec2 delta = currentMouse - m_ProfileView.profileMapLastPanMouse;
+            m_ProfileView.profileMapLastPanMouse = currentMouse;
             const double longitudeDelta = -(static_cast<double>(delta.x) / static_cast<double>(mapWidth)) * longitudeSpan;
             const double latitudeDelta = (static_cast<double>(delta.y) / static_cast<double>(mapHeight)) * latitudeSpan;
-            m_ProfileMapMinLatitude += latitudeDelta;
-            m_ProfileMapMaxLatitude += latitudeDelta;
-            m_ProfileMapMinLongitude += longitudeDelta;
-            m_ProfileMapMaxLongitude += longitudeDelta;
-            if (m_ProfileMapMinLatitude < bounds.minLatitude)
+            m_ProfileView.profileMapMinLatitude += latitudeDelta;
+            m_ProfileView.profileMapMaxLatitude += latitudeDelta;
+            m_ProfileView.profileMapMinLongitude += longitudeDelta;
+            m_ProfileView.profileMapMaxLongitude += longitudeDelta;
+            if (m_ProfileView.profileMapMinLatitude < bounds.minLatitude)
             {
-                m_ProfileMapMaxLatitude += bounds.minLatitude - m_ProfileMapMinLatitude;
-                m_ProfileMapMinLatitude = bounds.minLatitude;
+                m_ProfileView.profileMapMaxLatitude += bounds.minLatitude - m_ProfileView.profileMapMinLatitude;
+                m_ProfileView.profileMapMinLatitude = bounds.minLatitude;
             }
-            if (m_ProfileMapMaxLatitude > bounds.maxLatitude)
+            if (m_ProfileView.profileMapMaxLatitude > bounds.maxLatitude)
             {
-                m_ProfileMapMinLatitude -= m_ProfileMapMaxLatitude - bounds.maxLatitude;
-                m_ProfileMapMaxLatitude = bounds.maxLatitude;
+                m_ProfileView.profileMapMinLatitude -= m_ProfileView.profileMapMaxLatitude - bounds.maxLatitude;
+                m_ProfileView.profileMapMaxLatitude = bounds.maxLatitude;
             }
-            if (m_ProfileMapMinLongitude < bounds.minLongitude)
+            if (m_ProfileView.profileMapMinLongitude < bounds.minLongitude)
             {
-                m_ProfileMapMaxLongitude += bounds.minLongitude - m_ProfileMapMinLongitude;
-                m_ProfileMapMinLongitude = bounds.minLongitude;
+                m_ProfileView.profileMapMaxLongitude += bounds.minLongitude - m_ProfileView.profileMapMinLongitude;
+                m_ProfileView.profileMapMinLongitude = bounds.minLongitude;
             }
-            if (m_ProfileMapMaxLongitude > bounds.maxLongitude)
+            if (m_ProfileView.profileMapMaxLongitude > bounds.maxLongitude)
             {
-                m_ProfileMapMinLongitude -= m_ProfileMapMaxLongitude - bounds.maxLongitude;
-                m_ProfileMapMaxLongitude = bounds.maxLongitude;
+                m_ProfileView.profileMapMinLongitude -= m_ProfileView.profileMapMaxLongitude - bounds.maxLongitude;
+                m_ProfileView.profileMapMaxLongitude = bounds.maxLongitude;
             }
         }
 
@@ -2196,13 +2196,13 @@ void Application::RenderTerrainProfileMap(TerrainProfile& activeProfile)
                 }
             }
 
-            if (m_ProfileEditMode && nearestVertex >= 0 && !m_ProfileAuxiliaryDrawMode)
+            if (m_ProfileView.profileEditMode && nearestVertex >= 0 && !m_ProfileView.profileAuxiliaryDrawMode)
             {
-                m_SelectedProfileVertexIndex = nearestVertex;
+                m_ProfileView.selectedProfileVertexIndex = nearestVertex;
             }
-            else if (m_ProfileDrawMode)
+            else if (m_ProfileView.profileDrawMode)
             {
-                if (m_ProfileAuxiliaryDrawMode)
+                if (m_ProfileView.profileAuxiliaryDrawMode)
                 {
                     if (activeProfile.vertices.size() < 2)
                     {
@@ -2252,7 +2252,7 @@ void Application::RenderTerrainProfileMap(TerrainProfile& activeProfile)
                         auxiliaryVertex.auxiliary = true;
                         insertIndex = std::clamp(insertIndex, 1, static_cast<int>(activeProfile.vertices.size()));
                         activeProfile.vertices.insert(activeProfile.vertices.begin() + insertIndex, auxiliaryVertex);
-                        m_SelectedProfileVertexIndex = insertIndex;
+                        m_ProfileView.selectedProfileVertexIndex = insertIndex;
                         RebuildTerrainProfileSamples(activeProfile);
                         m_StatusMessage = "Inserted auxiliary profile vertex between V vertices.";
                     }
@@ -2260,25 +2260,25 @@ void Application::RenderTerrainProfileMap(TerrainProfile& activeProfile)
                 else
                 {
                     activeProfile.vertices.push_back(hoveredVertex);
-                    m_SelectedProfileVertexIndex = static_cast<int>(activeProfile.vertices.size()) - 1;
+                    m_ProfileView.selectedProfileVertexIndex = static_cast<int>(activeProfile.vertices.size()) - 1;
                     RebuildTerrainProfileSamples(activeProfile);
                     m_StatusMessage = "Added profile vertex.";
                 }
             }
         }
 
-        if (!io.KeyShift && m_ProfileEditMode && m_SelectedProfileVertexIndex >= 0 &&
-            m_SelectedProfileVertexIndex < static_cast<int>(activeProfile.vertices.size()) && ImGui::IsMouseDragging(ImGuiMouseButton_Left))
+        if (!io.KeyShift && m_ProfileView.profileEditMode && m_ProfileView.selectedProfileVertexIndex >= 0 &&
+            m_ProfileView.selectedProfileVertexIndex < static_cast<int>(activeProfile.vertices.size()) && ImGui::IsMouseDragging(ImGuiMouseButton_Left))
         {
             TerrainProfileVertex movedVertex = hoveredVertex;
-            movedVertex.auxiliary = activeProfile.vertices[static_cast<size_t>(m_SelectedProfileVertexIndex)].auxiliary;
-            activeProfile.vertices[static_cast<size_t>(m_SelectedProfileVertexIndex)] = movedVertex;
+            movedVertex.auxiliary = activeProfile.vertices[static_cast<size_t>(m_ProfileView.selectedProfileVertexIndex)].auxiliary;
+            activeProfile.vertices[static_cast<size_t>(m_ProfileView.selectedProfileVertexIndex)] = movedVertex;
             RebuildTerrainProfileSamples(activeProfile);
         }
 
         if (ImGui::IsMouseClicked(ImGuiMouseButton_Right))
         {
-            m_ProfileDrawMode = false;
+            m_ProfileView.profileDrawMode = false;
         }
     }
 
@@ -2313,7 +2313,7 @@ void Application::SyncProfileMapToGraphZoom(const TerrainProfile& profile)
     // Compute the geographic bounding box of all samples within the current
     // zoom distance range, then set the map view to that bbox (with padding).
     // The map's own clamping will keep it inside the terrain bounds.
-    if (m_ProfileGraphZoomMaxDist <= m_ProfileGraphZoomMinDist)
+    if (m_ProfileView.profileGraphZoomMaxDist <= m_ProfileView.profileGraphZoomMinDist)
         return;
 
     double minLat = std::numeric_limits<double>::max();
@@ -2324,7 +2324,7 @@ void Application::SyncProfileMapToGraphZoom(const TerrainProfile& profile)
     for (const TerrainProfileSample& sample : profile.samples)
     {
         if (!sample.valid) continue;
-        if (sample.distanceMeters < m_ProfileGraphZoomMinDist || sample.distanceMeters > m_ProfileGraphZoomMaxDist) continue;
+        if (sample.distanceMeters < m_ProfileView.profileGraphZoomMinDist || sample.distanceMeters > m_ProfileView.profileGraphZoomMaxDist) continue;
         minLat = std::min(minLat, sample.latitude);
         maxLat = std::max(maxLat, sample.latitude);
         minLon = std::min(minLon, sample.longitude);
@@ -2338,11 +2338,11 @@ void Application::SyncProfileMapToGraphZoom(const TerrainProfile& profile)
     const double lonSpan = std::max(maxLon - minLon, 1e-6);
     const double latPad  = latSpan * 0.20;
     const double lonPad  = lonSpan * 0.20;
-    m_ProfileMapMinLatitude  = minLat - latPad;
-    m_ProfileMapMaxLatitude  = maxLat + latPad;
-    m_ProfileMapMinLongitude = minLon - lonPad;
-    m_ProfileMapMaxLongitude = maxLon + lonPad;
-    // Do NOT set m_ProfileMapViewInitialized to false — we are deliberately
+    m_ProfileView.profileMapMinLatitude  = minLat - latPad;
+    m_ProfileView.profileMapMaxLatitude  = maxLat + latPad;
+    m_ProfileView.profileMapMinLongitude = minLon - lonPad;
+    m_ProfileView.profileMapMaxLongitude = maxLon + lonPad;
+    // Do NOT set m_ProfileView.profileMapViewInitialized to false — we are deliberately
     // overriding the view; the clamping in RenderTerrainProfileMap will handle bounds.
 }
 
@@ -2350,8 +2350,8 @@ void Application::RenderTerrainProfileGraph(TerrainProfile& activeProfile)
 {
     if (activeProfile.samples.empty())
     {
-        m_HoveredProfileSampleIndex = -1;
-        m_ProfileGraphHoverActive = false;
+        m_ProfileView.hoveredProfileSampleIndex = -1;
+        m_ProfileView.profileGraphHoverActive = false;
         ImGui::Text("Draw at least two vertices to generate an elevation profile.");
         return;
     }
@@ -2371,8 +2371,8 @@ void Application::RenderTerrainProfileGraph(TerrainProfile& activeProfile)
     }
     if (minHeight == std::numeric_limits<double>::max())
     {
-        m_HoveredProfileSampleIndex = -1;
-        m_ProfileGraphHoverActive = false;
+        m_ProfileView.hoveredProfileSampleIndex = -1;
+        m_ProfileView.profileGraphHoverActive = false;
         ImGui::TextColored(ImVec4(1.0f, 0.55f, 0.25f, 1.0f),
                            "The profile has no valid terrain samples inside the selected terrain coverage.");
         return;
@@ -2382,37 +2382,37 @@ void Application::RenderTerrainProfileGraph(TerrainProfile& activeProfile)
     const double heightRange = std::max(maxHeight - minHeight, 1.0);
     double graphMinHeight = minHeight;
     double graphMaxHeight = maxHeight;
-    if (m_ProfileScaleMode == ProfileElevationScaleMode::Fixed)
+    if (m_ProfileView.profileScaleMode == ProfileElevationScaleMode::Fixed)
     {
-        graphMinHeight = m_ProfileFixedMinHeight;
-        graphMaxHeight = m_ProfileFixedMaxHeight;
+        graphMinHeight = m_ProfileView.profileFixedMinHeight;
+        graphMaxHeight = m_ProfileView.profileFixedMaxHeight;
     }
-    else if (m_ProfileScaleMode != ProfileElevationScaleMode::Auto)
+    else if (m_ProfileView.profileScaleMode != ProfileElevationScaleMode::Auto)
     {
         double exaggeration = 1.0;
-        if (m_ProfileScaleMode == ProfileElevationScaleMode::TwoX) exaggeration = 2.0;
-        else if (m_ProfileScaleMode == ProfileElevationScaleMode::FiveX) exaggeration = 5.0;
-        else if (m_ProfileScaleMode == ProfileElevationScaleMode::TenX) exaggeration = 10.0;
+        if (m_ProfileView.profileScaleMode == ProfileElevationScaleMode::TwoX) exaggeration = 2.0;
+        else if (m_ProfileView.profileScaleMode == ProfileElevationScaleMode::FiveX) exaggeration = 5.0;
+        else if (m_ProfileView.profileScaleMode == ProfileElevationScaleMode::TenX) exaggeration = 10.0;
         const double visibleRange = std::max(heightRange / exaggeration, 1.0);
         graphMinHeight = centerHeight - (visibleRange * 0.5);
         graphMaxHeight = centerHeight + (visibleRange * 0.5);
     }
 
     const float leftAxisWidth = 74.0f;
-    const float graphWidth = std::max(m_ProfileMapLastWidth, 360.0f);
+    const float graphWidth = std::max(m_ProfileView.profileMapLastWidth, 360.0f);
     const float graphHeight = 220.0f;
-    ImGui::Checkbox("Add A Vertices From Height Graph", &m_ProfileGraphAuxiliaryInsertMode);
+    ImGui::Checkbox("Add A Vertices From Height Graph", &m_ProfileView.profileGraphAuxiliaryInsertMode);
     ImGui::SameLine();
     ImGui::TextDisabled("Click the elevation profile to insert an A vertex at the nearest distance.");
     // ── Line-of-sight controls ───────────────────────────────────────────────
-    ImGui::Checkbox("Line of sight", &m_LineOfSightEnabled);
-    if (m_LineOfSightEnabled)
+    ImGui::Checkbox("Line of sight", &m_ProfileView.lineOfSightEnabled);
+    if (m_ProfileView.lineOfSightEnabled)
     {
         ImGui::SameLine();
         ImGui::SetNextItemWidth(120.0f);
-        if (ImGui::DragFloat("Observer eye (m)", &m_ObserverEyeHeightMeters, 0.5f, 0.0f, 500.0f, "%.1f"))
+        if (ImGui::DragFloat("Observer eye (m)", &m_ProfileView.observerEyeHeightMeters, 0.5f, 0.0f, 500.0f, "%.1f"))
         {
-            m_ObserverEyeHeightMeters = std::clamp(m_ObserverEyeHeightMeters, 0.0f, 500.0f);
+            m_ProfileView.observerEyeHeightMeters = std::clamp(m_ProfileView.observerEyeHeightMeters, 0.0f, 500.0f);
         }
         ImGui::SameLine();
         ImGui::TextDisabled("from the first vertex");
@@ -2422,14 +2422,14 @@ void Application::RenderTerrainProfileGraph(TerrainProfile& activeProfile)
     // clicking the graph offers the same action in a context menu.
     {
         const bool hasSelectedSample =
-            m_SelectedProfileSampleIndex >= 0 &&
-            m_SelectedProfileSampleIndex < static_cast<int>(activeProfile.samples.size()) &&
-            activeProfile.samples[static_cast<size_t>(m_SelectedProfileSampleIndex)].valid;
+            m_ProfileView.selectedProfileSampleIndex >= 0 &&
+            m_ProfileView.selectedProfileSampleIndex < static_cast<int>(activeProfile.samples.size()) &&
+            activeProfile.samples[static_cast<size_t>(m_ProfileView.selectedProfileSampleIndex)].valid;
         ImGui::BeginDisabled(!hasSelectedSample);
         if (ImGui::Button("Jump camera to selected point"))
         {
             JumpCameraToProfileSample(activeProfile,
-                                      activeProfile.samples[static_cast<size_t>(m_SelectedProfileSampleIndex)]);
+                                      activeProfile.samples[static_cast<size_t>(m_ProfileView.selectedProfileSampleIndex)]);
         }
         ImGui::EndDisabled();
         if (!hasSelectedSample)
@@ -2442,11 +2442,11 @@ void Application::RenderTerrainProfileGraph(TerrainProfile& activeProfile)
     // Compute visibility once per frame when enabled; consumed by the line
     // colouring and overlay markers below.
     ProfileLineOfSightResult losResult;
-    const bool losActive = m_LineOfSightEnabled && activeProfile.samples.size() >= 2;
+    const bool losActive = m_ProfileView.lineOfSightEnabled && activeProfile.samples.size() >= 2;
     if (losActive)
     {
         losResult = ComputeProfileLineOfSight(activeProfile.samples,
-                                              static_cast<double>(m_ObserverEyeHeightMeters));
+                                              static_cast<double>(m_ProfileView.observerEyeHeightMeters));
     }
     const ImVec2 graphTopLeft = ImGui::GetCursorScreenPos();
     const ImVec2 plotTopLeft(graphTopLeft.x + leftAxisWidth, graphTopLeft.y);
@@ -2463,8 +2463,8 @@ void Application::RenderTerrainProfileGraph(TerrainProfile& activeProfile)
                                                             TerrainCoordinateMode::Geographic;
 
     // Horizontal zoom range (in metres along path). Negative max = full profile.
-    double zoomedMinDist = (m_ProfileGraphZoomMaxDist > 0.0) ? m_ProfileGraphZoomMinDist : 0.0;
-    double zoomedMaxDist = (m_ProfileGraphZoomMaxDist > 0.0) ? m_ProfileGraphZoomMaxDist : totalDistance;
+    double zoomedMinDist = (m_ProfileView.profileGraphZoomMaxDist > 0.0) ? m_ProfileView.profileGraphZoomMinDist : 0.0;
+    double zoomedMaxDist = (m_ProfileView.profileGraphZoomMaxDist > 0.0) ? m_ProfileView.profileGraphZoomMaxDist : totalDistance;
     zoomedMinDist = std::clamp(zoomedMinDist, 0.0, totalDistance);
     zoomedMaxDist = std::clamp(zoomedMaxDist, zoomedMinDist + 1.0, totalDistance);
     const double zoomedRange  = std::max(zoomedMaxDist - zoomedMinDist, 1.0);
@@ -2665,11 +2665,11 @@ void Application::RenderTerrainProfileGraph(TerrainProfile& activeProfile)
         const float contextX = std::clamp(ImGui::GetIO().MousePos.x, plotTopLeft.x, plotBottomRight.x);
         const double contextDistance = zoomedMinDist +
             (static_cast<double>(contextX - plotTopLeft.x) / static_cast<double>(plotWidth)) * zoomedRange;
-        m_ProfileGraphContextSample = sampleAtDistance(contextDistance);
+        m_ProfileView.profileGraphContextSample = sampleAtDistance(contextDistance);
     }
     if (ImGui::BeginPopupContextItem("##terrain_profile_graph_context"))
     {
-        const TerrainProfileSample& contextSample = m_ProfileGraphContextSample;
+        const TerrainProfileSample& contextSample = m_ProfileView.profileGraphContextSample;
         ImGui::TextDisabled("%.0f m along path  |  %.1f m elevation",
                             contextSample.distanceMeters, contextSample.height);
         ImGui::Separator();
@@ -2718,25 +2718,25 @@ void Application::RenderTerrainProfileGraph(TerrainProfile& activeProfile)
         if (nearestSample >= 0 && (mouseInsidePlot || nearestDistance <= 16.0f))
         {
             foundHoveredSample = true;
-            m_HoveredProfileSampleIndex = nearestSample;
+            m_ProfileView.hoveredProfileSampleIndex = nearestSample;
             const TerrainProfileSample& nearestProfileSample = activeProfile.samples[static_cast<size_t>(nearestSample)];
             const TerrainProfileSample cursorSample = sampleAtDistance(clickedDistance);
-            m_ProfileGraphHoverActive = mouseInsidePlot;
-            m_ProfileGraphHoverSample = cursorSample;
+            m_ProfileView.profileGraphHoverActive = mouseInsidePlot;
+            m_ProfileView.profileGraphHoverSample = cursorSample;
             const TerrainProfileSample& displayedSample = mouseInsidePlot ? cursorSample : nearestProfileSample;
             const ImVec2 samplePoint = graphPointFromSample(displayedSample);
             if (mouseInsidePlot)
             {
                 drawList->AddLine(ImVec2(clampedMouseX, plotTopLeft.y),
                                   ImVec2(clampedMouseX, plotBottomRight.y),
-                                  m_ProfileGraphAuxiliaryInsertMode ? IM_COL32(90, 230, 255, 230) : IM_COL32(255, 220, 64, 210),
-                                  m_ProfileGraphAuxiliaryInsertMode ? 2.5f : 2.0f);
+                                  m_ProfileView.profileGraphAuxiliaryInsertMode ? IM_COL32(90, 230, 255, 230) : IM_COL32(255, 220, 64, 210),
+                                  m_ProfileView.profileGraphAuxiliaryInsertMode ? 2.5f : 2.0f);
             }
             drawList->AddCircleFilled(samplePoint,
-                                      m_ProfileGraphAuxiliaryInsertMode ? 6.0f : 5.0f,
-                                      m_ProfileGraphAuxiliaryInsertMode ? IM_COL32(90, 230, 255, 255) : IM_COL32(255, 220, 64, 255),
+                                      m_ProfileView.profileGraphAuxiliaryInsertMode ? 6.0f : 5.0f,
+                                      m_ProfileView.profileGraphAuxiliaryInsertMode ? IM_COL32(90, 230, 255, 255) : IM_COL32(255, 220, 64, 255),
                                       18);
-            if (m_ProfileGraphAuxiliaryInsertMode)
+            if (m_ProfileView.profileGraphAuxiliaryInsertMode)
             {
                 drawList->AddLine(ImVec2(samplePoint.x, plotTopLeft.y),
                                   ImVec2(samplePoint.x, plotBottomRight.y),
@@ -2744,13 +2744,13 @@ void Application::RenderTerrainProfileGraph(TerrainProfile& activeProfile)
                                   1.5f);
             }
             ImGui::SetTooltip("%s%.2f m along path\nHeight %.2f m\nLine angle %.2f degrees",
-                              m_ProfileGraphAuxiliaryInsertMode ? "Click to insert A vertex\n" : "",
+                              m_ProfileView.profileGraphAuxiliaryInsertMode ? "Click to insert A vertex\n" : "",
                               displayedSample.distanceMeters,
                               displayedSample.height,
                               displayedSample.lineAngleDegrees);
             if (ImGui::IsMouseClicked(ImGuiMouseButton_Left))
             {
-                if (m_ProfileGraphAuxiliaryInsertMode)
+                if (m_ProfileView.profileGraphAuxiliaryInsertMode)
                 {
                     const TerrainDataset* profileTerrain = GetPrimaryTerrainForProfile(activeProfile);
                     GeoConverter converter(profileTerrain != nullptr ? profileTerrain->geoReference : m_GeoReference);
@@ -2830,9 +2830,9 @@ void Application::RenderTerrainProfileGraph(TerrainProfile& activeProfile)
                     {
                         insertIndex = std::clamp(insertIndex, 1, static_cast<int>(activeProfile.vertices.size()) - 1);
                         activeProfile.vertices.insert(activeProfile.vertices.begin() + insertIndex, insertedVertex);
-                        m_SelectedProfileVertexIndex = insertIndex;
-                        m_SelectedProfileSampleIndex = -1;
-                        m_HoveredProfileSampleIndex = -1;
+                        m_ProfileView.selectedProfileVertexIndex = insertIndex;
+                        m_ProfileView.selectedProfileSampleIndex = -1;
+                        m_ProfileView.hoveredProfileSampleIndex = -1;
                         RebuildTerrainProfileSamples(activeProfile);
                         m_StatusMessage = "Inserted auxiliary profile vertex between V vertices at " +
                                           std::to_string(insertionSample.distanceMeters) + " m.";
@@ -2840,7 +2840,7 @@ void Application::RenderTerrainProfileGraph(TerrainProfile& activeProfile)
                 }
                 else
                 {
-                    m_SelectedProfileSampleIndex = nearestSample;
+                    m_ProfileView.selectedProfileSampleIndex = nearestSample;
                 }
             }
         }
@@ -2855,22 +2855,22 @@ void Application::RenderTerrainProfileGraph(TerrainProfile& activeProfile)
             const double cursorDist = zoomedMinDist + static_cast<double>(tX) * zoomedRange;
             const double factor     = io.MouseWheel > 0.0f ? 0.70 : 1.4285;
             const double newRange   = std::clamp(zoomedRange * factor, totalDistance * 0.01, totalDistance);
-            m_ProfileGraphZoomMinDist = std::max(cursorDist - static_cast<double>(tX) * newRange, 0.0);
-            m_ProfileGraphZoomMaxDist = std::min(m_ProfileGraphZoomMinDist + newRange, totalDistance);
+            m_ProfileView.profileGraphZoomMinDist = std::max(cursorDist - static_cast<double>(tX) * newRange, 0.0);
+            m_ProfileView.profileGraphZoomMaxDist = std::min(m_ProfileView.profileGraphZoomMinDist + newRange, totalDistance);
             SyncProfileMapToGraphZoom(activeProfile);
         }
-        if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && !m_ProfileGraphAuxiliaryInsertMode)
+        if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && !m_ProfileView.profileGraphAuxiliaryInsertMode)
         {
-            m_ProfileGraphZoomMinDist = 0.0;
-            m_ProfileGraphZoomMaxDist = -1.0;
-            m_ProfileMapViewInitialized = false; // also reset the map to full terrain view
+            m_ProfileView.profileGraphZoomMinDist = 0.0;
+            m_ProfileView.profileGraphZoomMaxDist = -1.0;
+            m_ProfileView.profileMapViewInitialized = false; // also reset the map to full terrain view
         }
     }
 
     if (!foundHoveredSample)
     {
-        m_HoveredProfileSampleIndex = -1;
-        m_ProfileGraphHoverActive = false;
+        m_ProfileView.hoveredProfileSampleIndex = -1;
+        m_ProfileView.profileGraphHoverActive = false;
     }
 
     ImGui::Text("Elevation: %.2f m to %.2f m  Path length: %.2f m", graphMinHeight, graphMaxHeight, totalDistance);
