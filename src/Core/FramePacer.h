@@ -23,8 +23,8 @@ class FramePacer
     // has fallen hopelessly behind (e.g. paused in a debugger).
     void WaitForNextFrame();
 
-    // The current absolute target, in glfwGetTime-milliseconds, for diagnostics
-    // (the performance log records the per-frame schedule slip).
+    // The current absolute target, in GeoFPS::NowMs() milliseconds, for
+    // diagnostics (the performance log records the per-frame schedule slip).
     [[nodiscard]] double nextTargetMs() const { return m_NextTargetMs; }
 
   private:

@@ -1,5 +1,6 @@
 #include "Core/Application.h"
 #include "Core/ApplicationInternal.h"
+#include "Core/Time.h"
 #include "Game/SpeedKeyMapping.h"
 
 #include "imgui.h"
@@ -29,11 +30,6 @@ namespace GeoFPS
 using namespace ApplicationInternal;
 namespace
 {
-double NowMs()
-{
-    return glfwGetTime() * 1000.0;
-}
-
 glm::dvec3 TerrainCoordinateToLocal(const TerrainDataset& dataset, double latitude, double longitude, double height)
 {
     if (dataset.settings.coordinateMode == TerrainCoordinateMode::LocalMeters)

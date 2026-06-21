@@ -1,21 +1,12 @@
 #include "Core/PerformanceLogger.h"
+#include "Core/Time.h"
 
-#include <chrono>
 #include <cstdlib>
 #include <ctime>
 #include <iostream>
 
 namespace GeoFPS
 {
-namespace
-{
-double NowMs()
-{
-    using Clock = std::chrono::steady_clock;
-    return std::chrono::duration<double, std::milli>(Clock::now().time_since_epoch()).count();
-}
-} // namespace
-
 std::string PerformanceLogger::Toggle()
 {
     if (m_Active)

@@ -1,4 +1,5 @@
 #include "Core/TerrainSystem.h"
+#include "Core/Time.h"
 
 #include "Renderer/Mesh.h"
 
@@ -13,18 +14,6 @@
 
 namespace GeoFPS
 {
-namespace
-{
-// Same steady_clock reading the inline code used in ApplicationScene.cpp.  Note
-// that ctx.frameStartMs comes from a *different* clock (GLFW's), exactly as
-// before — see ProcessBuildJobs for why that's preserved rather than fixed.
-double NowMs()
-{
-    using Clock = std::chrono::steady_clock;
-    return std::chrono::duration<double, std::milli>(Clock::now().time_since_epoch()).count();
-}
-} // namespace
-
 void TerrainSystem::ProcessBuildJobs(TerrainJobContext& ctx)
 {
     // Adaptive time-budget for GPU chunk uploads.

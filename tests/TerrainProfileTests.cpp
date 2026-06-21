@@ -1,4 +1,5 @@
 #include "Core/ApplicationInternal.h"
+#include "Core/Time.h"
 #include "Core/WorldFileParser.h"
 #include "Game/CameraCommand.h"
 #include "Game/SpeedKeyMapping.h"
@@ -9,6 +10,7 @@
 #include "Terrain/TerrainMeshBuilder.h"
 #include "Terrain/TerrainProfile.h"
 
+#include <chrono>
 #include <cmath>
 #include <filesystem>
 #include <fstream>
@@ -16,6 +18,7 @@
 #include <limits>
 #include <sstream>
 #include <string>
+#include <thread>
 #include <vector>
 
 namespace
@@ -1105,6 +1108,28 @@ void TestSpeedKeyCharMapping()
     }
 }
 
+void TestNowMsIsMonotonicMilliseconds()
+{
+    // The frame pacer, perf log, and the terrain GPU-upload budget all share the
+    // single GeoFPS::NowMs() clock.  The budget computes elapsed-this-frame as
+    // NowMs() - frameStartMs and only streams more than one chunk/frame when that
+    // elapsed reads as a small *millisecond* number.  This used to be broken: two
+    // of the (then five) NowMs copies read glfwGetTime while others read
+    // steady_clock, so subtracting across files produced garbage and streaming
+    // collapsed to ~1 chunk/frame.  Pin the contract NowMs must keep — monotonic,
+    // and in milliseconds — so a future units slip (seconds or nanoseconds) or a
+    // reintroduced second clock can't silently rebreak it.
+    const double t0 = GeoFPS::NowMs();
+    std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    const double elapsedMs = GeoFPS::NowMs() - t0;
+    Require(elapsedMs > 0.0, "NowMs must increase across a sleep (monotonic)");
+    // ~5 ms expected.  Seconds would read ~0.005 (fails the lower bound),
+    // nanoseconds ~5e6 (fails the upper bound); the bounds stay loose enough to
+    // never flake on a loaded CI runner.
+    Require(elapsedMs >= 4.0 && elapsedMs < 2000.0,
+            "NowMs must be in milliseconds (≈5ms for a 5ms sleep)");
+}
+
 void TestCameraRotationOnlyMatrixIsPositionIndependent()
 {
     // Guards the mouse-look stutter root-cause fix.  GetViewMatrixRotationOnly()
@@ -1213,6 +1238,7 @@ int main()
     RUN(TestCameraCommandGizmoDragCancelsSnap);
     RUN(TestCameraCommandTeleportSnapSuppressesMouseDelta);
     RUN(TestSpeedKeyCharMapping);
+    RUN(TestNowMsIsMonotonicMilliseconds);
     RUN(TestCameraRotationOnlyMatrixIsPositionIndependent);
     RUN(TestCameraRelativeRenderOriginKeepsSmallDeltas);
 

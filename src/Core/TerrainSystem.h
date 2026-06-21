@@ -18,9 +18,10 @@ namespace GeoFPS
 // reference; the reference members make "all wired up" a compile-time fact.
 struct TerrainJobContext
 {
-    // Shared upload budget.  frameStartMs is in the GLFW clock (glfwGetTime*1000)
-    // — ProcessBuildJobs measures elapsed time against it exactly as the inline
-    // code did.  avgChunkUploadMs is the read/write EMA of a single Mesh upload.
+    // Shared upload budget.  frameStartMs is a GeoFPS::NowMs() reading taken at
+    // the top of the frame (same monotonic clock ProcessBuildJobs measures
+    // against), so elapsed-this-frame is meaningful.  avgChunkUploadMs is the
+    // read/write EMA of a single Mesh upload.
     double            frameStartMs;
     float&            avgSwapWaitMs;
     float&            avgChunkUploadMs;

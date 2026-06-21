@@ -1,20 +1,12 @@
 #include "Core/FramePacer.h"
 
-#include <GLFW/glfw3.h>
+#include "Core/Time.h"
 
 #include <chrono>
 #include <thread>
 
 namespace GeoFPS
 {
-namespace
-{
-double NowMs()
-{
-    return glfwGetTime() * 1000.0;
-}
-} // namespace
-
 void FramePacer::WaitForNextFrame()
 {
     constexpr double kTargetFrameMs = 1000.0 / 60.0; // 16.67 ms (60 Hz)

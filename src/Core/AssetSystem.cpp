@@ -1,4 +1,5 @@
 #include "Core/AssetSystem.h"
+#include "Core/Time.h"
 
 #include "Renderer/AnimatedMesh.h"
 #include "Renderer/Mesh.h"
@@ -16,12 +17,6 @@ namespace GeoFPS
 {
 namespace
 {
-double NowMs()
-{
-    using Clock = std::chrono::steady_clock;
-    return std::chrono::duration<double, std::milli>(Clock::now().time_since_epoch()).count();
-}
-
 void ReleasePixelBuffer(std::vector<unsigned char>& pixels)
 {
     std::vector<unsigned char>().swap(pixels);
