@@ -18,4 +18,8 @@ glm::dvec3 TerrainCoordinateToLocal(const TerrainDataset& dataset, double latitu
 
 // True when (latitude, longitude) falls inside the dataset's valid bounds.
 bool TerrainDatasetContainsCoordinate(const TerrainDataset& dataset, double latitude, double longitude);
+
+// True when the dataset is visible, loaded, and has valid bounds — i.e. it
+// contributes terrain to the scene/profile sampling right now.
+bool TerrainDatasetHasCoverage(const TerrainDataset& dataset);
 } // namespace GeoFPS

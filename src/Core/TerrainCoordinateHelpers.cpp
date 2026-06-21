@@ -24,4 +24,9 @@ bool TerrainDatasetContainsCoordinate(const TerrainDataset& dataset, double lati
     return latitude >= dataset.bounds.minLatitude && latitude <= dataset.bounds.maxLatitude &&
            longitude >= dataset.bounds.minLongitude && longitude <= dataset.bounds.maxLongitude;
 }
+
+bool TerrainDatasetHasCoverage(const TerrainDataset& dataset)
+{
+    return dataset.visible && dataset.loaded && dataset.bounds.valid;
+}
 } // namespace GeoFPS
