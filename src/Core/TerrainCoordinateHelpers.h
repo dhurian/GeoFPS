@@ -26,4 +26,7 @@ bool TerrainDatasetContainsCoordinate(const TerrainDataset& dataset, double lati
 // True when the dataset is visible, loaded, and has valid bounds — i.e. it
 // contributes terrain to the scene/profile sampling right now.
 bool TerrainDatasetHasCoverage(const TerrainDataset& dataset);
+
+// Human-readable label for a coordinate mode, for UI display.
+const char* TerrainCoordinateModeLabel(TerrainCoordinateMode mode);
 } // namespace GeoFPS

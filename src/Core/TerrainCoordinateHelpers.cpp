@@ -39,4 +39,17 @@ bool TerrainDatasetHasCoverage(const TerrainDataset& dataset)
 {
     return dataset.visible && dataset.loaded && dataset.bounds.valid;
 }
+
+const char* TerrainCoordinateModeLabel(TerrainCoordinateMode mode)
+{
+    if (mode == TerrainCoordinateMode::LocalMeters)
+    {
+        return "Local meters X/Z/height";
+    }
+    if (mode == TerrainCoordinateMode::Projected)
+    {
+        return "Projected CRS meters";
+    }
+    return "Geographic lat/lon/height";
+}
 } // namespace GeoFPS
