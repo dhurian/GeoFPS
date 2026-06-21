@@ -1,5 +1,6 @@
 #include "Core/Application.h"
 #include "Core/ApplicationUIHelpers.h"
+#include "Core/ImGuiWindowControls.h"
 #include "Core/NativeFileDialog.h"
 
 #include "imgui.h"
@@ -42,6 +43,7 @@ void Application::RenderBlenderAssetsWindow()
         ImGui::End();
         return;
     }
+    DrawWindowArrangeMenu("Blender Assets");
 
     // ── Label settings ────────────────────────────────────────────────────────
     if (ImGui::CollapsingHeader("World Labels"))

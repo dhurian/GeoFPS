@@ -1,5 +1,6 @@
 #include "Core/Application.h"
 #include "Core/ApplicationInternal.h"
+#include "Core/ImGuiWindowControls.h"
 
 #include "imgui.h"
 #include <algorithm>
@@ -21,6 +22,7 @@ void Application::RenderSunWindow()
         ImGui::End();
         return;
     }
+    DrawWindowArrangeMenu("Sun Illumination");
 
     RenderSunControls();
     ImGui::End();

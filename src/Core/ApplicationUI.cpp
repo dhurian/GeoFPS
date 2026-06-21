@@ -1,6 +1,7 @@
 #include "Core/Application.h"
 #include "Core/ApplicationInternal.h"
 #include "Core/ApplicationUIHelpers.h"
+#include "Core/ImGuiWindowControls.h"
 #include "Core/NativeFileDialog.h"
 
 #include "imgui.h"
@@ -409,6 +410,7 @@ void Application::RenderMiniMapWindow()
         ImGui::End();
         return;
     }
+    DrawWindowArrangeMenu("Terrain Minimap");
 
     RenderMiniMap();
     ImGui::End();
@@ -609,6 +611,7 @@ void Application::RenderTerrainDatasetWindow()
         ImGui::End();
         return;
     }
+    DrawWindowArrangeMenu("Terrain Datasets");
 
     if (activeTerrain == nullptr)
     {
@@ -885,6 +888,7 @@ void Application::RenderAerialOverlayWindow()
         ImGui::End();
         return;
     }
+    DrawWindowArrangeMenu("Aerial Overlay");
 
     if (activeTerrain == nullptr)
     {
@@ -1032,6 +1036,7 @@ void Application::RenderTerrainProfilesWindow()
         ImGui::End();
         return;
     }
+    DrawWindowArrangeMenu("Terrain Profiles");
 
     TerrainProfile& activeProfile = m_Profiles.profiles()[static_cast<size_t>(m_Profiles.activeIndex())];
     EnsureTerrainProfileHasTerrainSelection(activeProfile);
