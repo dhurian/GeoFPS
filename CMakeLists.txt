@@ -170,6 +170,7 @@ if(GEOFPS_BUILD_TESTS)
   add_executable(GeoFPSTests
     tests/TerrainProfileTests.cpp
     src/Game/CameraCommand.cpp
+    src/Core/ProfileSystem.cpp
     src/Core/WorldFileParser.cpp
     src/Math/GeoConverter.cpp
     src/Renderer/Camera.cpp

@@ -1,4 +1,5 @@
 #include "Core/ApplicationInternal.h"
+#include "Core/ProfileSystem.h"
 #include "Core/Time.h"
 #include "Core/WorldFileParser.h"
 #include "Game/CameraCommand.h"
@@ -14,6 +15,7 @@
 #include <cmath>
 #include <filesystem>
 #include <fstream>
+#include <future>
 #include <iostream>
 #include <limits>
 #include <sstream>
@@ -1130,6 +1132,55 @@ void TestNowMsIsMonotonicMilliseconds()
             "NowMs must be in milliseconds (≈5ms for a 5ms sleep)");
 }
 
+void TestProfileSampleJobInstallAndClamp()
+{
+    using namespace GeoFPS;
+    // ProfileSystem::ProcessSampleJobs is the one async drain loop with no GPU
+    // work, so it's unit-testable.  A finished resample job must install the new
+    // profile set, re-clamp the active index into range (or -1 when empty), set
+    // the status string, and drain the job.  Pins the install + clamp logic —
+    // including the empty -> -1 ternary that was hand-edited during the
+    // ProfileSystem extraction.
+    auto makeReadyJob = [](bool success, size_t profileCount, const std::string& status) {
+        ProfileSampleBuildResult result;
+        result.success = success;
+        result.statusMessage = status;
+        result.profiles.resize(profileCount);
+        std::promise<ProfileSampleBuildResult> promise;
+        promise.set_value(std::move(result));
+        ProfileSampleBuildJob job;
+        job.future = promise.get_future();
+        return job;
+    };
+
+    {
+        ProfileSystem profiles;
+        profiles.setActiveIndex(5); // stale, out of range for the incoming set
+        profiles.sampleBuildJobs().push_back(makeReadyJob(true, 3, "rebuilt"));
+
+        std::string status;
+        ProfileJobContext ctx {status};
+        profiles.ProcessSampleJobs(ctx);
+
+        Require(profiles.profiles().size() == 3, "resampled profiles installed");
+        Require(profiles.activeIndex() == 2, "active index clamped to last profile");
+        Require(profiles.sampleBuildJobs().empty(), "finished job drained");
+        Require(status == "rebuilt", "status message taken from the result");
+    }
+    {
+        ProfileSystem profiles;
+        profiles.setActiveIndex(2);
+        profiles.sampleBuildJobs().push_back(makeReadyJob(true, 0, "empty"));
+
+        std::string status;
+        ProfileJobContext ctx {status};
+        profiles.ProcessSampleJobs(ctx);
+
+        Require(profiles.profiles().empty(), "empty result clears the profiles");
+        Require(profiles.activeIndex() == -1, "active index becomes -1 when no profiles remain");
+    }
+}
+
 void TestCameraRotationOnlyMatrixIsPositionIndependent()
 {
     // Guards the mouse-look stutter root-cause fix.  GetViewMatrixRotationOnly()
@@ -1239,6 +1290,7 @@ int main()
     RUN(TestCameraCommandTeleportSnapSuppressesMouseDelta);
     RUN(TestSpeedKeyCharMapping);
     RUN(TestNowMsIsMonotonicMilliseconds);
+    RUN(TestProfileSampleJobInstallAndClamp);
     RUN(TestCameraRotationOnlyMatrixIsPositionIndependent);
     RUN(TestCameraRelativeRenderOriginKeepsSmallDeltas);
 
