@@ -17,12 +17,13 @@ void Application::RenderSunWindow()
         return;
     }
 
-    if (!ImGui::Begin("Sun Illumination", &m_ShowSunWindow))
+    const bool sunWindowOpen = ImGui::Begin("Sun Illumination", &m_ShowSunWindow);
+    DrawWindowArrangeMenu("Sun Illumination");
+    if (!sunWindowOpen)
     {
         ImGui::End();
         return;
     }
-    DrawWindowArrangeMenu("Sun Illumination");
 
     RenderSunControls();
     ImGui::End();

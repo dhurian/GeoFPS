@@ -25,27 +25,68 @@ std::unordered_map<std::string, WindowRect>& SavedRects()
     static std::unordered_map<std::string, WindowRect> rects;
     return rects;
 }
+
+// Work area to fit/snap against.  For a window docked in the main viewport that
+// is just the viewport's work area (the app window).  But a window detached to
+// its own OS viewport (multi-viewport) has a viewport sized to the window
+// itself, so fitting against it would be a no-op — fit to the monitor the
+// window currently sits on instead.
+void ResolveWorkArea(const ImVec2& windowPos, const ImVec2& windowSize, ImVec2& outPos, ImVec2& outSize)
+{
+    const ImGuiViewport* viewport = ImGui::GetWindowViewport();
+    outPos = viewport->WorkPos;
+    outSize = viewport->WorkSize;
+    if (viewport == ImGui::GetMainViewport())
+    {
+        return;
+    }
+
+    const ImVec2 center(windowPos.x + windowSize.x * 0.5f, windowPos.y + windowSize.y * 0.5f);
+    const ImGuiPlatformIO& platformIO = ImGui::GetPlatformIO();
+    for (const ImGuiPlatformMonitor& monitor : platformIO.Monitors)
+    {
+        const float maxX = monitor.MainPos.x + monitor.MainSize.x;
+        const float maxY = monitor.MainPos.y + monitor.MainSize.y;
+        if (center.x >= monitor.MainPos.x && center.x < maxX &&
+            center.y >= monitor.MainPos.y && center.y < maxY)
+        {
+            outPos = monitor.WorkPos;
+            outSize = monitor.WorkSize;
+            return;
+        }
+    }
+}
 } // namespace
 
 void DrawWindowArrangeMenu(const char* windowName)
 {
-    // Capture everything we need from the *parent* window's scope: the popup
-    // opened below renders as its own window, so GetWindowViewport()/GetWindowPos()
-    // would read the popup there, not this window.
-    const ImGuiViewport* viewport = ImGui::GetWindowViewport();
-    const ImVec2 workPos  = viewport->WorkPos;
-    const ImVec2 workSize = viewport->WorkSize;
-    const ImVec2 curPos   = ImGui::GetWindowPos();
-    const ImVec2 curSize  = ImGui::GetWindowSize();
+    const ImVec2 curPos  = ImGui::GetWindowPos();
+    const ImVec2 curSize = ImGui::GetWindowSize();
+    ImVec2 workPos;
+    ImVec2 workSize;
+    ResolveWorkArea(curPos, curSize, workPos, workSize);
 
-    // Right-aligned compact button on its own toolbar row at the top of content.
-    const char* label = "Layout";
-    const ImGuiStyle& style = ImGui::GetStyle();
-    const float buttonWidth = ImGui::CalcTextSize(label).x + style.FramePadding.x * 2.0f;
-    ImGui::SetCursorPosX(ImGui::GetWindowContentRegionMax().x - buttonWidth);
-    if (ImGui::SmallButton(label))
+    // Open the menu from the place that's actually visible in each state: a
+    // top-right "Layout" button while expanded, or a right-click on the title
+    // bar while collapsed (when the title bar is all that's left on screen).
+    if (!ImGui::IsWindowCollapsed())
     {
-        ImGui::OpenPopup("##win_arrange");
+        const char* label = "Layout";
+        const ImGuiStyle& style = ImGui::GetStyle();
+        const float buttonWidth = ImGui::CalcTextSize(label).x + style.FramePadding.x * 2.0f;
+        ImGui::SetCursorPosX(ImGui::GetWindowContentRegionMax().x - buttonWidth);
+        if (ImGui::SmallButton(label))
+        {
+            ImGui::OpenPopup("##win_arrange");
+        }
+    }
+    else if (ImGui::IsWindowHovered())
+    {
+        ImGui::SetTooltip("Right-click for layout options (Fit / Snap / Restore)");
+        if (ImGui::IsMouseClicked(ImGuiMouseButton_Right))
+        {
+            ImGui::OpenPopup("##win_arrange");
+        }
     }
 
     if (ImGui::BeginPopup("##win_arrange"))

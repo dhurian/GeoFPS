@@ -38,12 +38,13 @@ void Application::RenderBlenderAssetsWindow()
     static double bulkHeight = 0.0;
 
     ImGui::SetNextWindowSize(ImVec2(400.0f, 700.0f), ImGuiCond_FirstUseEver);
-    if (!ImGui::Begin("Blender Assets", &m_ShowBlenderAssetsWindow))
+    const bool blenderWindowOpen = ImGui::Begin("Blender Assets", &m_ShowBlenderAssetsWindow);
+    DrawWindowArrangeMenu("Blender Assets");
+    if (!blenderWindowOpen)
     {
         ImGui::End();
         return;
     }
-    DrawWindowArrangeMenu("Blender Assets");
 
     // ── Label settings ────────────────────────────────────────────────────────
     if (ImGui::CollapsingHeader("World Labels"))

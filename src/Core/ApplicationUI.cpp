@@ -405,12 +405,13 @@ void Application::RenderMiniMapWindow()
     }
 
     ImGui::SetNextWindowSize(ImVec2(360.0f, 520.0f), ImGuiCond_FirstUseEver);
-    if (!ImGui::Begin("Terrain Minimap", &m_ShowMiniMapWindow))
+    const bool minimapWindowOpen = ImGui::Begin("Terrain Minimap", &m_ShowMiniMapWindow);
+    DrawWindowArrangeMenu("Terrain Minimap");
+    if (!minimapWindowOpen)
     {
         ImGui::End();
         return;
     }
-    DrawWindowArrangeMenu("Terrain Minimap");
 
     RenderMiniMap();
     ImGui::End();
@@ -606,12 +607,13 @@ void Application::RenderTerrainDatasetWindow()
     }
 
     TerrainDataset* activeTerrain = GetActiveTerrainDataset();
-    if (!ImGui::Begin("Terrain Datasets", &m_ShowTerrainDatasetWindow))
+    const bool datasetsWindowOpen = ImGui::Begin("Terrain Datasets", &m_ShowTerrainDatasetWindow);
+    DrawWindowArrangeMenu("Terrain Datasets");
+    if (!datasetsWindowOpen)
     {
         ImGui::End();
         return;
     }
-    DrawWindowArrangeMenu("Terrain Datasets");
 
     if (activeTerrain == nullptr)
     {
@@ -883,12 +885,13 @@ void Application::RenderAerialOverlayWindow()
     TerrainDataset* activeTerrain = GetActiveTerrainDataset();
     OverlayEntry* activeOverlay = GetActiveOverlayEntry();
 
-    if (!ImGui::Begin("Aerial Overlay", &m_ShowAerialOverlayWindow))
+    const bool aerialWindowOpen = ImGui::Begin("Aerial Overlay", &m_ShowAerialOverlayWindow);
+    DrawWindowArrangeMenu("Aerial Overlay");
+    if (!aerialWindowOpen)
     {
         ImGui::End();
         return;
     }
-    DrawWindowArrangeMenu("Aerial Overlay");
 
     if (activeTerrain == nullptr)
     {
@@ -1031,12 +1034,13 @@ void Application::RenderTerrainProfilesWindow()
     m_Profiles.setActiveIndex(std::clamp(m_Profiles.activeIndex(), 0, static_cast<int>(m_Profiles.profiles().size()) - 1));
 
     ImGui::SetNextWindowSize(ImVec2(1180.0f, 760.0f), ImGuiCond_FirstUseEver);
-    if (!ImGui::Begin("Terrain Profiles", &m_ShowTerrainProfilesWindow))
+    const bool profilesWindowOpen = ImGui::Begin("Terrain Profiles", &m_ShowTerrainProfilesWindow);
+    DrawWindowArrangeMenu("Terrain Profiles");
+    if (!profilesWindowOpen)
     {
         ImGui::End();
         return;
     }
-    DrawWindowArrangeMenu("Terrain Profiles");
 
     TerrainProfile& activeProfile = m_Profiles.profiles()[static_cast<size_t>(m_Profiles.activeIndex())];
     EnsureTerrainProfileHasTerrainSelection(activeProfile);
