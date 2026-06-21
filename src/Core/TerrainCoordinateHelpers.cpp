@@ -14,6 +14,16 @@ glm::dvec3 TerrainCoordinateToLocal(const TerrainDataset& dataset, double latitu
     return GeoConverter(dataset.geoReference).ToLocal(latitude, longitude, height);
 }
 
+glm::dvec3 LocalToTerrainCoordinate(const TerrainDataset& dataset, const glm::dvec3& localPosition)
+{
+    if (dataset.settings.coordinateMode == TerrainCoordinateMode::LocalMeters)
+    {
+        return {localPosition.x, localPosition.z, localPosition.y};
+    }
+
+    return GeoConverter(dataset.geoReference).ToGeographic(localPosition);
+}
+
 bool TerrainDatasetContainsCoordinate(const TerrainDataset& dataset, double latitude, double longitude)
 {
     if (!dataset.bounds.valid)

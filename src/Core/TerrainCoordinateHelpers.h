@@ -16,6 +16,10 @@ namespace GeoFPS
 // GeoReference.
 glm::dvec3 TerrainCoordinateToLocal(const TerrainDataset& dataset, double latitude, double longitude, double height);
 
+// Inverse of TerrainCoordinateToLocal: scene-local space back to the dataset's
+// native coordinate (geographic lat/lon/height, or x/z/y for local-meters).
+glm::dvec3 LocalToTerrainCoordinate(const TerrainDataset& dataset, const glm::dvec3& localPosition);
+
 // True when (latitude, longitude) falls inside the dataset's valid bounds.
 bool TerrainDatasetContainsCoordinate(const TerrainDataset& dataset, double latitude, double longitude);
 
