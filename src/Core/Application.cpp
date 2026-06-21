@@ -1,5 +1,6 @@
 #include "Core/Application.h"
 #include "Core/ApplicationInternal.h"
+#include "Core/TerrainCoordinateHelpers.h"
 #include "Core/Time.h"
 #include "Game/SpeedKeyMapping.h"
 
@@ -30,16 +31,6 @@ namespace GeoFPS
 using namespace ApplicationInternal;
 namespace
 {
-glm::dvec3 TerrainCoordinateToLocal(const TerrainDataset& dataset, double latitude, double longitude, double height)
-{
-    if (dataset.settings.coordinateMode == TerrainCoordinateMode::LocalMeters)
-    {
-        return {latitude, height, longitude};
-    }
-
-    return GeoConverter(dataset.geoReference).ToLocal(latitude, longitude, height);
-}
-
 struct RenderOverlayPlacement
 {
     const OverlayEntry* overlay {nullptr};

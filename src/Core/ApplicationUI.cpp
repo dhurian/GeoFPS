@@ -3,6 +3,7 @@
 #include "Core/ApplicationUIHelpers.h"
 #include "Core/ImGuiWindowControls.h"
 #include "Core/NativeFileDialog.h"
+#include "Core/TerrainCoordinateHelpers.h"
 
 #include "imgui.h"
 #include "backends/imgui_impl_glfw.h"
@@ -25,16 +26,6 @@ using namespace ApplicationUIInternal;
 namespace
 {
 constexpr float kMinimumVisibleProfileWorldThicknessMeters = 3.0f;
-
-glm::dvec3 TerrainCoordinateToLocal(const TerrainDataset& dataset, double latitude, double longitude, double height)
-{
-    if (dataset.settings.coordinateMode == TerrainCoordinateMode::LocalMeters)
-    {
-        return {latitude, height, longitude};
-    }
-
-    return GeoConverter(dataset.geoReference).ToLocal(latitude, longitude, height);
-}
 
 glm::dvec3 ProfileLocalToTerrainCoordinate(const TerrainDataset* dataset,
                                            const GeoConverter& converter,
@@ -64,17 +55,6 @@ const char* TerrainCoordinateModeLabel(TerrainCoordinateMode mode)
 bool TerrainDatasetHasCoverage(const TerrainDataset& dataset)
 {
     return dataset.visible && dataset.loaded && dataset.bounds.valid;
-}
-
-bool TerrainDatasetContainsCoordinate(const TerrainDataset& dataset, double latitude, double longitude)
-{
-    if (!dataset.bounds.valid)
-    {
-        return false;
-    }
-
-    return latitude >= dataset.bounds.minLatitude && latitude <= dataset.bounds.maxLatitude &&
-           longitude >= dataset.bounds.minLongitude && longitude <= dataset.bounds.maxLongitude;
 }
 } // namespace
 

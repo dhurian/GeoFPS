@@ -1,5 +1,6 @@
 #include "Core/Application.h"
 #include "Core/ApplicationInternal.h"
+#include "Core/TerrainCoordinateHelpers.h"
 
 #include <glm/geometric.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -104,16 +105,6 @@ TerrainBuildSettings TileBuildSettings(const TerrainBuildSettings& datasetSettin
     return tileSettings;
 }
 
-glm::dvec3 TerrainCoordinateToLocal(const TerrainDataset& dataset, double latitude, double longitude, double height)
-{
-    if (dataset.settings.coordinateMode == TerrainCoordinateMode::LocalMeters)
-    {
-        return {latitude, height, longitude};
-    }
-
-    return GeoConverter(dataset.geoReference).ToLocal(latitude, longitude, height);
-}
-
 glm::dvec3 LocalToTerrainCoordinate(const TerrainDataset& dataset, const glm::dvec3& localPosition)
 {
     if (dataset.settings.coordinateMode == TerrainCoordinateMode::LocalMeters)
@@ -130,17 +121,6 @@ float RawTerrainHeightToRenderedLocalHeight(const TerrainDataset& dataset, doubl
                                   terrainHeight :
                                   terrainHeight - dataset.geoReference.originHeight;
     return static_cast<float>(baseHeight * static_cast<double>(dataset.settings.heightScale));
-}
-
-bool TerrainDatasetContainsCoordinate(const TerrainDataset& dataset, double latitude, double longitude)
-{
-    if (!dataset.bounds.valid)
-    {
-        return false;
-    }
-
-    return latitude >= dataset.bounds.minLatitude && latitude <= dataset.bounds.maxLatitude &&
-           longitude >= dataset.bounds.minLongitude && longitude <= dataset.bounds.maxLongitude;
 }
 
 TerrainProfileVertex ProfileVertexToDatasetCoordinate(const TerrainProfile& profile,
